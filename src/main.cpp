@@ -1,9 +1,12 @@
-#include "loaders/model_loader.hpp"
-#include "loaders/shader_loader.hpp"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-#include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
+
+#include "loaders/model_loader.hpp"
+#include "loaders/shader_loader.hpp"
+#include "scene/scene.hpp"
+
+#include "glm/gtc/matrix_transform.hpp"
 
 int main() {
     if (!glfwInit()) {
@@ -11,8 +14,8 @@ int main() {
         return -1;
     }
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWwindow *window =
@@ -23,54 +26,52 @@ int main() {
         return -1;
     }
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1); // enable vsync
 
-    if (GLenum err = glewInit();
-        err != GLEW_OK && err != GLEW_ERROR_NO_GLX_DISPLAY) {
-        // GLEW_ERROR_NO_GLX_DISPLAY is a known false positive on Wayland/EGL
-        // contexts (GLEW probes for a GLX display unconditionally); the
-        // extension pointers are already loaded correctly by this point.
-        std::cerr << "Failed to initialize GLEW: " << glewGetErrorString(err)
-                  << std::endl;
+    // glewExperimental = GL_TRUE; // required for core profile contexts
+    GLenum glewStatus = glewInit();
+    // Under Wayland glewInit reports NO_GLX_DISPLAY even though all GL
+    // function pointers were loaded fine, so that one is not fatal.
+    if (glewStatus != GLEW_OK && glewStatus != GLEW_ERROR_NO_GLX_DISPLAY) {
+        std::cerr << "Failed to initialize GLEW: "
+                  << glewGetErrorString(glewStatus) << std::endl;
         return -1;
     }
-    glGetError(); // clear the spurious error glewInit() may leave behind
+
+    auto texture_shader = createShaderProgram("default.vs", "texture.fs");
+    auto crate_model = loadModel("SM_PROP_crate_02.glb");
+
+    scn::Scene scene = scn::Scene();
+
+    auto crate_node = scn::Node::create("Melon crate", glm::vec3(0.f));
+    scene.tree->add_child(crate_node);
+    // Rotate it towards camera
+    crate_node->localTransform =
+        glm::rotate(crate_node->localTransform, glm::pi<float>() * 5.f / 6.f,
+                    glm::vec3(1, 0, 0));
+
+    crate_node->localTransform =
+        glm::rotate(crate_node->localTransform,
+                    glm::half_pi<float>() * 3.f / 2.f, glm::vec3(0, 1, 0));
+
+    auto camera_node = scn::Node::create("Camera", glm::vec3(0.f, 0.f, -4.f));
+    scene.tree->add_child(camera_node);
+    // Make camera projection matrix
+    auto proj_mat = glm::perspectiveFov(50.0, 800.0, 600.0, 0.1, 1000.0);
 
     glEnable(GL_DEPTH_TEST);
-
-    // Load shaders
-    auto shader = createShaderProgram("default.vs", "texture.fs");
-    // Load models
-    auto crate = loadModel("SM_PROP_crate_02.glb");
-    // Create camera
-    glm::mat4 camere_proj = glm::infinitePerspective(50.f, 1.f, 0.1f);
-    glm::mat4 camera_pos = glm::mat4(1.f);
-    camera_pos = glm::translate(camera_pos, glm::vec3(0, 0.12, -5));
-    glm::mat4 model_mat =
-        glm::rotate(glm::scale(glm::mat4(1.f), glm::vec3(1.f, -1.f, 1.f)),
-                    glm::quarter_pi<float>(), glm::vec3(1, 0, 0));
+    glDepthFunc(GL_LESS);
 
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        GLint umodel = glGetUniformLocation(shader, "uModel");
-        GLint uview = glGetUniformLocation(shader, "uView");
-        GLint uprojection = glGetUniformLocation(shader, "uProjection");
-        GLint utexture = glGetUniformLocation(shader, "uTexture");
-        glUseProgram(shader);
 
-        // Time
-        float time = glfwGetTime();
+        glUseProgram(texture_shader);
+        uTexture("uTexture", 0);
+        uMat4("uView", camera_node->globalTransform());
+        uMat4("uModel", crate_node->globalTransform());
+        uMat4("uProjection", proj_mat);
+        crate_model.draw();
 
-        model_mat =
-            glm::rotate(model_mat, (float)1e-2, glm::vec3(0.f, 1.f, 0.f));
-        // Update uniforms
-        glUniformMatrix4fv(umodel, 1, false, &model_mat[0][0]);
-        glUniformMatrix4fv(uview, 1, false, &camera_pos[0][0]);
-        glUniformMatrix4fv(uprojection, 1, false, &camere_proj[0][0]);
-        glUniform1i(utexture, 0);
-
-        crate.draw();
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

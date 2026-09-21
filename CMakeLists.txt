@@ -15,7 +15,7 @@ find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(OpenMP)
 
-# GLFW, GLM and ASSIMP are fetched and built from source instead
+# GLFW, GLM, ASSIMP and cJSON are fetched and built from source instead
 include(FetchContent)
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -46,9 +46,16 @@ FetchContent_Declare(cmrc
         GIT_REPOSITORY https://github.com/vector-of-bool/cmrc.git
         GIT_TAG 2.0.1)
 
+set(ENABLE_CJSON_TEST OFF CACHE BOOL "" FORCE)
+set(ENABLE_CJSON_UNINSTALL OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(cjson
+        GIT_REPOSITORY https://github.com/DaveGamble/cJSON.git
+        GIT_TAG v1.7.18)
+
 # cmrc 2.0.1 predates CMake 4.0's removal of cmake_minimum_required(VERSION < 3.5)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
-FetchContent_MakeAvailable(glfw glm assimp cmrc)
+FetchContent_MakeAvailable(glfw glm assimp cmrc cjson)
 unset(CMAKE_POLICY_VERSION_MINIMUM)
 
 # stb_image is a single header with no CMakeLists.txt of its own, so it's
@@ -101,7 +108,8 @@ target_link_libraries(semestralka PUBLIC
         GLEW::GLEW
         glfw
         glm::glm
-        assimp)
+        assimp
+        cjson)
 
 if(OpenMP_CXX_FOUND)
     target_link_libraries(semestralka PUBLIC OpenMP::OpenMP_CXX)

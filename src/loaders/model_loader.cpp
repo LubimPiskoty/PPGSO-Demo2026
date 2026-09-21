@@ -31,18 +31,19 @@ GLuint createTexture(const unsigned char *pixels, int width, int height) {
 
 // Used for meshes with no (or an unsupported) texture, so the shader always
 // has something valid bound to sample.
-GLuint whiteFallbackTexture() {
+// TODO: Change into purple checker texture
+GLuint pinkFallbackTexture() {
     static GLuint texture = 0;
     if (texture == 0) {
-        unsigned char white[4] = {255, 0, 255, 255};
-        texture = createTexture(white, 1, 1);
+        unsigned char pink[4] = {255, 0, 255, 255};
+        texture = createTexture(pink, 1, 1);
     }
     return texture;
 }
 
 GLuint loadMeshTexture(const aiScene *scene, const aiMesh *mesh) {
     if (mesh->mMaterialIndex >= scene->mNumMaterials) {
-        return whiteFallbackTexture();
+        return pinkFallbackTexture();
     }
     const aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
 
@@ -52,7 +53,7 @@ GLuint loadMeshTexture(const aiScene *scene, const aiMesh *mesh) {
             AI_SUCCESS ||
         material->GetTexture(aiTextureType_DIFFUSE, 0, &path) == AI_SUCCESS;
     if (!hasTexture) {
-        return whiteFallbackTexture();
+        return pinkFallbackTexture();
     }
 
     // glTF/GLB textures are embedded in the file itself, referenced as "*N";
@@ -61,7 +62,7 @@ GLuint loadMeshTexture(const aiScene *scene, const aiMesh *mesh) {
     if (!embedded || embedded->mHeight != 0) {
         std::cerr << "Unsupported or missing embedded texture: " << path.C_Str()
                   << std::endl;
-        return whiteFallbackTexture();
+        return pinkFallbackTexture();
     }
 
     int width, height, channels;
@@ -71,7 +72,7 @@ GLuint loadMeshTexture(const aiScene *scene, const aiMesh *mesh) {
     if (!pixels) {
         std::cerr << "Failed to decode embedded texture: " << path.C_Str()
                   << std::endl;
-        return whiteFallbackTexture();
+        return pinkFallbackTexture();
     }
 
     GLuint texture = createTexture(pixels, width, height);
@@ -183,8 +184,7 @@ Model loadModel(const std::string &filename) {
 
     Assimp::Importer importer;
     const aiScene *scene = importer.ReadFileFromMemory(
-        file.begin(), file.size(),
-        aiProcess_Triangulate | aiProcess_FlipUVs,
+        file.begin(), file.size(), aiProcess_Triangulate | aiProcess_FlipUVs,
         extensionOf(filename).c_str());
 
     if (!scene || !scene->mRootNode) {
