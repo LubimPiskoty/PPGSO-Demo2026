@@ -2,7 +2,9 @@
 
 #include "../ecs/camera.hpp"
 #include "../ecs/ecs.hpp"
+#include <cstdint>
 #include <glm/ext/vector_float3.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <glm/matrix.hpp>
 #include <memory>
 #include <ostream>
@@ -12,6 +14,17 @@
 #include <vector>
 
 namespace scn {
+
+using Guid = std::uint64_t;
+
+// Decomposed position/rotation/scale, e.g. the result of collapsing a node's
+// global transform on demand.
+struct PosRotScale {
+    glm::vec3 pos{0.f};
+    glm::quat rot{1.f, 0.f, 0.f, 0.f};
+    glm::vec3 scale{1.f};
+};
+
 class Node : public std::enable_shared_from_this<Node> {
   public:
     virtual ~Node() = default;
@@ -20,12 +33,31 @@ class Node : public std::enable_shared_from_this<Node> {
     std::weak_ptr<Node> parent; // weak: parent owns children, not the reverse
     std::vector<std::shared_ptr<Node>> children;
 
+    // Randomly assigned on creation, stable for the node's lifetime. Used to
+    // reference nodes (e.g. activeCamera, parent links) when serializing,
+    // since raw pointers/indices don't survive a save/load round-trip.
+    Guid guid;
+    std::string guid_string() const;
+    static Guid make_guid();
+    static std::string guid_to_string(Guid guid);
+    static Guid guid_from_string(const std::string &str);
+
     // Attributes
     bool enabled;
     std::string name;
-    glm::mat4 localTransform;
+
+    // Local transform, stored decomposed so components can be edited
+    // directly (e.g. by an inspector) without matrix decomposition.
+    glm::vec3 localPos{0.f};
+    glm::quat localRot{1.f, 0.f, 0.f, 0.f};
+    glm::vec3 localScale{1.f};
+
+    // Composed/decomposed on demand from the fields above (and, for the
+    // global variants, the parent chain) rather than cached.
+    glm::mat4 localTransform() const;
     glm::mat4 globalTransform() const;
     glm::vec3 globalPosition() const;
+    PosRotScale globalPosRotScale() const;
     void setGlobalTransform(const glm::mat4 &globalTransform);
 
     // ECS
@@ -81,8 +113,13 @@ class Scene {
     void update(double dt);
     void draw();
 
+    // Depth-first search for the node with the given guid, or nullptr if not
+    // found. Used to resolve guid references (activeCamera, parent links,
+    // ...) when deserializing a scene.
+    std::shared_ptr<Node> findByGuid(Guid guid) const;
+
   public:
-    std::shared_ptr<Node> tree;
+    std::shared_ptr<Node> root;
 };
 
 } // namespace scn

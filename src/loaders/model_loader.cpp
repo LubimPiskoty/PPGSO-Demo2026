@@ -31,7 +31,6 @@ GLuint createTexture(const unsigned char *pixels, int width, int height) {
 
 // Used for meshes with no (or an unsupported) texture, so the shader always
 // has something valid bound to sample.
-// TODO: Change into purple checker texture
 GLuint pinkFallbackTexture() {
     static GLuint texture = 0;
     if (texture == 0) {

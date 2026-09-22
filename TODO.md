@@ -10,9 +10,9 @@
   - [ ] (1b) Object using a bump texture (normal mapping)
 - [ ] Scene [8b]
   - [ ] (2b) Procedurally generated scene (object placement/constraints defined by a (non-)deterministic algorithm and/or data structure)
-  - [ ] (4b) Hierarchical scene representation
-    - [ ] Logical spatial layout (e.g. floor, background, sky, ceiling, walls...) implemented via a scene graph, at minimum a tree data structure
-    - [ ] Hierarchical transformations: at least 2 levels of hierarchy among 3 objects, using composition of matrix transformations
+  - [x] (4b) Hierarchical scene representation
+    - [x] Logical spatial layout (e.g. floor, background, sky, ceiling, walls...) implemented via a scene graph, at minimum a tree data structure
+    - [x] Hierarchical transformations: at least 2 levels of hierarchy among 3 objects, using composition of matrix transformations
   - [ ] (2b) Cube mapping — as a skybox, or as environment mapping onto an object's surface
 - [ ] Animated objects [6b]
   - [ ] (2b) Procedural animation (simulating complex object behavior/decision-making: branching, cycles, a closed-form method with parameters, etc.)

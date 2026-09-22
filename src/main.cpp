@@ -1,10 +1,13 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <cstdio>
 #include <iostream>
+#include <sys/types.h>
 
 #include "ecs/camera.hpp"
 #include "ecs/mesh.hpp"
 #include "loaders/model_loader.hpp"
+#include "loaders/scene_loader.hpp"
 #include "loaders/shader_loader.hpp"
 #include "scene/scene.hpp"
 
@@ -52,19 +55,19 @@ int main() {
     glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
     glViewport(0, 0, fbWidth, fbHeight);
 
-    auto texture_shader = createShaderProgram("default.vs", "texture.fs");
+    auto texture_shader =
+        loader::createShaderProgram("default.vs", "texture.fs");
     auto crate_model = std::make_shared<loader::Model>(
         loader::loadModel("SM_PROP_crate_02.glb"));
-
     scn::Scene scene = scn::Scene();
 
     auto crate_node = scn::Node::create("Melon crate");
-    scene.tree->add_child(crate_node);
+    scene.root->add_child(crate_node);
     // Rotate it towards camera
     crate_node->add_component<ecs::Mesh>(crate_model, texture_shader);
 
     auto camera_node = scn::Node::create("Camera");
-    scene.tree->add_child(camera_node);
+    scene.root->add_child(camera_node);
     auto camera = camera_node->add_component<ecs::Camera>(50.f, (float)fbWidth,
                                                           (float)fbHeight);
     // camera->lookAt(glm::vec3(0.f));
@@ -90,15 +93,15 @@ int main() {
         time = glfwGetTime();
         scene.update(0.16);
 
-        camera_node->localTransform = glm::translate(
-            glm::mat4(1.f), glm::vec3(glm::cos(time * speed) * range, 0.7f,
-                                      glm::sin(time * speed) * range));
+        camera_node->localPos =
+            glm::vec3(glm::cos(time * speed) * range, 0.7f,
+                      glm::sin(time * speed) * range);
         camera_node->get_component<ecs::Camera>()->lookAt(glm::vec3(0.f));
 
         scene.draw();
 
         // if (time - last_print > 1.0) {
-        //     scene.tree->print(std::cout);
+        //     scene.root->print(std::cout);
         //     last_print = time;
         // }
 
@@ -112,7 +115,10 @@ int main() {
         ImGui::SliderFloat("orbit range", &range, 0.f, 10.f);
         ImGui::SliderFloat("orbit speed", &speed, 0.f, 5.f);
         ImGui::Separator();
-        ImGui::TextUnformatted(scene.tree->to_string().c_str());
+        ImGui::TextUnformatted(scene.root->to_string().c_str());
+        ImGui::Separator();
+        if (ImGui::Button("Save scene"))
+            loader::saveScene(&scene, "scene.json");
         ImGui::End();
 
         ImGui::Render();

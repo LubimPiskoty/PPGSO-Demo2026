@@ -5,6 +5,7 @@
 #include <iostream>
 
 CMRC_DECLARE(shaders);
+namespace loader {
 
 std::string loadShaderSource(const std::string &filepath) {
     auto fs = cmrc::shaders::get_filesystem();
@@ -62,6 +63,7 @@ GLuint createShaderProgram(const std::string &vertexPath,
 
     return program;
 }
+} // namespace loader
 
 static GLint uniLoc(const char *name) {
     GLint prog = 0;

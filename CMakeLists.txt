@@ -23,11 +23,13 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(glfw
         GIT_REPOSITORY https://github.com/glfw/glfw.git
-        GIT_TAG 3.4)
+        GIT_TAG 3.4
+        GIT_SHALLOW TRUE)
 
 FetchContent_Declare(glm
         GIT_REPOSITORY https://github.com/g-truc/glm.git
-        GIT_TAG 1.0.1)
+        GIT_TAG 1.0.1
+        GIT_SHALLOW TRUE)
 
 set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "" FORCE)
@@ -40,23 +42,30 @@ set(ASSIMP_BUILD_GLTF_IMPORTER ON CACHE BOOL "" FORCE)
 set(ASSIMP_NO_EXPORT ON CACHE BOOL "" FORCE)
 FetchContent_Declare(assimp
         GIT_REPOSITORY https://github.com/assimp/assimp.git
-        GIT_TAG v5.4.3)
+        GIT_TAG v5.4.3
+        GIT_SHALLOW TRUE)
 
 FetchContent_Declare(cmrc
         GIT_REPOSITORY https://github.com/vector-of-bool/cmrc.git
-        GIT_TAG 2.0.1)
+        GIT_TAG 2.0.1
+        GIT_SHALLOW TRUE)
 
 set(ENABLE_CJSON_TEST OFF CACHE BOOL "" FORCE)
 set(ENABLE_CJSON_UNINSTALL OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(cjson
         GIT_REPOSITORY https://github.com/DaveGamble/cJSON.git
-        GIT_TAG v1.7.18)
+        GIT_TAG v1.7.18
+        GIT_SHALLOW TRUE)
 
 # cmrc 2.0.1 predates CMake 4.0's removal of cmake_minimum_required(VERSION < 3.5)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 FetchContent_MakeAvailable(glfw glm assimp cmrc cjson)
 unset(CMAKE_POLICY_VERSION_MINIMUM)
+
+# cJSON's own CMakeLists.txt doesn't call target_include_directories(), so
+# without this its header isn't visible to anything linking against it.
+target_include_directories(cjson PUBLIC $<BUILD_INTERFACE:${cjson_SOURCE_DIR}>)
 
 # Dear ImGui is a debug-only dependency (in-scene overlay/inspector). It has
 # no CMakeLists.txt of its own, so it's fetched as raw source and built into
@@ -66,7 +75,8 @@ unset(CMAKE_POLICY_VERSION_MINIMUM)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     FetchContent_Declare(imgui
             GIT_REPOSITORY https://github.com/ocornut/imgui.git
-            GIT_TAG v1.91.5)
+            GIT_TAG v1.91.5
+            GIT_SHALLOW TRUE)
     FetchContent_MakeAvailable(imgui)
 
     add_library(imgui STATIC
@@ -119,7 +129,8 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.cpp")
 
 add_executable(semestralka ${SOURCES})
 
-target_compile_definitions(semestralka PUBLIC GLM_FORCE_RADIANS GLEW_STATIC)
+target_compile_definitions(semestralka PUBLIC GLM_FORCE_RADIANS GLEW_STATIC
+        GLM_ENABLE_EXPERIMENTAL)
 
 target_include_directories(semestralka PUBLIC
         ${CMAKE_CURRENT_BINARY_DIR}
