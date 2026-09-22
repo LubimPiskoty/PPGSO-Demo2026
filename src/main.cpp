@@ -2,6 +2,8 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 
+#include "ecs/camera.hpp"
+#include "ecs/mesh.hpp"
 #include "loaders/model_loader.hpp"
 #include "loaders/shader_loader.hpp"
 #include "scene/scene.hpp"
@@ -37,40 +39,49 @@ int main() {
         return -1;
     }
 
+    // Use the actual framebuffer size (can differ from the window size
+    // passed to glfwCreateWindow on HiDPI displays) so the viewport and the
+    // camera's projection aspect ratio always agree.
+    int fbWidth, fbHeight;
+    glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+    glViewport(0, 0, fbWidth, fbHeight);
+
     auto texture_shader = createShaderProgram("default.vs", "texture.fs");
-    auto crate_model = loadModel("SM_PROP_crate_02.glb");
+    auto crate_model = std::make_shared<loader::Model>(
+        loader::loadModel("SM_PROP_crate_02.glb"));
 
     scn::Scene scene = scn::Scene();
 
-    auto crate_node = scn::Node::create("Melon crate", glm::vec3(0.f));
+    auto crate_node = scn::Node::create("Melon crate");
     scene.tree->add_child(crate_node);
     // Rotate it towards camera
-    crate_node->localTransform =
-        glm::rotate(crate_node->localTransform, glm::pi<float>() * 5.f / 6.f,
-                    glm::vec3(1, 0, 0));
+    crate_node->add_component<ecs::Mesh>(crate_model, texture_shader);
 
-    crate_node->localTransform =
-        glm::rotate(crate_node->localTransform,
-                    glm::half_pi<float>() * 3.f / 2.f, glm::vec3(0, 1, 0));
-
-    auto camera_node = scn::Node::create("Camera", glm::vec3(0.f, 0.f, -4.f));
+    auto camera_node = scn::Node::create("Camera");
     scene.tree->add_child(camera_node);
-    // Make camera projection matrix
-    auto proj_mat = glm::perspectiveFov(50.0, 800.0, 600.0, 0.1, 1000.0);
+    auto camera = camera_node->add_component<ecs::Camera>(50.f, (float)fbWidth,
+                                                          (float)fbHeight);
+    // camera->lookAt(glm::vec3(0.f));
+    scene.activeCamera = camera;
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
-
+    double time;
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glUseProgram(texture_shader);
-        uTexture("uTexture", 0);
-        uMat4("uView", camera_node->globalTransform());
-        uMat4("uModel", crate_node->globalTransform());
-        uMat4("uProjection", proj_mat);
-        crate_model.draw();
+        time = glfwGetTime();
+        scene.update(0.16);
+
+        float range = 1.f;
+        float speed = 0.5f;
+        camera_node->localTransform = glm::translate(
+            glm::mat4(1.f), glm::vec3(glm::cos(time * speed) * range, 0.7f,
+                                      glm::sin(time * speed) * range));
+        camera_node->get_component<ecs::Camera>()->lookAt(glm::vec3(0.f));
+
+        scene.draw();
 
         glfwSwapBuffers(window);
         glfwPollEvents();

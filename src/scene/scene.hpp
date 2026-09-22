@@ -1,14 +1,18 @@
 #pragma once
 
+#include "../ecs/camera.hpp"
+#include "../ecs/ecs.hpp"
 #include <glm/ext/vector_float3.hpp>
 #include <glm/matrix.hpp>
 #include <memory>
 #include <ostream>
 #include <string>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace scn {
-class Node : public std::enable_shared_from_this<Node> { // TODO: Make into ECS
+class Node : public std::enable_shared_from_this<Node> {
   public:
     virtual ~Node() = default;
 
@@ -20,12 +24,35 @@ class Node : public std::enable_shared_from_this<Node> { // TODO: Make into ECS
     bool enabled;
     std::string name;
     glm::mat4 localTransform;
-    glm::mat4 globalTransform();
-    void setGlobalTransform(glm::mat4 globalTransform);
+    glm::mat4 globalTransform() const;
+    glm::vec3 globalPosition() const;
+    void setGlobalTransform(const glm::mat4 &globalTransform);
+
+    // ECS
+    std::vector<std::shared_ptr<ecs::Component>> components;
+
+    template <typename T, typename... Args>
+    std::shared_ptr<T> add_component(Args &&...args) {
+        static_assert(std::is_base_of_v<ecs::Component, T>,
+                      "T must derive from ecs::Component");
+        auto component = std::make_shared<T>(std::forward<Args>(args)...);
+        component->node = shared_from_this();
+        components.push_back(component);
+        return component;
+    }
+
+    // Returns the first attached component of type T, or nullptr if none.
+    template <typename T> std::shared_ptr<T> get_component() {
+        for (auto &c : components) {
+            if (c->type_id() == ecs::component_type_id<T>())
+                return std::static_pointer_cast<T>(c);
+        }
+        return nullptr;
+    }
 
     // Overridable functions
-    virtual void update(double dt);
-    virtual void draw();
+    void update(double dt);
+    void draw(const std::shared_ptr<ecs::Camera> camera);
 
     // General functions
     static std::shared_ptr<Node> create(std::string name);
@@ -48,6 +75,7 @@ std::ostream &operator<<(std::ostream &os, const Node &node);
 
 class Scene {
   public:
+    std::weak_ptr<ecs::Camera> activeCamera;
     Scene();
 
     // Call on whole scene graph

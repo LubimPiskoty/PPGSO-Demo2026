@@ -49,3 +49,8 @@
 
 - [ ] Shell texturing for animal fur
 - [ ] Automatic Camera exposure
+
+## Engine side of project
+
+- [ ] Make material class so simplify shaders and textures
+- [ ] Rewrite assimp loader

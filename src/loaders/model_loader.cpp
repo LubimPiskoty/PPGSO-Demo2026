@@ -11,7 +11,7 @@
 
 CMRC_DECLARE(models);
 
-namespace {
+namespace loader {
 
 GLuint createTexture(const unsigned char *pixels, int width, int height) {
     GLuint texture;
@@ -156,8 +156,6 @@ std::string extensionOf(const std::string &filename) {
     return dot == std::string::npos ? "" : filename.substr(dot + 1);
 }
 
-} // namespace
-
 void Mesh::draw() const {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, textureId);
@@ -198,3 +196,4 @@ Model loadModel(const std::string &filename) {
     }
     return model;
 }
+} // namespace loader
