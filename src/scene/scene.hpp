@@ -67,8 +67,7 @@ class Node : public std::enable_shared_from_this<Node> {
     std::string to_string() const;
 
   private:
-    void print_subtree(std::ostream &os, const std::string &prefix, bool isLast,
-                       bool isRoot) const;
+    void print_subtree(std::ostream &os, int depth) const;
 };
 
 std::ostream &operator<<(std::ostream &os, const Node &node);

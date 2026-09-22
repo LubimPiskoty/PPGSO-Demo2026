@@ -67,25 +67,26 @@ glm::mat4 Node::globalTransform() const {
     return transform;
 }
 
-void Node::print_subtree(std::ostream &os, const std::string &prefix,
-                         bool isLast, bool isRoot) const {
-    os << prefix;
-    if (!isRoot)
-        os << (isLast ? "└── " : "├── ");
-    os << name;
+void Node::print_subtree(std::ostream &os, int depth) const {
+    for (int i = 0; i < depth; ++i)
+        os << "  ";
+    os << "- " << name;
     if (!enabled)
         os << " (disabled)";
     const glm::vec3 pos(localTransform[3]);
     os << "  [" << pos.x << ", " << pos.y << ", " << pos.z << "]\n";
 
-    const std::string childPrefix =
-        isRoot ? prefix : prefix + (isLast ? "    " : "│   ");
-    for (size_t i = 0; i < children.size(); ++i)
-        children[i]->print_subtree(os, childPrefix, i + 1 == children.size(),
-                                   false);
+    for (const auto &component : components) {
+        for (int i = 0; i < depth + 1; ++i)
+            os << "  ";
+        os << "* " << component->type_name() << "\n";
+    }
+
+    for (const auto &child : children)
+        child->print_subtree(os, depth + 1);
 }
 
-void Node::print(std::ostream &os) const { print_subtree(os, "", true, true); }
+void Node::print(std::ostream &os) const { print_subtree(os, 0); }
 
 std::string Node::to_string() const {
     std::ostringstream os;

@@ -35,6 +35,7 @@ class Component {
 
     virtual void update(double dt) {}
     virtual ComponentTypeId type_id() const = 0;
+    virtual const char *type_name() const = 0;
 
     // The node this component is attached to.
     // weak_ptr: the node owns the component, not the other way round.
@@ -48,6 +49,8 @@ template <typename Derived> class ComponentBase : public Component {
     ComponentTypeId type_id() const override {
         return component_type_id<Derived>();
     }
+    // type_name() is left for Derived to override with a clean, human-picked
+    // name (e.g. "Camera") instead of a mangled typeid name.
 };
 
 } // namespace ecs

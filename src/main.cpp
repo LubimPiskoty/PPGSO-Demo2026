@@ -10,6 +10,12 @@
 
 #include "glm/gtc/matrix_transform.hpp"
 
+#ifdef WITH_IMGUI
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#endif
+
 int main() {
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
@@ -66,7 +72,17 @@ int main() {
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
+
+#ifdef WITH_IMGUI
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330 core");
+#endif
+
     double time;
+    float range = 1.f;
+    float speed = 0.5f;
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -74,8 +90,6 @@ int main() {
         time = glfwGetTime();
         scene.update(0.16);
 
-        float range = 1.f;
-        float speed = 0.5f;
         camera_node->localTransform = glm::translate(
             glm::mat4(1.f), glm::vec3(glm::cos(time * speed) * range, 0.7f,
                                       glm::sin(time * speed) * range));
@@ -83,9 +97,37 @@ int main() {
 
         scene.draw();
 
+        // if (time - last_print > 1.0) {
+        //     scene.tree->print(std::cout);
+        //     last_print = time;
+        // }
+
+#ifdef WITH_IMGUI
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::Begin("Scene");
+        ImGui::Text("%.1f fps", ImGui::GetIO().Framerate);
+        ImGui::SliderFloat("orbit range", &range, 0.f, 10.f);
+        ImGui::SliderFloat("orbit speed", &speed, 0.f, 5.f);
+        ImGui::Separator();
+        ImGui::TextUnformatted(scene.tree->to_string().c_str());
+        ImGui::End();
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+#endif
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+
+#ifdef WITH_IMGUI
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+#endif
 
     glfwTerminate();
     return 0;

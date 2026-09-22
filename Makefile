@@ -5,7 +5,7 @@ JOBS := $(shell nproc 2>/dev/null || echo $(NUMBER_OF_PROCESSORS))
 JOBS := $(if $(JOBS),$(JOBS),4)
 BUILD_TYPE ?=
 
-.PHONY: run build release clean distclean configure
+.PHONY: run build debug release clean distclean configure
 
 run: build
 	./$(BUILD_DIR)/$(TARGET)
@@ -15,6 +15,9 @@ configure:
 
 build: configure
 	cmake --build $(BUILD_DIR) -j$(JOBS)
+
+debug:
+	$(MAKE) build BUILD_TYPE=Debug
 
 release:
 	$(MAKE) build BUILD_TYPE=Release

@@ -19,6 +19,8 @@ class Mesh : public ecs::ComponentBase<Mesh> {
         this->shader = shader;
     }
 
+    const char *type_name() const override { return "Mesh"; }
+
     void draw(std::shared_ptr<ecs::Camera> camera) {
         glUseProgram(this->shader);
         uTexture("uTexture", 0);

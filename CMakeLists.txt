@@ -58,6 +58,30 @@ set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 FetchContent_MakeAvailable(glfw glm assimp cmrc cjson)
 unset(CMAKE_POLICY_VERSION_MINIMUM)
 
+# Dear ImGui is a debug-only dependency (in-scene overlay/inspector). It has
+# no CMakeLists.txt of its own, so it's fetched as raw source and built into
+# a small static lib by hand, and only in Debug builds - Release never fetches,
+# builds, or links it, and main.cpp's ImGui calls are compiled out via the
+# WITH_IMGUI define (see #ifdef WITH_IMGUI usage there).
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    FetchContent_Declare(imgui
+            GIT_REPOSITORY https://github.com/ocornut/imgui.git
+            GIT_TAG v1.91.5)
+    FetchContent_MakeAvailable(imgui)
+
+    add_library(imgui STATIC
+            ${imgui_SOURCE_DIR}/imgui.cpp
+            ${imgui_SOURCE_DIR}/imgui_draw.cpp
+            ${imgui_SOURCE_DIR}/imgui_tables.cpp
+            ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+            ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+            ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp)
+    target_include_directories(imgui PUBLIC
+            ${imgui_SOURCE_DIR}
+            ${imgui_SOURCE_DIR}/backends)
+    target_link_libraries(imgui PUBLIC glfw OpenGL::GL)
+endif()
+
 # stb_image is a single header with no CMakeLists.txt of its own, so it's
 # just downloaded directly instead of going through FetchContent.
 set(STB_IMAGE_HEADER "${CMAKE_CURRENT_BINARY_DIR}/_stb/stb_image.h")
@@ -113,6 +137,11 @@ target_link_libraries(semestralka PUBLIC
 
 if(OpenMP_CXX_FOUND)
     target_link_libraries(semestralka PUBLIC OpenMP::OpenMP_CXX)
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_definitions(semestralka PUBLIC WITH_IMGUI)
+    target_link_libraries(semestralka PUBLIC imgui)
 endif()
 
 #

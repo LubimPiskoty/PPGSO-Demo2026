@@ -15,6 +15,8 @@ class Camera : public ComponentBase<Camera> {
 
     glm::mat4 projection;
 
+    const char *type_name() const override { return "Camera"; }
+
     // Helper functions
     // Orients (and repositions to `eye`, if given) the owning node so the
     // camera faces `target`. Defined in camera.cpp: needs the full scn::Node
