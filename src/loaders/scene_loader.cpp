@@ -25,14 +25,38 @@ cJSON *serializeRotation(const glm::quat &q) {
     return serializeVec3(glm::eulerAngles(q));
 }
 
+void serializeCameraComponent(cJSON *json,
+                              std::shared_ptr<ecs::Camera> camera) {
+    cJSON_AddNumberToObject(json, "fov", camera->getFov());
+    cJSON_AddNumberToObject(json, "near", camera->getNear());
+    cJSON_AddNumberToObject(json, "far", camera->getFar());
+}
+
+void serializeMeshComponent(cJSON *json, std::shared_ptr<ecs::Mesh> mesh) {
+
+    cJSON_AddStringToObject(json, "model", mesh->get_model_name());
+    cJSON_AddStringToObject(json, "vertex", mesh->get_vertex_name());
+    cJSON_AddStringToObject(json, "fragment", mesh->get_fragment_name());
+}
+
 cJSON *serializeComponent(std::shared_ptr<ecs::Component> component) {
     cJSON *json = cJSON_CreateObject();
-    // Try to parse the type if not implement fallback to simple type_id
+
+    // cJSON_AddNumberToObject(json, "type_id", component->type_id());
+    cJSON_AddStringToObject(json, "type_id", component->type_name());
+    cJSON_AddBoolToObject(json, "enabled", component->enabled);
+    // TODO: Refactor get_component cast to the component too but forget it now
     if (component->type_id() == ecs::component_type_id<ecs::Camera>()) {
+        serializeCameraComponent(
+            json, component->node.lock()->get_component<ecs::Camera>());
         // cJSON_AddObjectToObject(cJSON *const object, const char *const name);
     } else if (component->type_id() == ecs::component_type_id<ecs::Mesh>()) {
-    } else
-        cJSON_AddNumberToObject(json, "type_id", component->type_id());
+
+        serializeMeshComponent(
+            json, component->node.lock()->get_component<ecs::Mesh>());
+    } else {
+        cJSON_AddTrueToObject(json, "missing_serializer");
+    }
     return json;
 }
 

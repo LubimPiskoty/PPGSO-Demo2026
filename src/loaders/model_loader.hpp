@@ -23,6 +23,7 @@ struct Mesh {
 };
 
 struct Model {
+    std::string filename;
     std::vector<Mesh> meshes;
 
     void draw() const;

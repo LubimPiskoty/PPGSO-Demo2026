@@ -20,6 +20,11 @@ class Mesh : public ecs::ComponentBase<Mesh> {
     }
 
     const char *type_name() const override { return "Mesh"; }
+    const char *get_model_name() const {
+        return model.lock()->filename.c_str();
+    }
+    const char *get_vertex_name() const { return "MISSING"; }
+    const char *get_fragment_name() const { return "MISSING"; }
 
     void draw(std::shared_ptr<ecs::Camera> camera) {
         glUseProgram(this->shader);

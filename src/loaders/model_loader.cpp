@@ -193,6 +193,8 @@ Model loadModel(const std::string &filename) {
     for (unsigned int i = 0; i < scene->mNumMeshes; i++) {
         model.meshes.push_back(processMesh(scene, scene->mMeshes[i]));
     }
+
+    model.filename = filename;
     return model;
 }
 } // namespace loader
