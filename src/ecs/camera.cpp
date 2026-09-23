@@ -1,6 +1,7 @@
 #include "camera.hpp"
 
 #include "../scene/scene.hpp"
+#include "ecs.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
 

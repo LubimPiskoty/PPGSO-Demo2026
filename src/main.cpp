@@ -4,8 +4,10 @@
 #include <iostream>
 #include <sys/types.h>
 
+#include "ecs/UserMovement.hpp"
 #include "ecs/camera.hpp"
 #include "ecs/mesh.hpp"
+#include "input/input.hpp"
 #include "loaders/model_loader.hpp"
 #include "loaders/scene_loader.hpp"
 #include "loaders/shader_loader.hpp"
@@ -66,12 +68,16 @@ int main() {
     // Rotate it towards camera
     crate_node->add_component<ecs::Mesh>(crate_model, texture_shader);
 
-    auto camera_node = scn::Node::create("Camera");
+    auto camera_node = scn::Node::create("Camera", glm::vec3(2.f));
     scene.root->add_child(camera_node);
     auto camera = camera_node->add_component<ecs::Camera>(50.f, (float)fbWidth,
                                                           (float)fbHeight);
-    // camera->lookAt(glm::vec3(0.f));
+    camera->lookAt(glm::vec3(0));
+
     scene.activeCamera = camera;
+    auto movement = camera_node->add_component<ecs::UserMovement>(0.2f, 0.1f);
+
+    input::bind(window, movement.get());
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
@@ -84,20 +90,12 @@ int main() {
 #endif
 
     double time;
-    float range = 1.f;
-    float speed = 0.5f;
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         time = glfwGetTime();
         scene.update(0.16);
-
-        camera_node->localPos =
-            glm::vec3(glm::cos(time * speed) * range, 0.7f,
-                      glm::sin(time * speed) * range);
-        camera_node->get_component<ecs::Camera>()->lookAt(glm::vec3(0.f));
-
         scene.draw();
 
         // if (time - last_print > 1.0) {
@@ -112,8 +110,6 @@ int main() {
 
         ImGui::Begin("Scene");
         ImGui::Text("%.1f fps", ImGui::GetIO().Framerate);
-        ImGui::SliderFloat("orbit range", &range, 0.f, 10.f);
-        ImGui::SliderFloat("orbit speed", &speed, 0.f, 5.f);
         ImGui::Separator();
         ImGui::TextUnformatted(scene.root->to_string().c_str());
         ImGui::Separator();

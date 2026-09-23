@@ -72,14 +72,18 @@ void Node::update(double dt) {
         return;
 
     for (auto &component : this->components)
-        component->update(dt);
+        if (component->enabled)
+            component->update(dt);
+
+    for (auto const &child : this->children)
+        child->update(dt);
 }
 void Node::draw(const std::shared_ptr<ecs::Camera> camera) {
     if (!enabled)
         return;
 
     std::weak_ptr<ecs::Mesh> mesh = get_component<ecs::Mesh>();
-    if (!mesh.expired())
+    if (!mesh.expired() && mesh.lock()->enabled)
         mesh.lock()->draw(camera);
 
     for (auto const &child : this->children)

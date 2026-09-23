@@ -30,7 +30,7 @@ class Component {
   public:
     bool enabled;
 
-    Component() = default;
+    Component() { enabled = true; }
     virtual ~Component() = default;
 
     virtual void update(double dt) {}
