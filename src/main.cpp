@@ -61,12 +61,19 @@ int main() {
         loader::createShaderProgram("default.vs", "texture.fs");
     auto crate_model = std::make_shared<loader::Model>(
         loader::loadModel("SM_PROP_crate_02.glb"));
+    auto ground_model =
+        std::make_shared<loader::Model>(loader::loadModel("grass_plane.glb"));
     scn::Scene scene = scn::Scene();
 
     auto crate_node = scn::Node::create("Melon crate");
     scene.root->add_child(crate_node);
-    // Rotate it towards camera
     crate_node->add_component<ecs::Mesh>(crate_model, texture_shader);
+
+    auto ground_node =
+        scn::Node::create("Grass ground", glm::vec3(0.f, -0.2f, 0.f));
+    scene.root->add_child(ground_node);
+    ground_node->add_component<ecs::Mesh>(ground_model, texture_shader);
+    ground_node->localScale = glm::vec3(.7f);
 
     auto camera_node = scn::Node::create("Camera", glm::vec3(2.f));
     scene.root->add_child(camera_node);

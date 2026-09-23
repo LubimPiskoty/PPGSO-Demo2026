@@ -1,0 +1,73 @@
+{
+	"version":	1,
+	"scene":	{
+		"activeCamera":	"6fcc4c15389d6345",
+		"graph":	{
+			"name":	"root",
+			"guid":	"bbfa68a3bb2a1f26",
+			"enabled":	true,
+			"transform":	{
+				"position":	[0, 0, 0],
+				"rotation":	[0, 0, 0],
+				"scale":	[1, 1, 1]
+			},
+			"components":	[],
+			"children":	[{
+					"name":	"Melon crate",
+					"guid":	"6cf7d9044d0e19a2",
+					"enabled":	true,
+					"transform":	{
+						"position":	[0, 0, 0],
+						"rotation":	[0, 0, 0],
+						"scale":	[1, 1, 1]
+					},
+					"components":	[{
+							"type_id":	"Mesh",
+							"enabled":	true,
+							"model":	"SM_PROP_crate_02.glb",
+							"vertex":	"MISSING",
+							"fragment":	"MISSING"
+						}],
+					"children":	[]
+				}, {
+					"name":	"Grass ground",
+					"guid":	"1c16cb37b0002180",
+					"enabled":	true,
+					"transform":	{
+						"position":	[0, -0.20000000298023224, 0],
+						"rotation":	[0, 0, 0],
+						"scale":	[0.699999988079071, 0.699999988079071, 0.699999988079071]
+					},
+					"components":	[{
+							"type_id":	"Mesh",
+							"enabled":	true,
+							"model":	"grass_plane.glb",
+							"vertex":	"MISSING",
+							"fragment":	"MISSING"
+						}],
+					"children":	[]
+				}, {
+					"name":	"Camera",
+					"guid":	"6fcc4c15389d6345",
+					"enabled":	true,
+					"transform":	{
+						"position":	[1.5691561698913574, 0.82461953163146973, 1.0768588781356812],
+						"rotation":	[-0.36069542169570923, 0.99117660522460938, 0],
+						"scale":	[0.99999994039535522, 1.0000001192092896, 1.0000001192092896]
+					},
+					"components":	[{
+							"type_id":	"Camera",
+							"enabled":	true,
+							"fov":	0.87266463041305542,
+							"near":	0.0010000000474974513,
+							"far":	10000
+						}, {
+							"type_id":	"UserMovement",
+							"enabled":	true,
+							"missing_serializer":	true
+						}],
+					"children":	[]
+				}]
+		}
+	}
+}
