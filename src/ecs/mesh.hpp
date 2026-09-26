@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../loaders/model_loader.hpp"
-#include "../loaders/shader_loader.hpp"
+#include "../render/material.hpp"
+#include "../render/model.hpp"
 #include "../scene/scene.hpp"
 #include "camera.hpp"
 #include "ecs.hpp"
@@ -10,29 +10,27 @@
 
 namespace ecs {
 class Mesh : public ecs::ComponentBase<Mesh> {
-    std::weak_ptr<loader::Model> model;
-    GLuint shader;
 
   public:
-    Mesh(const std::weak_ptr<loader::Model> model, GLuint shader) {
-        this->model = model;
-        this->shader = shader;
-    }
+    std::shared_ptr<render::Model> model;
+    std::shared_ptr<render::Material> material;
 
-    const char *type_name() const override { return "Mesh"; }
-    const char *get_model_name() const {
-        return model.lock()->filename.c_str();
+    Mesh(std::shared_ptr<render::Model> model,
+         std::shared_ptr<render::Material> material)
+        : material(material), model(model) {}
+
+    const char *type_name() const override {
+        return "Mesh";
     }
-    const char *get_vertex_name() const { return "MISSING"; }
-    const char *get_fragment_name() const { return "MISSING"; }
 
     void draw(std::shared_ptr<ecs::Camera> camera) {
-        glUseProgram(this->shader);
-        uTexture("uTexture", 0);
-        uMat4("uProjection", camera->projection);
-        uMat4("uView", glm::inverse(camera->node.lock()->globalTransform()));
-        uMat4("uModel", this->node.lock()->globalTransform());
-        this->model.lock()->draw();
+        material->setMat4("uProjection", camera->projection);
+        material->setMat4("uView",
+                          glm::inverse(camera->node.lock()->globalTransform()));
+        material->setMat4("uModel", this->node.lock()->globalTransform());
+        material->bind();
+
+        model->draw();
     };
 };
 } // namespace ecs

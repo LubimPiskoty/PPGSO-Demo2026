@@ -64,30 +64,3 @@ GLuint createShaderProgram(const std::string &vertexPath,
     return program;
 }
 } // namespace loader
-
-static GLint uniLoc(const char *name) {
-    GLint prog = 0;
-    glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
-    return glGetUniformLocation(prog, name);
-}
-
-void uInt(const char *name, int v) { glUniform1i(uniLoc(name), v); }
-void uFloat(const char *name, float v) { glUniform1f(uniLoc(name), v); }
-void uDouble(const char *name, double v) { glUniform1d(uniLoc(name), v); }
-void uVec2(const char *name, const glm::vec2 &v) {
-    glUniform2fv(uniLoc(name), 1, glm::value_ptr(v));
-}
-void uVec3(const char *name, const glm::vec3 &v) {
-    glUniform3fv(uniLoc(name), 1, glm::value_ptr(v));
-}
-void uVec4(const char *name, const glm::vec4 &v) {
-    glUniform4fv(uniLoc(name), 1, glm::value_ptr(v));
-}
-void uMat4(const char *name, const glm::mat4 &v) {
-    glUniformMatrix4fv(uniLoc(name), 1, GL_FALSE, glm::value_ptr(v));
-}
-void uTexture(const char *name, GLuint tex, int unit, GLenum target) {
-    glActiveTexture(GL_TEXTURE0 + unit);
-    glBindTexture(target, tex);
-    glUniform1i(uniLoc(name), unit);
-}

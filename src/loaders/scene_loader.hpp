@@ -4,9 +4,11 @@
 #include <string>
 
 namespace loader {
-// Maybe change the scene to live on heap but idk most of data is on heap so it
-// should be okay
+
+// V2: materials are written once in a top-level "materials" list and mesh
+// components reference them by name + guid
 void saveScene(const scn::Scene *scene, const std::string path);
+
 scn::Scene loadScene(std::string path);
 
 } // namespace loader

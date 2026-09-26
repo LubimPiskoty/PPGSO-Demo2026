@@ -11,6 +11,7 @@
 #include "loaders/model_loader.hpp"
 #include "loaders/scene_loader.hpp"
 #include "loaders/shader_loader.hpp"
+#include "render/material.hpp"
 #include "scene/scene.hpp"
 
 #include "glm/gtc/matrix_transform.hpp"
@@ -58,21 +59,24 @@ int main() {
     glViewport(0, 0, fbWidth, fbHeight);
 
     auto texture_shader =
-        loader::createShaderProgram("default.vs", "texture.fs");
-    auto crate_model = std::make_shared<loader::Model>(
+        std::make_shared<render::Shader>("default.vs", "texture.fs");
+    // Both models carry their own albedo texture, so one material is enough
+    auto textured_material =
+        std::make_shared<render::Material>("Textured", texture_shader);
+    auto crate_model = std::make_shared<render::Model>(
         loader::loadModel("SM_PROP_crate_02.glb"));
     auto ground_model =
-        std::make_shared<loader::Model>(loader::loadModel("grass_plane.glb"));
+        std::make_shared<render::Model>(loader::loadModel("grass_plane.glb"));
     scn::Scene scene = scn::Scene();
 
     auto crate_node = scn::Node::create("Melon crate");
     scene.root->add_child(crate_node);
-    crate_node->add_component<ecs::Mesh>(crate_model, texture_shader);
+    crate_node->add_component<ecs::Mesh>(crate_model, textured_material);
 
     auto ground_node =
         scn::Node::create("Grass ground", glm::vec3(0.f, -0.2f, 0.f));
     scene.root->add_child(ground_node);
-    ground_node->add_component<ecs::Mesh>(ground_model, texture_shader);
+    ground_node->add_component<ecs::Mesh>(ground_model, textured_material);
     ground_node->localScale = glm::vec3(.7f);
 
     auto camera_node = scn::Node::create("Camera", glm::vec3(2.f));

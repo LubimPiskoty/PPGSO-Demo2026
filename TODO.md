@@ -4,7 +4,7 @@
 
 - [ ] 3D objects [9b]
   - [ ] (2b) Objects as unique 3D polygonal models
-  - [ ] (2b) Unique texture mapping via UV coordinates on a 3D object
+  - [x] (2b) Unique texture mapping via UV coordinates on a 3D object
   - [ ] (2b) Efficient instancing: render at least 5000 instances using OpenGL instancing
   - [ ] (2b) Transparent objects, correctly blended together with opaque objects in one scene (e.g. sort transparent objects and draw farthest-to-nearest)
   - [ ] (1b) Object using a bump texture (normal mapping)

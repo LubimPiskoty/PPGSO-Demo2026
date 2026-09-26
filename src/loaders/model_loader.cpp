@@ -13,6 +13,10 @@ CMRC_DECLARE(models);
 
 namespace loader {
 
+using render::Mesh;
+using render::Model;
+using render::Vertex;
+
 GLuint createTexture(const unsigned char *pixels, int width, int height) {
     GLuint texture;
     glGenTextures(1, &texture);
@@ -153,20 +157,6 @@ Mesh processMesh(const aiScene *scene, const aiMesh *mesh) {
 std::string extensionOf(const std::string &filename) {
     auto dot = filename.find_last_of('.');
     return dot == std::string::npos ? "" : filename.substr(dot + 1);
-}
-
-void Mesh::draw() const {
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, textureId);
-    glBindVertexArray(vao);
-    glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, nullptr);
-    glBindVertexArray(0);
-}
-
-void Model::draw() const {
-    for (const auto &mesh : meshes) {
-        mesh.draw();
-    }
 }
 
 Model loadModel(const std::string &filename) {
