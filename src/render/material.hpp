@@ -32,9 +32,22 @@ struct Shader {
     std::string fragmentPath;
 
     Shader(std::string vertexPath, std::string fragmentPath)
-        : vertexPath(vertexPath), fragmentPath(fragmentPath) {
+        : Shader(vertexPath, fragmentPath, false) {
         program = loader::createShaderProgram(vertexPath, fragmentPath);
     }
+
+    Shader(std::string vertexPath, std::string fragmentPath, bool instanced)
+        : vertexPath(vertexPath), fragmentPath(fragmentPath),
+          instanced(instanced) {
+        program = loader::createShaderProgram(vertexPath, fragmentPath);
+    }
+
+    bool isInstanced() {
+        return instanced;
+    }
+
+  private:
+    bool instanced = false;
 };
 
 struct Texture {

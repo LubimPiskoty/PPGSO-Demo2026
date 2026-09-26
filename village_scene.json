@@ -1,0 +1,7561 @@
+{
+	"version": 2,
+	"scene": {
+		"activeCamera": "f9f38a23d2bec37a",
+		"graph": {
+			"name": "root",
+			"guid": "670a0a514656071d",
+			"enabled": true,
+			"transform": {
+				"position": [
+					0,
+					0,
+					0
+				],
+				"rotation": [
+					0,
+					0,
+					0
+				],
+				"scale": [
+					1,
+					1,
+					1
+				]
+			},
+			"components": [],
+			"children": [
+				{
+					"name": "Grass ground",
+					"guid": "90dccd7d6b7f3750",
+					"enabled": true,
+					"transform": {
+						"position": [
+							0,
+							-0.2,
+							-5
+						],
+						"rotation": [
+							0,
+							0,
+							0
+						],
+						"scale": [
+							14,
+							1,
+							14
+						]
+					},
+					"components": [
+						{
+							"type_id": "Mesh",
+							"enabled": true,
+							"model": "grass_plane.glb",
+							"material": {
+								"name": "Textured",
+								"guid": "07fb5de87aeca419"
+							}
+						}
+					],
+					"children": []
+				},
+				{
+					"name": "Camera",
+					"guid": "f9f38a23d2bec37a",
+					"enabled": true,
+					"transform": {
+						"position": [
+							0,
+							12,
+							75
+						],
+						"rotation": [
+							-0.2,
+							0,
+							0
+						],
+						"scale": [
+							1,
+							1,
+							1
+						]
+					},
+					"components": [
+						{
+							"type_id": "Camera",
+							"enabled": true,
+							"fov": 0.8726646304130554,
+							"near": 0.0010000000474974513,
+							"far": 10000
+						},
+						{
+							"type_id": "UserMovement",
+							"enabled": true,
+							"missing_serializer": true
+						}
+					],
+					"children": []
+				},
+				{
+					"name": "Village",
+					"guid": "d587ebb9b179301c",
+					"enabled": true,
+					"transform": {
+						"position": [
+							0.0,
+							0.0,
+							-0.0
+						],
+						"rotation": [
+							0,
+							0.0,
+							0
+						],
+						"scale": [
+							1.0,
+							1.0,
+							1.0
+						]
+					},
+					"components": [],
+					"children": [
+						{
+							"name": "Palisade",
+							"guid": "341f8686d50966c0",
+							"enabled": true,
+							"transform": {
+								"position": [
+									0.0,
+									0.0,
+									-0.0
+								],
+								"rotation": [
+									0,
+									0.0,
+									0
+								],
+								"scale": [
+									1.0,
+									1.0,
+									1.0
+								]
+							},
+							"components": [],
+							"children": [
+								{
+									"name": "South wall",
+									"guid": "c0e7c4e3b1a6018e",
+									"enabled": true,
+									"transform": {
+										"position": [
+											0.0,
+											0.0,
+											-0.0
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "South wall segment 1",
+											"guid": "2a7bd3797589c29b",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-24.0,
+													0.0,
+													27.0
+												],
+												"rotation": [
+													0,
+													-1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "South wall segment 2",
+											"guid": "8bf8c4851a58cddc",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-18.0,
+													0.0,
+													27.0
+												],
+												"rotation": [
+													0,
+													-1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "South wall segment 3",
+											"guid": "bc9e74381ced41fa",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-12.0,
+													0.0,
+													27.0
+												],
+												"rotation": [
+													0,
+													-1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "South wall segment 4",
+											"guid": "f9954db9c1c1b5cf",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-6.0,
+													0.0,
+													27.0
+												],
+												"rotation": [
+													0,
+													-1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "South wall segment 6",
+											"guid": "814eec71424993a9",
+											"enabled": true,
+											"transform": {
+												"position": [
+													6.0,
+													0.0,
+													27.0
+												],
+												"rotation": [
+													0,
+													-1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "South wall segment 7",
+											"guid": "7fbe6109247148ed",
+											"enabled": true,
+											"transform": {
+												"position": [
+													12.0,
+													0.0,
+													27.0
+												],
+												"rotation": [
+													0,
+													-1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "South wall segment 8",
+											"guid": "ab81c796ce4fa73e",
+											"enabled": true,
+											"transform": {
+												"position": [
+													18.0,
+													0.0,
+													27.0
+												],
+												"rotation": [
+													0,
+													-1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "South wall segment 9",
+											"guid": "1520bad710495e9c",
+											"enabled": true,
+											"transform": {
+												"position": [
+													24.0,
+													0.0,
+													27.0
+												],
+												"rotation": [
+													0,
+													-1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "North wall",
+									"guid": "7d0554b106e3e760",
+									"enabled": true,
+									"transform": {
+										"position": [
+											0.0,
+											0.0,
+											-0.0
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "North wall segment 1",
+											"guid": "e586901a2a374d56",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-24.0,
+													0.0,
+													-27.0
+												],
+												"rotation": [
+													0,
+													1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "North wall segment 2",
+											"guid": "5220fcd416cb4594",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-18.0,
+													0.0,
+													-27.0
+												],
+												"rotation": [
+													0,
+													1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "North wall segment 3",
+											"guid": "dfa399a6190371d3",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-12.0,
+													0.0,
+													-27.0
+												],
+												"rotation": [
+													0,
+													1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "North wall segment 4",
+											"guid": "28cc93fdfdaed8d1",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-6.0,
+													0.0,
+													-27.0
+												],
+												"rotation": [
+													0,
+													1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "North wall segment 5",
+											"guid": "f0ca821a5fe7f405",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-27.0
+												],
+												"rotation": [
+													0,
+													1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "North wall segment 6",
+											"guid": "855a5a7e7bd622f5",
+											"enabled": true,
+											"transform": {
+												"position": [
+													6.0,
+													0.0,
+													-27.0
+												],
+												"rotation": [
+													0,
+													1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "North wall segment 8",
+											"guid": "a3803c4c1765f4c1",
+											"enabled": true,
+											"transform": {
+												"position": [
+													18.0,
+													0.0,
+													-27.0
+												],
+												"rotation": [
+													0,
+													1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "North wall segment 9",
+											"guid": "03c9881146231386",
+											"enabled": true,
+											"transform": {
+												"position": [
+													24.0,
+													0.0,
+													-27.0
+												],
+												"rotation": [
+													0,
+													1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "West wall",
+									"guid": "3f3c1ca405901022",
+									"enabled": true,
+									"transform": {
+										"position": [
+											0.0,
+											0.0,
+											-0.0
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "West wall segment 1",
+											"guid": "aa212bcbc71cd860",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-27.0,
+													0.0,
+													24.0
+												],
+												"rotation": [
+													0,
+													-3.141593,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "West wall segment 2",
+											"guid": "5eb611928fc1c25e",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-27.0,
+													0.0,
+													18.0
+												],
+												"rotation": [
+													0,
+													-3.141593,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "West wall segment 3",
+											"guid": "1f3c384c71515ec9",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-27.0,
+													0.0,
+													12.0
+												],
+												"rotation": [
+													0,
+													-3.141593,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "West wall segment 4",
+											"guid": "601efde7e9d0453c",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-27.0,
+													0.0,
+													6.0
+												],
+												"rotation": [
+													0,
+													-3.141593,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "West wall segment 5",
+											"guid": "5edca87d7ff9d46f",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-27.0,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													-3.141593,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "West wall segment 6",
+											"guid": "d51ade1b48af242d",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-27.0,
+													0.0,
+													-6.0
+												],
+												"rotation": [
+													0,
+													-3.141593,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "West wall segment 7",
+											"guid": "0a52d88b7c49a93b",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-27.0,
+													0.0,
+													-12.0
+												],
+												"rotation": [
+													0,
+													-3.141593,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "West wall segment 8",
+											"guid": "a8a05b9d5c8d2d8e",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-27.0,
+													0.0,
+													-18.0
+												],
+												"rotation": [
+													0,
+													-3.141593,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "West wall segment 9",
+											"guid": "05069b6180b168ec",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-27.0,
+													0.0,
+													-24.0
+												],
+												"rotation": [
+													0,
+													-3.141593,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "East wall",
+									"guid": "d859e454510c7bc4",
+									"enabled": true,
+									"transform": {
+										"position": [
+											0.0,
+											0.0,
+											-0.0
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "East wall segment 1",
+											"guid": "e1b480be18ca44eb",
+											"enabled": true,
+											"transform": {
+												"position": [
+													27.0,
+													0.0,
+													24.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "East wall segment 2",
+											"guid": "f0f15408b1d4c095",
+											"enabled": true,
+											"transform": {
+												"position": [
+													27.0,
+													0.0,
+													18.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "East wall segment 3",
+											"guid": "430ce07dbda2a7e7",
+											"enabled": true,
+											"transform": {
+												"position": [
+													27.0,
+													0.0,
+													12.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "East wall segment 4",
+											"guid": "6de31b17af29af99",
+											"enabled": true,
+											"transform": {
+												"position": [
+													27.0,
+													0.0,
+													6.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "East wall segment 5",
+											"guid": "8fd9c42a212216e1",
+											"enabled": true,
+											"transform": {
+												"position": [
+													27.0,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "East wall segment 6",
+											"guid": "279764187b3a88a3",
+											"enabled": true,
+											"transform": {
+												"position": [
+													27.0,
+													0.0,
+													-6.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "East wall segment 7",
+											"guid": "387eb13cecb1a20d",
+											"enabled": true,
+											"transform": {
+												"position": [
+													27.0,
+													0.0,
+													-12.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "East wall segment 8",
+											"guid": "7ba9c0ed28f5b0e3",
+											"enabled": true,
+											"transform": {
+												"position": [
+													27.0,
+													0.0,
+													-18.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "East wall segment 9",
+											"guid": "bbccc77491fb8b2f",
+											"enabled": true,
+											"transform": {
+												"position": [
+													27.0,
+													0.0,
+													-24.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "Main gate",
+									"guid": "5d1729b03d15cfbe",
+									"enabled": true,
+									"transform": {
+										"position": [
+											0.0,
+											0.0,
+											27.0
+										],
+										"rotation": [
+											0,
+											-1.570796,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "Main gate frame",
+											"guid": "2cec533845012cd3",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood_gate_frame_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Main gate door L",
+											"guid": "b76a39962721d5c7",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.1,
+													0.0,
+													2.1
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood_gate_door_L_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Main gate door R",
+											"guid": "417a4e66d2e65baf",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.1,
+													0.0,
+													-2.1
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood_gate_door_R_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "Back gate",
+									"guid": "110722a5913c9955",
+									"enabled": true,
+									"transform": {
+										"position": [
+											12.0,
+											0.0,
+											-27.0
+										],
+										"rotation": [
+											0,
+											1.570796,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "Back gate frame",
+											"guid": "ce97f932b8de3973",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_wall_wood_gate_frame_02.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "Watchtowers",
+									"guid": "36c5c1e9834cd763",
+									"enabled": true,
+									"transform": {
+										"position": [
+											0.0,
+											0.0,
+											-0.0
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "Watchtower SW",
+											"guid": "b9a75abc9d4ef9e3",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-25.5,
+													0.0,
+													25.5
+												],
+												"rotation": [
+													0,
+													-2.356195,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_watchtower_wood_02.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Watchtower SE",
+											"guid": "652df490178a8c16",
+											"enabled": true,
+											"transform": {
+												"position": [
+													25.5,
+													0.0,
+													25.5
+												],
+												"rotation": [
+													0,
+													2.356194,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_watchtower_wood_02.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Watchtower NW",
+											"guid": "1619c77b626e6778",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-25.8,
+													0.0,
+													-25.8
+												],
+												"rotation": [
+													0,
+													-0.785398,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_watchtower_wood_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Watchtower NE",
+											"guid": "5e987fdeb8c90919",
+											"enabled": true,
+											"transform": {
+												"position": [
+													25.8,
+													0.0,
+													-25.8
+												],
+												"rotation": [
+													0,
+													0.785398,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_watchtower_wood_02_small.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "Gate dressing",
+									"guid": "d6f1411f202862aa",
+									"enabled": true,
+									"transform": {
+										"position": [
+											0.0,
+											0.0,
+											27.0
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "Gate banner L",
+											"guid": "b07f22ef2d1e1a30",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-4.6,
+													0.0,
+													1.6
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_flag_05.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Gate banner R",
+											"guid": "862780b1b4c0d304",
+											"enabled": true,
+											"transform": {
+												"position": [
+													4.6,
+													0.0,
+													1.6
+												],
+												"rotation": [
+													0,
+													-3.141593,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_flag_06.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Gate torch L",
+											"guid": "dc356fda58191b33",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-3.8,
+													0.0,
+													3.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_brazier_05.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Gate torch R",
+											"guid": "a915a6ec355e6924",
+											"enabled": true,
+											"transform": {
+												"position": [
+													3.8,
+													0.0,
+													3.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_brazier_05.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Spikes L",
+											"guid": "aa62be6317e3ebaa",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-10.0,
+													0.0,
+													5.5
+												],
+												"rotation": [
+													0,
+													0.087266,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_spikes_v02_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Spikes R",
+											"guid": "b8f26d507883efea",
+											"enabled": true,
+											"transform": {
+												"position": [
+													10.0,
+													0.0,
+													5.5
+												],
+												"rotation": [
+													0,
+													-0.087266,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_spikes_v02_02.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "Ground cover",
+							"guid": "d56b4fd1bcd1be11",
+							"enabled": true,
+							"transform": {
+								"position": [
+									0.0,
+									0.0,
+									-0.0
+								],
+								"rotation": [
+									0,
+									0.0,
+									0
+								],
+								"scale": [
+									1.0,
+									1.0,
+									1.0
+								]
+							},
+							"components": [],
+							"children": [
+								{
+									"name": "Town square paving",
+									"guid": "abfeda9981268c9e",
+									"enabled": true,
+									"transform": {
+										"position": [
+											0.0,
+											0.0,
+											-2.0
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											18.0,
+											0.05,
+											18.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "PLACEHOLDER_cobblestone_plaza.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Road gate-square",
+									"guid": "9440e53bfa75be81",
+									"enabled": true,
+									"transform": {
+										"position": [
+											0.0,
+											0.0,
+											18.5
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											4.5,
+											0.04,
+											23.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "PLACEHOLDER_dirt_road.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Road square-back gate",
+									"guid": "44566e94d3f1e07e",
+									"enabled": true,
+									"transform": {
+										"position": [
+											12.0,
+											0.0,
+											-18.5
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											4.0,
+											0.04,
+											17.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "PLACEHOLDER_dirt_road.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Road outside gate",
+									"guid": "1b2f3fc4d0673089",
+									"enabled": true,
+									"transform": {
+										"position": [
+											0.0,
+											0.0,
+											40.0
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											4.0,
+											0.04,
+											26.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "PLACEHOLDER_dirt_road.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Road to windmill",
+									"guid": "617a3dd24f236b40",
+									"enabled": true,
+									"transform": {
+										"position": [
+											12.0,
+											0.0,
+											-33.0
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											3.5,
+											0.04,
+											12.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "PLACEHOLDER_dirt_road.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								}
+							]
+						},
+						{
+							"name": "Town square",
+							"guid": "ee340a8c8f7aaa29",
+							"enabled": true,
+							"transform": {
+								"position": [
+									0.0,
+									0.0,
+									-2.0
+								],
+								"rotation": [
+									0,
+									0.0,
+									0
+								],
+								"scale": [
+									1.0,
+									1.0,
+									1.0
+								]
+							},
+							"components": [],
+							"children": [
+								{
+									"name": "Well",
+									"guid": "da63832cf09bb95c",
+									"enabled": true,
+									"transform": {
+										"position": [
+											0.0,
+											0.0,
+											-0.0
+										],
+										"rotation": [
+											0,
+											0.349066,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "Well.001",
+											"guid": "79e14537f0424deb",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_well.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Well crank",
+											"guid": "fd32c929eef47c01",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													2.0,
+													-1.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_well_handle.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Well bucket",
+											"guid": "39a4e6e75e57e6e0",
+											"enabled": true,
+											"transform": {
+												"position": [
+													1.3,
+													0.0,
+													1.2
+												],
+												"rotation": [
+													0,
+													0.523599,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_bucket_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "Square bench 1",
+									"guid": "c17faab459868c30",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-5.0,
+											0.0,
+											5.2
+										],
+										"rotation": [
+											0,
+											0.785398,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_bench_02.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Square bench 2",
+									"guid": "9444e20daf14973a",
+									"enabled": true,
+									"transform": {
+										"position": [
+											5.0,
+											0.0,
+											5.2
+										],
+										"rotation": [
+											0,
+											-0.785398,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_bench_02.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Square bench 3",
+									"guid": "ca7d31287fcc8537",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-5.5,
+											0.0,
+											-5.0
+										],
+										"rotation": [
+											0,
+											2.356194,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_bench_02.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Square bench 4",
+									"guid": "c33f0b7e7ed22f42",
+									"enabled": true,
+									"transform": {
+										"position": [
+											5.5,
+											0.0,
+											-5.0
+										],
+										"rotation": [
+											0,
+											-2.356194,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_bench_02.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Square lamp 1",
+									"guid": "c7c64e4f3fe1a777",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-8.4,
+											0.0,
+											8.4
+										],
+										"rotation": [
+											0,
+											-2.356194,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_streetlamp_v02_01.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Square lamp 2",
+									"guid": "ce9066d4909531df",
+									"enabled": true,
+									"transform": {
+										"position": [
+											8.4,
+											0.0,
+											8.4
+										],
+										"rotation": [
+											0,
+											2.356194,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_streetlamp_v02_01.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Square lamp 3",
+									"guid": "c1abb7e8cb07e9d9",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-8.4,
+											0.0,
+											-8.4
+										],
+										"rotation": [
+											0,
+											-0.785398,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_streetlamp_v02_01.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Square lamp 4",
+									"guid": "aa520c5fd5b806a9",
+									"enabled": true,
+									"transform": {
+										"position": [
+											8.4,
+											0.0,
+											-8.4
+										],
+										"rotation": [
+											0,
+											0.785398,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_streetlamp_v02_01.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Square signpost",
+									"guid": "5a59d7960893d499",
+									"enabled": true,
+									"transform": {
+										"position": [
+											2.8,
+											0.0,
+											8.8
+										],
+										"rotation": [
+											0,
+											0.349066,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_signpost_01.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Notice board",
+									"guid": "3051bae43d2a978c",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-3.3,
+											0.0,
+											8.9
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_board_01.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Square flower bed",
+									"guid": "11aba893d428db2c",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-4.8,
+											0.0,
+											-1.2
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "PLACEHOLDER_flower_bed.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								}
+							]
+						},
+						{
+							"name": "Market",
+							"guid": "c79b1889ed45a35a",
+							"enabled": true,
+							"transform": {
+								"position": [
+									10.2,
+									0.0,
+									-2.0
+								],
+								"rotation": [
+									0,
+									1.570796,
+									0
+								],
+								"scale": [
+									1.0,
+									1.0,
+									1.0
+								]
+							},
+							"components": [],
+							"children": [
+								{
+									"name": "Fruit stall",
+									"guid": "c184ec997b800301",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-5.2,
+											0.0,
+											-0.0
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "Fruit stall stand",
+											"guid": "a08e869e04e89d55",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_market_v01_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Fruit stall goods 1",
+											"guid": "213dc7d9dac115c1",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-0.8,
+													0.95,
+													-0.1
+												],
+												"rotation": [
+													0,
+													1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_crate_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Fruit stall goods 2",
+											"guid": "9513ed0c8fd34b8a",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.8,
+													0.95,
+													-0.1
+												],
+												"rotation": [
+													0,
+													1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_crate_02.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Fruit stall sack",
+											"guid": "26035df965707b36",
+											"enabled": true,
+											"transform": {
+												"position": [
+													1.7,
+													0.0,
+													-2.3
+												],
+												"rotation": [
+													0,
+													0.523599,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_sack_04.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "Veggie stall",
+									"guid": "0d17ba29e907d0ef",
+									"enabled": true,
+									"transform": {
+										"position": [
+											0.0,
+											0.0,
+											-0.0
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "Veggie stall stand",
+											"guid": "74c0a152d71f0f6e",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_market_v03_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Veggie stall goods 1",
+											"guid": "bed956abd3bd1167",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-0.8,
+													0.95,
+													-0.1
+												],
+												"rotation": [
+													0,
+													1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_crate_03.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Veggie stall goods 2",
+											"guid": "8113609a8fe928a9",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.8,
+													0.95,
+													-0.1
+												],
+												"rotation": [
+													0,
+													1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_crate_04.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Veggie stall sack",
+											"guid": "ab905f69179edc67",
+											"enabled": true,
+											"transform": {
+												"position": [
+													1.7,
+													0.0,
+													-2.3
+												],
+												"rotation": [
+													0,
+													0.523599,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_sack_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "Bakery stall",
+									"guid": "cb2438a211b1c4a6",
+									"enabled": true,
+									"transform": {
+										"position": [
+											5.2,
+											0.0,
+											-0.0
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "Bakery stall stand",
+											"guid": "fda115c4f96dd75e",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_market_v02_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Bakery stall goods 1",
+											"guid": "1a018300f8121240",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-0.8,
+													0.95,
+													-0.1
+												],
+												"rotation": [
+													0,
+													1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_crate_05.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Bakery stall goods 2",
+											"guid": "058a174c383e0fd5",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.8,
+													0.95,
+													-0.1
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_basket_02.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Bakery stall sack",
+											"guid": "f984be31c4e155a6",
+											"enabled": true,
+											"transform": {
+												"position": [
+													1.7,
+													0.0,
+													-2.3
+												],
+												"rotation": [
+													0,
+													0.523599,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_sack_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "Market barrel 1",
+									"guid": "a3ad11edb519e22f",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-8.0,
+											0.0,
+											-1.5
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_barrel_01.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Market barrel 2",
+									"guid": "5337b015045f2bc0",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-8.1,
+											0.0,
+											-2.4
+										],
+										"rotation": [
+											0,
+											0.698132,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_barrel_02.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Market box 1",
+									"guid": "9b70142f22bfe988",
+									"enabled": true,
+									"transform": {
+										"position": [
+											8.0,
+											0.0,
+											-2.0
+										],
+										"rotation": [
+											0,
+											0.261799,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_box_01.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Market box 2",
+									"guid": "2546f62082ff5013",
+									"enabled": true,
+									"transform": {
+										"position": [
+											8.0,
+											0.97,
+											-2.0
+										],
+										"rotation": [
+											0,
+											0.872665,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_box_02.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Market hay",
+									"guid": "a2d2f5b3b574bf4a",
+									"enabled": true,
+									"transform": {
+										"position": [
+											7.8,
+											0.0,
+											1.0
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_hay_05.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								}
+							]
+						},
+						{
+							"name": "Houses",
+							"guid": "6639bdc4532d1e45",
+							"enabled": true,
+							"transform": {
+								"position": [
+									0.0,
+									0.0,
+									-0.0
+								],
+								"rotation": [
+									0,
+									0.0,
+									0
+								],
+								"scale": [
+									1.0,
+									1.0,
+									1.0
+								]
+							},
+							"components": [],
+							"children": [
+								{
+									"name": "Tavern",
+									"guid": "e7df837835ff5477",
+									"enabled": true,
+									"transform": {
+										"position": [
+											0.0,
+											0.0,
+											-17.8
+										],
+										"rotation": [
+											0,
+											-3.141593,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "Tavern body",
+											"guid": "f5170c29a0b40aa2",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_body_v07_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Tavern door",
+											"guid": "b5e0c8fa8f16ad91",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-5.3952
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_door_v01_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Tavern window 1",
+											"guid": "16bb6677d6705e56",
+											"enabled": true,
+											"transform": {
+												"position": [
+													4.0,
+													1.3,
+													-2.3917
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_window_v04_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Tavern window 2",
+											"guid": "7efffc3223392697",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-4.0,
+													1.3,
+													-2.3917
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_window_v05_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Tavern window 3",
+											"guid": "6681eb16ad6c523e",
+											"enabled": true,
+											"transform": {
+												"position": [
+													5.4065,
+													2.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													-1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_window_v09_02.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Tavern window 4",
+											"guid": "12c8bc05514436fc",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-5.4065,
+													2.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_window_v09_02.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Tavern chimney",
+											"guid": "a11f24ae26ea124b",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-3.5,
+													3.9177,
+													3.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_chimney_v02_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "Tavern terrace",
+									"guid": "cf128e542861b6f1",
+									"enabled": true,
+									"transform": {
+										"position": [
+											0.0,
+											0.0,
+											-17.8
+										],
+										"rotation": [
+											0,
+											-3.141593,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "Tavern sign",
+											"guid": "1cf24266bad3369f",
+											"enabled": true,
+											"transform": {
+												"position": [
+													5.2,
+													0.0,
+													-7.1
+												],
+												"rotation": [
+													0,
+													1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_sign_02.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Terrace table 1",
+											"guid": "867626c160536ab6",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-4.2,
+													0.0,
+													-9.2
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_table_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Terrace bench 1a",
+											"guid": "b6f1e3e1754c6042",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-4.2,
+													0.0,
+													-8.3
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_bench_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Terrace bench 1b",
+											"guid": "74f0eb8e52ba70e5",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-4.2,
+													0.0,
+													-10.1
+												],
+												"rotation": [
+													0,
+													-3.141593,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_bench_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Terrace table 2",
+											"guid": "c9e256097cae7116",
+											"enabled": true,
+											"transform": {
+												"position": [
+													4.0,
+													0.0,
+													-9.4
+												],
+												"rotation": [
+													0,
+													0.349066,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_table_03.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Terrace chair 2a",
+											"guid": "01919abf240d7092",
+											"enabled": true,
+											"transform": {
+												"position": [
+													4.9,
+													0.0,
+													-9.9
+												],
+												"rotation": [
+													0,
+													1.919862,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_chair_02.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Terrace chair 2b",
+											"guid": "5c7b01d8ecd16c5a",
+											"enabled": true,
+											"transform": {
+												"position": [
+													3.1,
+													0.0,
+													-9.0
+												],
+												"rotation": [
+													0,
+													-1.22173,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_chair_03.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Tavern keg 1",
+											"guid": "0b5b397d912f5625",
+											"enabled": true,
+											"transform": {
+												"position": [
+													7.4,
+													0.0,
+													-3.5
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_barrel_06.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Tavern keg 2",
+											"guid": "cc8a0541541e603e",
+											"enabled": true,
+											"transform": {
+												"position": [
+													7.3,
+													0.0,
+													-5.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_barrel_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Tavern keg 3",
+											"guid": "94a70052b9a037ad",
+											"enabled": true,
+											"transform": {
+												"position": [
+													7.9,
+													0.0,
+													-4.3
+												],
+												"rotation": [
+													0,
+													1.047198,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_barrel_03.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "House west 1",
+									"guid": "890545ee654fd338",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-17.5,
+											0.0,
+											-4.0
+										],
+										"rotation": [
+											0,
+											-1.570796,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "House west 1 body",
+											"guid": "1b67deb4a4e654c5",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_body_v02_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "House west 1 door",
+											"guid": "dadc61f3c77cff53",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-1.2,
+													0.0,
+													-2.5289
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_door_v03_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "House west 1 window 1",
+											"guid": "db751e80d56f4798",
+											"enabled": true,
+											"transform": {
+												"position": [
+													1.8,
+													2.0,
+													-2.7023
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_window_v01_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "House west 1 window 2",
+											"guid": "613111243717586b",
+											"enabled": true,
+											"transform": {
+												"position": [
+													2.3653,
+													4.6,
+													-0.0
+												],
+												"rotation": [
+													0,
+													-1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_window_v08_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "House west 1 chimney",
+											"guid": "0aaf6125f3ad9868",
+											"enabled": true,
+											"transform": {
+												"position": [
+													1.8,
+													4.7836,
+													1.5
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_chimney_v01_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "House west 2",
+									"guid": "f360f65e890f5d86",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-17.5,
+											0.0,
+											8.0
+										],
+										"rotation": [
+											0,
+											-1.570796,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "House west 2 body",
+											"guid": "e4bd18ff279601dd",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_body_v03_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "House west 2 door",
+											"guid": "c9fb1f8bd7c29eb5",
+											"enabled": true,
+											"transform": {
+												"position": [
+													1.0,
+													0.0,
+													-2.5204
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_door_v02_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "House west 2 window 1",
+											"guid": "9f15d8a62316f5a7",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-1.8,
+													2.0,
+													-2.5602
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_window_v02_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "House west 2 window 2",
+											"guid": "e36d60570bda9cba",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-2.6915,
+													4.3,
+													-0.0
+												],
+												"rotation": [
+													0,
+													1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_window_v07_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "House west 2 chimney",
+											"guid": "812aae9f47ec96ba",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-1.5,
+													5.2827,
+													-1.8
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_chimney_v01_02.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "House northwest",
+									"guid": "e98ddd956460b465",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-17.0,
+											0.0,
+											-18.5
+										],
+										"rotation": [
+											0,
+											-1.570796,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "House northwest body",
+											"guid": "c683575826f1c7bc",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_body_v06_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "House northwest door",
+											"guid": "2bcbbb308575b26d",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-1.5,
+													0.0,
+													-2.4022
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_door_v04_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "House northwest window 1",
+											"guid": "f8adf67bf6d503ce",
+											"enabled": true,
+											"transform": {
+												"position": [
+													1.2,
+													1.4,
+													-2.4002
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_window_v03_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "House northwest window 2",
+											"guid": "f082a8c2cc1f1f6b",
+											"enabled": true,
+											"transform": {
+												"position": [
+													5.743,
+													5.2,
+													2.0
+												],
+												"rotation": [
+													0,
+													-1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_window_v06_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "House northwest chimney",
+											"guid": "e74424636e6a6a40",
+											"enabled": true,
+											"transform": {
+												"position": [
+													3.8,
+													2.3524,
+													3.8
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_chimney_v01_03.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "House gate west",
+									"guid": "95bf68a68b7a4801",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-15.0,
+											0.0,
+											18.5
+										],
+										"rotation": [
+											0,
+											-1.570796,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "House gate west body",
+											"guid": "5df2da27d815fb86",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_body_v05_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "House gate west door",
+											"guid": "12ce994671a29b00",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-5.3952
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_door_v01_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "House gate west window 1",
+											"guid": "fdb7e6f980552930",
+											"enabled": true,
+											"transform": {
+												"position": [
+													5.6026,
+													2.0,
+													-2.5
+												],
+												"rotation": [
+													0,
+													-1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_window_v09_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "House gate west window 2",
+											"guid": "2770a8d0c053475d",
+											"enabled": true,
+											"transform": {
+												"position": [
+													5.67,
+													2.0,
+													2.5
+												],
+												"rotation": [
+													0,
+													-1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_window_v09_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "House gate west chimney",
+											"guid": "133dc0ed51897325",
+											"enabled": true,
+											"transform": {
+												"position": [
+													2.0,
+													6.3286,
+													-3.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_chimney_v01_02.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "House gate east",
+									"guid": "fd1b718b5057b2f8",
+									"enabled": true,
+									"transform": {
+										"position": [
+											15.5,
+											0.0,
+											18.0
+										],
+										"rotation": [
+											0,
+											1.570796,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "House gate east body",
+											"guid": "c266d7edf0f8fd2d",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_body_v04_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "House gate east door",
+											"guid": "b09efe4eb98c34e7",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-5.3952
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_door_v02_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "House gate east window 1",
+											"guid": "d237447cc04f62a8",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-2.397,
+													2.0,
+													3.0
+												],
+												"rotation": [
+													0,
+													1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_window_v01_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "House gate east window 2",
+											"guid": "c46bc50cf6338175",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-2.6394,
+													5.0,
+													-3.0
+												],
+												"rotation": [
+													0,
+													1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_window_v08_02.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "House gate east chimney",
+											"guid": "22b697c74443c409",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													9.5665,
+													3.5
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_chimney_v01_03.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "Tall house",
+									"guid": "245ed2fe7d8caf32",
+									"enabled": true,
+									"transform": {
+										"position": [
+											19.0,
+											0.0,
+											-2.5
+										],
+										"rotation": [
+											0,
+											1.570796,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "Tall house body",
+											"guid": "476a8c5e74f5eeb8",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_body_v01_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Tall house door",
+											"guid": "52edf4e8dec8af8d",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-2.393
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_door_v03_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Tall house window 1",
+											"guid": "1ecfa54b83337c9f",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													5.0,
+													-2.8619
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_window_v02_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Tall house window 2",
+											"guid": "9adec0bb0f701241",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-3.7855,
+													3.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_window_v06_02.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Tall house chimney",
+											"guid": "5ea80c29b34e1766",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													13.0593,
+													2.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_chimney_v01_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "Blacksmith",
+							"guid": "3f87dd220826efd1",
+							"enabled": true,
+							"transform": {
+								"position": [
+									13.0,
+									0.0,
+									8.5
+								],
+								"rotation": [
+									0,
+									1.570796,
+									0
+								],
+								"scale": [
+									1.0,
+									1.0,
+									1.0
+								]
+							},
+							"components": [],
+							"children": [
+								{
+									"name": "Forge",
+									"guid": "2e1d1beb45d696c6",
+									"enabled": true,
+									"transform": {
+										"position": [
+											0.0,
+											0.0,
+											-0.0
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "PLACEHOLDER_blacksmith_forge.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Anvil",
+									"guid": "39d25ac96af965ec",
+									"enabled": true,
+									"transform": {
+										"position": [
+											0.0,
+											0.0,
+											-2.6
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "PLACEHOLDER_anvil.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Blacksmith canopy",
+									"guid": "ecc36a33148471e2",
+									"enabled": true,
+									"transform": {
+										"position": [
+											0.0,
+											0.0,
+											-1.4
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_market_v04_01.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Quench barrel",
+									"guid": "96b2222501075b0e",
+									"enabled": true,
+									"transform": {
+										"position": [
+											2.3,
+											0.0,
+											-2.8
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_barrel_08.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Blacksmith crate",
+									"guid": "33568305ade4c6fd",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-2.5,
+											0.0,
+											-2.4
+										],
+										"rotation": [
+											0,
+											0.436332,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_box_03.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Blacksmith planks",
+									"guid": "8346a7a26629c948",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-2.2,
+											0.0,
+											1.8
+										],
+										"rotation": [
+											0,
+											1.22173,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_planks_01.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								}
+							]
+						},
+						{
+							"name": "Street props",
+							"guid": "4af384c50dbf7b8f",
+							"enabled": true,
+							"transform": {
+								"position": [
+									0.0,
+									0.0,
+									-0.0
+								],
+								"rotation": [
+									0,
+									0.0,
+									0
+								],
+								"scale": [
+									1.0,
+									1.0,
+									1.0
+								]
+							},
+							"components": [],
+							"children": [
+								{
+									"name": "Street lamp W1",
+									"guid": "d19b3a386c272169",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-3.2,
+											0.0,
+											23.0
+										],
+										"rotation": [
+											0,
+											1.570796,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_streetlamp_v01_01.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Street lamp E1",
+									"guid": "c50c15e18365cd07",
+									"enabled": true,
+									"transform": {
+										"position": [
+											3.2,
+											0.0,
+											19.0
+										],
+										"rotation": [
+											0,
+											-1.570796,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_streetlamp_v01_03.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Street lamp W2",
+									"guid": "50182eab31ab1ba8",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-3.2,
+											0.0,
+											15.0
+										],
+										"rotation": [
+											0,
+											1.570796,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_streetlamp_v01_01.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Street lamp E2",
+									"guid": "c99604b50d078ff1",
+									"enabled": true,
+									"transform": {
+										"position": [
+											3.2,
+											0.0,
+											11.0
+										],
+										"rotation": [
+											0,
+											-1.570796,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_streetlamp_v01_03.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Hay cart",
+									"guid": "c1ced40886b498f5",
+									"enabled": true,
+									"transform": {
+										"position": [
+											5.2,
+											0.0,
+											12.0
+										],
+										"rotation": [
+											0,
+											2.792527,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "Cart",
+											"guid": "49e5c095877b9301",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_cart_03.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Cart wheel L",
+											"guid": "6702d2a5aab8660c",
+											"enabled": true,
+											"transform": {
+												"position": [
+													1.2,
+													0.9,
+													0.1
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_cart_wheel_big_L_03.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Cart wheel R",
+											"guid": "28a6eb5fa56a443f",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-1.1,
+													0.9,
+													0.1
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_cart_wheel_big_R_03.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "Hay bale 1",
+									"guid": "724e11c473d4ceb6",
+									"enabled": true,
+									"transform": {
+										"position": [
+											7.5,
+											0.0,
+											13.8
+										],
+										"rotation": [
+											0,
+											0.523599,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_hay_01.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Hay bale 2",
+									"guid": "d0189fc4a3f255ed",
+									"enabled": true,
+									"transform": {
+										"position": [
+											6.8,
+											0.0,
+											15.0
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_hay_02.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Horse trough",
+									"guid": "954afa3230d88da6",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-5.0,
+											0.0,
+											21.5
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_trough_01.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Hitching post",
+									"guid": "84c124703b6b58b1",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-5.2,
+											0.0,
+											18.5
+										],
+										"rotation": [
+											0,
+											1.570796,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_horsestation.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Horse",
+									"guid": "2cceb3f940c284c0",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-6.4,
+											0.0,
+											19.0
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "PLACEHOLDER_horse.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Barrel street 1",
+									"guid": "f6f6e4da4e463ce0",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-7.0,
+											0.0,
+											13.2
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_barrel_04.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Barrel street 2",
+									"guid": "482483f7d23c1779",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-7.6,
+											0.0,
+											12.5
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_barrel_05.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Crate street",
+									"guid": "e0abc467473161a0",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-7.3,
+											0.0,
+											11.4
+										],
+										"rotation": [
+											0,
+											0.174533,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_box_04.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Flower pot W1a",
+									"guid": "ef62e4c0af54040a",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-9.9,
+											0.0,
+											3.8
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_PLANT_pot_v3_01.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Flower pot W1b",
+									"guid": "ec9e16eb7e3d2f9a",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-10.0,
+											0.0,
+											-9.2
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_PLANT_pot_v2_01.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Flower pot W2",
+									"guid": "3cf88044824a1d4f",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-9.4,
+											0.0,
+											13.0
+										],
+										"rotation": [
+											0,
+											1.570796,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_PLANT_pot_v1_02.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Flower pot tavern",
+									"guid": "4c52f82cbc69428d",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-5.8,
+											0.0,
+											-10.8
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_PLANT_pot_v6_01.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Flower pot gate house",
+									"guid": "be3d0d6d7aabc5d5",
+									"enabled": true,
+									"transform": {
+										"position": [
+											8.0,
+											0.0,
+											21.0
+										],
+										"rotation": [
+											0,
+											-1.570796,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_PLANT_pot_v5_01.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Mailbox",
+									"guid": "35bfe34e179f5849",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-9.8,
+											0.0,
+											-5.6
+										],
+										"rotation": [
+											0,
+											-1.570796,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_mailbox.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								}
+							]
+						},
+						{
+							"name": "Backyard",
+							"guid": "a8fdf2f84134fe1f",
+							"enabled": true,
+							"transform": {
+								"position": [
+									20.0,
+									0.0,
+									-17.0
+								],
+								"rotation": [
+									0,
+									0.0,
+									0
+								],
+								"scale": [
+									1.0,
+									1.0,
+									1.0
+								]
+							},
+							"components": [],
+							"children": [
+								{
+									"name": "Clothesline",
+									"guid": "5f699e0b78b84bb2",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-3.0,
+											0.0,
+											-0.0
+										],
+										"rotation": [
+											0,
+											1.570796,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_clothesline_01.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Outhouse",
+									"guid": "6377c1b75c452303",
+									"enabled": true,
+									"transform": {
+										"position": [
+											4.5,
+											0.0,
+											-2.0
+										],
+										"rotation": [
+											0,
+											-3.141593,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_outhouse.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Firewood",
+									"guid": "9e189de71199c7e8",
+									"enabled": true,
+									"transform": {
+										"position": [
+											1.0,
+											0.0,
+											-2.8
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_firepit_woodpile.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Log",
+									"guid": "d4912ba082105f4f",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-0.5,
+											0.0,
+											2.8
+										],
+										"rotation": [
+											0,
+											0.261799,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [
+										{
+											"type_id": "Mesh",
+											"enabled": true,
+											"model": "SM_PROP_treetrunk_02.glb",
+											"material": {
+												"name": "Textured",
+												"guid": "07fb5de87aeca419"
+											}
+										}
+									],
+									"children": []
+								},
+								{
+									"name": "Garden fence",
+									"guid": "d38c88773f971208",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-4.8,
+											0.0,
+											6.0
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "Garden fence 1",
+											"guid": "dd2b39625bfba762",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_fence_v02_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Garden fence 2",
+											"guid": "9ae74a1cd26e822c",
+											"enabled": true,
+											"transform": {
+												"position": [
+													2.05,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_fence_v02_02.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Garden fence 3",
+											"guid": "38f7a56ad3582ac4",
+											"enabled": true,
+											"transform": {
+												"position": [
+													4.1,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_fence_v02_03.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Garden fence 4",
+											"guid": "21eea0e90327b3f7",
+											"enabled": true,
+											"transform": {
+												"position": [
+													6.15,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_fence_v02_04.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Garden fence gate",
+											"guid": "2c1570c28be2d67d",
+											"enabled": true,
+											"transform": {
+												"position": [
+													8.2,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_fence_door_gate.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Vegetable beds",
+											"guid": "1a386fe5055ea099",
+											"enabled": true,
+											"transform": {
+												"position": [
+													4.1,
+													0.0,
+													-2.2
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													7.5,
+													0.3,
+													3.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "PLACEHOLDER_vegetable_garden_bed.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Chicken 1",
+											"guid": "85939c533b6f01fb",
+											"enabled": true,
+											"transform": {
+												"position": [
+													6.0,
+													0.0,
+													1.6
+												],
+												"rotation": [
+													0,
+													0.523599,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "PLACEHOLDER_chicken.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Chicken 2",
+											"guid": "5f1caad223841ffd",
+											"enabled": true,
+											"transform": {
+												"position": [
+													7.1,
+													0.0,
+													2.3
+												],
+												"rotation": [
+													0,
+													-1.047198,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "PLACEHOLDER_chicken.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "Outskirts",
+							"guid": "089b65e0fd508765",
+							"enabled": true,
+							"transform": {
+								"position": [
+									0.0,
+									0.0,
+									-0.0
+								],
+								"rotation": [
+									0,
+									0.0,
+									0
+								],
+								"scale": [
+									1.0,
+									1.0,
+									1.0
+								]
+							},
+							"components": [],
+							"children": [
+								{
+									"name": "Windmill",
+									"guid": "90b4f839bcfb86c3",
+									"enabled": true,
+									"transform": {
+										"position": [
+											12.0,
+											0.0,
+											-44.0
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "Windmill body",
+											"guid": "41ea9ee976e86a35",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_body_v01_02.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Windmill sail",
+											"guid": "399f73b7c00fd34b",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													10.0,
+													3.0548
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_windmill_sail.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Windmill door",
+											"guid": "25d15f80325dd966",
+											"enabled": true,
+											"transform": {
+												"position": [
+													2.3917,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													-1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_BLD_door_v03_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Flour sack 1",
+											"guid": "5efaf7b07d5461a6",
+											"enabled": true,
+											"transform": {
+												"position": [
+													5.2,
+													0.0,
+													1.0
+												],
+												"rotation": [
+													0,
+													0.349066,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_sack_02.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Flour sack 2",
+											"guid": "66fb64bffe581d64",
+											"enabled": true,
+											"transform": {
+												"position": [
+													5.4,
+													0.0,
+													-0.2
+												],
+												"rotation": [
+													0,
+													1.396263,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_sack_03.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Windmill cart",
+											"guid": "d427d11b326221da",
+											"enabled": true,
+											"transform": {
+												"position": [
+													7.0,
+													0.0,
+													-3.5
+												],
+												"rotation": [
+													0,
+													-2.792527,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_cart_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "Pond",
+									"guid": "e7419b0fd921f2f7",
+									"enabled": true,
+									"transform": {
+										"position": [
+											-6.0,
+											0.0,
+											-42.0
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "Pond water",
+											"guid": "67ce6b5a5b223407",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													16.0,
+													0.05,
+													11.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "PLACEHOLDER_pond_water.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Pond shore",
+											"guid": "22d2a115d186ce48",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													-0.35,
+													-0.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													18.0,
+													0.4,
+													13.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "PLACEHOLDER_pond_shore_rocks.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Dock",
+											"guid": "0a1b01e7f518dc8d",
+											"enabled": true,
+											"transform": {
+												"position": [
+													3.0,
+													0.1,
+													6.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_walkway_wood.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Rowboat",
+											"guid": "be886af26cc32040",
+											"enabled": true,
+											"transform": {
+												"position": [
+													1.0,
+													0.05,
+													1.5
+												],
+												"rotation": [
+													0,
+													0.349066,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [],
+											"children": [
+												{
+													"name": "Rowboat hull",
+													"guid": "7ee0b1f954da0a04",
+													"enabled": true,
+													"transform": {
+														"position": [
+															0.0,
+															0.0,
+															-0.0
+														],
+														"rotation": [
+															0,
+															0.0,
+															0
+														],
+														"scale": [
+															1.0,
+															1.0,
+															1.0
+														]
+													},
+													"components": [
+														{
+															"type_id": "Mesh",
+															"enabled": true,
+															"model": "SM_PROP_rowboat.glb",
+															"material": {
+																"name": "Textured",
+																"guid": "07fb5de87aeca419"
+															}
+														}
+													],
+													"children": []
+												},
+												{
+													"name": "Rowboat lantern",
+													"guid": "3fcea662d1712a3d",
+													"enabled": true,
+													"transform": {
+														"position": [
+															0.0,
+															0.35,
+															-1.4
+														],
+														"rotation": [
+															0,
+															0.0,
+															0
+														],
+														"scale": [
+															1.0,
+															1.0,
+															1.0
+														]
+													},
+													"components": [
+														{
+															"type_id": "Mesh",
+															"enabled": true,
+															"model": "SM_PROP_rowboat_lantern.glb",
+															"material": {
+																"name": "Textured",
+																"guid": "07fb5de87aeca419"
+															}
+														}
+													],
+													"children": []
+												}
+											]
+										},
+										{
+											"name": "Pond bench",
+											"guid": "44fd7c6d5528533a",
+											"enabled": true,
+											"transform": {
+												"position": [
+													5.0,
+													0.0,
+													8.8
+												],
+												"rotation": [
+													0,
+													-3.141593,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_bench_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								},
+								{
+									"name": "South road",
+									"guid": "2b2098ca6242afe1",
+									"enabled": true,
+									"transform": {
+										"position": [
+											0.0,
+											0.0,
+											27.0
+										],
+										"rotation": [
+											0,
+											0.0,
+											0
+										],
+										"scale": [
+											1.0,
+											1.0,
+											1.0
+										]
+									},
+									"components": [],
+									"children": [
+										{
+											"name": "Road signpost",
+											"guid": "a5e296ae45744b27",
+											"enabled": true,
+											"transform": {
+												"position": [
+													3.8,
+													0.0,
+													10.0
+												],
+												"rotation": [
+													0,
+													-0.349066,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_signpost_03.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Road lamp",
+											"guid": "38dd6e72f80f4863",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-3.2,
+													0.0,
+													18.0
+												],
+												"rotation": [
+													0,
+													1.570796,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_streetlamp_v02_02.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Traveller cart",
+											"guid": "e4118b0ac0caf66e",
+											"enabled": true,
+											"transform": {
+												"position": [
+													-6.5,
+													0.0,
+													13.5
+												],
+												"rotation": [
+													0,
+													0.349066,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_cart_02.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Campfire",
+											"guid": "4be6ad005561f56f",
+											"enabled": true,
+											"transform": {
+												"position": [
+													8.5,
+													0.0,
+													20.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_campfire.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Campfire spit",
+											"guid": "ca685fd39acd8b6a",
+											"enabled": true,
+											"transform": {
+												"position": [
+													8.5,
+													0.0,
+													20.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_campfire_poles.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Campfire log seat",
+											"guid": "8bdef997d12aa5fa",
+											"enabled": true,
+											"transform": {
+												"position": [
+													11.0,
+													0.0,
+													21.8
+												],
+												"rotation": [
+													0,
+													0.174533,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_treetrunk_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Campfire stone seat",
+											"guid": "e2429a3d4e3c4947",
+											"enabled": true,
+											"transform": {
+												"position": [
+													6.2,
+													0.0,
+													21.6
+												],
+												"rotation": [
+													0,
+													0.698132,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_stone_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Stone bridge",
+											"guid": "40834fa274e0f3f5",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													0.0,
+													30.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													1.0,
+													1.0,
+													1.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "SM_PROP_bridge_stone_01.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Stream water",
+											"guid": "1b3244f8fe75177f",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													-0.6,
+													30.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													60.0,
+													0.05,
+													7.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "PLACEHOLDER_stream_water.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										},
+										{
+											"name": "Stream bed",
+											"guid": "901d789906eb66ec",
+											"enabled": true,
+											"transform": {
+												"position": [
+													0.0,
+													-1.2,
+													30.0
+												],
+												"rotation": [
+													0,
+													0.0,
+													0
+												],
+												"scale": [
+													60.0,
+													0.6,
+													9.0
+												]
+											},
+											"components": [
+												{
+													"type_id": "Mesh",
+													"enabled": true,
+													"model": "PLACEHOLDER_stream_bed.glb",
+													"material": {
+														"name": "Textured",
+														"guid": "07fb5de87aeca419"
+													}
+												}
+											],
+											"children": []
+										}
+									]
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	},
+	"materials": [
+		{
+			"name": "Textured",
+			"guid": "07fb5de87aeca419",
+			"shader": {
+				"vertex": "default.vs",
+				"fragment": "texture.fs"
+			},
+			"textures": {},
+			"phong": {
+				"ambient": [
+					0.10000000149011612,
+					0.10000000149011612,
+					0.10000000149011612
+				],
+				"diffuse": [
+					1,
+					1,
+					1
+				],
+				"specular": [
+					0.5,
+					0.5,
+					0.5
+				],
+				"shininess": 32
+			},
+			"opacity": 1,
+			"blend": "opaque"
+		}
+	]
+}

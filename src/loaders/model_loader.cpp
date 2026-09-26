@@ -1,4 +1,5 @@
 #include "model_loader.hpp"
+#include "texture_loader.hpp"
 
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
@@ -16,22 +17,6 @@ namespace loader {
 using render::Mesh;
 using render::Model;
 using render::Vertex;
-
-GLuint createTexture(const unsigned char *pixels, int width, int height) {
-    GLuint texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
-                 GL_UNSIGNED_BYTE, pixels);
-    glGenerateMipmap(GL_TEXTURE_2D);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                    GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    return texture;
-}
 
 // Used for meshes with no (or an unsupported) texture, so the shader always
 // has something valid bound to sample.
@@ -185,6 +170,29 @@ Model loadModel(const std::string &filename) {
     }
 
     model.filename = filename;
+    return model;
+}
+
+Model createPlane(float size, float unitsPerTile) {
+    float h = size / 2.f;
+    glm::vec3 up{0.f, 1.f, 0.f};
+    // UVs in world units / tile size, so the texture repeats at a fixed
+    // world scale no matter how big the plane is (needs GL_REPEAT)
+    auto vertex = [&](float x, float z) {
+        return Vertex{{x, 0.f, z}, up, glm::vec2{x, z} / unitsPerTile};
+    };
+    std::vector<Vertex> vertices = {
+        vertex(-h, -h),
+        vertex(h, -h),
+        vertex(h, h),
+        vertex(-h, h),
+    };
+    // Counter-clockwise when seen from above
+    std::vector<unsigned int> indices = {0, 2, 1, 0, 3, 2};
+
+    Model model;
+    model.meshes.push_back(createMesh(vertices, indices));
+    model.filename = "<plane>";
     return model;
 }
 } // namespace loader

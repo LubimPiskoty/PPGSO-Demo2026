@@ -110,17 +110,25 @@ endif()
 #
 # Resources
 #
-file(GLOB SHADER_FILES CONFIGURE_DEPENDS "res/*.vs" "res/*.fs")
+# WHENCE strips the folder, so files are looked up by bare name
+# (e.g. "default.vs", "grass_plane.glb")
+file(GLOB SHADER_FILES CONFIGURE_DEPENDS "res/shaders/*.vs" "res/shaders/*.fs")
 cmrc_add_resource_library(shaders
         NAMESPACE shaders
-        WHENCE res
+        WHENCE res/shaders
         ${SHADER_FILES})
 
-file(GLOB MODEL_FILES CONFIGURE_DEPENDS "res/*.glb" "res/*.gltf")
+file(GLOB MODEL_FILES CONFIGURE_DEPENDS "res/models/*.glb" "res/models/*.gltf")
 cmrc_add_resource_library(models
         NAMESPACE models
-        WHENCE res
+        WHENCE res/models
         ${MODEL_FILES})
+
+file(GLOB TEXTURE_FILES CONFIGURE_DEPENDS "res/textures/*.png" "res/textures/*.jpg")
+cmrc_add_resource_library(textures
+        NAMESPACE textures
+        WHENCE res/textures
+        ${TEXTURE_FILES})
 
 #
 # Target
@@ -139,6 +147,7 @@ target_include_directories(semestralka PUBLIC
 target_link_libraries(semestralka PUBLIC
         shaders
         models
+        textures
         OpenGL::GL
         GLEW::GLEW
         glfw

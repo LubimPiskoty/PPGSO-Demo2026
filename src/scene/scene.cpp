@@ -107,7 +107,11 @@ void Node::print_subtree(std::ostream &os, int depth) const {
     for (const auto &component : components) {
         for (int i = 0; i < depth + 1; ++i)
             os << "  ";
-        os << "* " << component->type_name() << "\n";
+        os << "* " << component->type_name();
+        std::string info = component->info();
+        if (!info.empty())
+            os << " (" << info << ")";
+        os << "\n";
     }
 
     for (const auto &child : children)

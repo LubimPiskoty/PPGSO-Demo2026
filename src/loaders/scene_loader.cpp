@@ -10,6 +10,7 @@
 #include <vector>
 
 #define SERIALIZER_VERSION 2.0
+// TODO: Version3 will serialize instanced meshes
 
 namespace loader {
 

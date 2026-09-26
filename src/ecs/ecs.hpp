@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <string>
 
 namespace scn {
 class Node;
@@ -36,6 +37,10 @@ class Component {
     virtual void update(double dt) {}
     virtual ComponentTypeId type_id() const = 0;
     virtual const char *type_name() const = 0;
+    // Optional extra detail shown next to type_name() in the inspector
+    virtual std::string info() const {
+        return "";
+    }
 
     // The node this component is attached to.
     // weak_ptr: the node owns the component, not the other way round.
