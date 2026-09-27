@@ -1,6 +1,6 @@
 #include "input.hpp"
 
-#include "../ecs/UserMovement.hpp"
+#include "../components/UserMovement.hpp"
 
 #ifdef WITH_IMGUI
 #include "imgui.h"
@@ -8,8 +8,8 @@
 
 namespace input {
 
-static ecs::UserMovement *getMovement(GLFWwindow *window) {
-    return static_cast<ecs::UserMovement *>(glfwGetWindowUserPointer(window));
+static component::UserMovement *getMovement(GLFWwindow *window) {
+    return static_cast<component::UserMovement *>(glfwGetWindowUserPointer(window));
 }
 
 static void keyCallback(GLFWwindow *window, int key, int scancode, int action,
@@ -50,7 +50,7 @@ static void cursorPosCallback(GLFWwindow *window, double x, double y) {
         movement->handleMouseMove(x, y);
 }
 
-void bind(GLFWwindow *window, ecs::UserMovement *movement) {
+void bind(GLFWwindow *window, component::UserMovement *movement) {
     glfwSetWindowUserPointer(window, movement);
     glfwSetKeyCallback(window, keyCallback);
     glfwSetMouseButtonCallback(window, mouseButtonCallback);

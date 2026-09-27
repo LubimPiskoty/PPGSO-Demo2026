@@ -1,6 +1,6 @@
 #include "scene.hpp"
 
-#include "../ecs/mesh.hpp"
+#include "../components/mesh.hpp"
 #include <cassert>
 #include <cstdio>
 #include <glm/ext/matrix_float4x4.hpp>
@@ -35,8 +35,10 @@ std::shared_ptr<Node> Node::create(std::string name, glm::mat4 localTransform) {
 
     glm::vec3 skew;
     glm::vec4 perspective;
-    glm::decompose(localTransform, node->localScale, node->localRot,
+    glm::quat rot;
+    glm::decompose(localTransform, node->localScale, rot,
                    node->localPos, skew, perspective);
+    node->localRotEuler = glm::eulerAngles(rot);
 
     return node;
 }
@@ -53,11 +55,11 @@ void Node::update(double dt) {
         child->update(dt);
 }
 
-void Node::draw(const std::shared_ptr<ecs::Camera> camera) {
+void Node::draw(const std::shared_ptr<component::Camera> camera) {
     if (!enabled)
         return;
 
-    std::weak_ptr<ecs::Mesh> mesh = get_component<ecs::Mesh>();
+    std::weak_ptr<component::Mesh> mesh = get_component<component::Mesh>();
     if (!mesh.expired() && mesh.lock()->enabled)
         mesh.lock()->draw(camera);
 
@@ -71,7 +73,9 @@ void Node::add_child(std::shared_ptr<Node> child) {
 }
 
 glm::mat4 Node::localTransform() const {
-    return glm::translate(glm::mat4(1.f), localPos) * glm::mat4_cast(localRot) *
+    // Build rotation matrix from Euler angles (convert to quat then to matrix)
+    glm::quat rot = glm::quat(localRotEuler);
+    return glm::translate(glm::mat4(1.f), localPos) * glm::mat4_cast(rot) *
            glm::scale(glm::mat4(1.f), localScale);
 }
 

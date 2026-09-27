@@ -7,10 +7,11 @@
 #include <sys/types.h>
 #include <vector>
 
+#include "components/UserMovement.hpp"
+#include "components/animation.hpp"
+#include "components/camera.hpp"
+#include "components/mesh.hpp"
 #include "debug/debug_ui.hpp"
-#include "ecs/UserMovement.hpp"
-#include "ecs/camera.hpp"
-#include "ecs/mesh.hpp"
 #include "input/input.hpp"
 #include "loaders/model_loader.hpp"
 #include "loaders/shader_loader.hpp"
@@ -31,7 +32,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWwindow *window =
-        glfwCreateWindow(800, 600, "Hello Triangle", nullptr, nullptr);
+        glfwCreateWindow(1000, 600, "Hello Triangle", nullptr, nullptr);
     if (!window) {
         std::cerr << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
@@ -104,28 +105,65 @@ int main() {
     // Add crate
     auto crate_node = scn::Node::create("Melon crate");
     scene.root->add_child(crate_node);
-    crate_node->add_component<ecs::Mesh>(crate_model, textured_material);
+    crate_node->add_component<component::Mesh>(crate_model, textured_material);
 
     // Add ground
     auto ground_node = scn::Node::create("Grid ground");
     scene.root->add_child(ground_node);
-    ground_node->add_component<ecs::Mesh>(ground_model, grid_material);
+    ground_node->add_component<component::Mesh>(ground_model, grid_material);
 
     // Add instanced grass
     auto grass_node = scn::Node::create("Grass");
-    grass_node->add_component<ecs::Mesh>(grass_model_instanced,
-                                         textured_material_instanced);
+    grass_node->add_component<component::Mesh>(grass_model_instanced,
+                                               textured_material_instanced);
     scene.root->add_child(grass_node);
 
     // Add camera
     auto camera_node = scn::Node::create("Camera", glm::vec3(2.f));
     scene.root->add_child(camera_node);
-    auto camera = camera_node->add_component<ecs::Camera>(50.f, (float)fbWidth,
-                                                          (float)fbHeight);
+    auto camera = camera_node->add_component<component::Camera>(
+        50.f, (float)fbWidth, (float)fbHeight);
     camera->lookAt(glm::vec3(0));
 
     scene.activeCamera = camera;
-    auto movement = camera_node->add_component<ecs::UserMovement>(1.f, 0.1f);
+    auto movement =
+        camera_node->add_component<component::UserMovement>(1.f, 0.1f);
+
+    // Simple bouncing curve - just one clean bounce
+    auto createBounceCurve = [](float baseHeight, float maxHeight) {
+        component::Bezier<float> curve;
+
+        // Single smooth bounce arc: 0 → peak → 0
+        curve.control.push_back(baseHeight + 0.0f);             // P0: ground
+        curve.control.push_back(baseHeight + maxHeight * 0.2f); // P1: up
+        curve.control.push_back(baseHeight + maxHeight * 0.8f); // P2: near peak
+        curve.control.push_back(baseHeight + maxHeight);        // P3: peak
+
+        return curve;
+    };
+
+    // Rotation curve: simple circle
+    float fullRotation = glm::two_pi<float>();
+    component::Bezier<float> rotation_curve;
+    rotation_curve.control.push_back(0.0f);                  // P0: start
+    rotation_curve.control.push_back(fullRotation * 0.333f); // P1: 1/3
+    rotation_curve.control.push_back(fullRotation * 0.667f); // P2: 2/3
+    rotation_curve.control.push_back(fullRotation);          // P3: peak
+
+    // Bounce animation - ping pong mode
+    auto bounce_curve = createBounceCurve(0.15f, .4f);
+    auto bounce_anim = crate_node->add_component<component::Animation<float>>(
+        bounce_curve, crate_node->localPos.y);
+    bounce_anim->setMaxTime(1.5f);
+    bounce_anim->setPlayMode(component::PlayMode::PingPong);
+    bounce_anim->play();
+
+    // Rotation animation - loop mode
+    auto rotation_anim = crate_node->add_component<component::Animation<float>>(
+        rotation_curve, crate_node->localRotEuler.y);
+    rotation_anim->setMaxTime(4.f);
+    rotation_anim->setPlayMode(component::PlayMode::Loop);
+    rotation_anim->play();
 
     input::bind(window, movement.get());
 

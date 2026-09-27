@@ -5,7 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
 
-namespace ecs {
+namespace component {
 
 Camera::Camera(float fovDegrees, float width, float height)
     : Camera(fovDegrees, width, height, 1e-3f, 1e+4f) {}
@@ -32,8 +32,10 @@ void Camera::lookAt(glm::vec3 target, glm::vec3 up) {
 
     glm::vec3 skew;
     glm::vec4 perspective;
-    glm::decompose(transform, owner->localScale, owner->localRot,
+    glm::quat rot;
+    glm::decompose(transform, owner->localScale, rot,
                    owner->localPos, skew, perspective);
+    owner->localRotEuler = glm::eulerAngles(rot);
 }
 
 float Camera::getFov() {
@@ -71,4 +73,4 @@ void Camera::calculateProjection() {
     projection = glm::perspectiveFov(fov, width, height, near, far);
 }
 
-} // namespace ecs
+} // namespace component

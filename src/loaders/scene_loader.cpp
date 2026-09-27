@@ -1,6 +1,6 @@
 #include "scene_loader.hpp"
 
-#include "../ecs/mesh.hpp"
+#include "../components/mesh.hpp"
 #include <cJSON.h>
 #include <cstdio>
 #include <cstring>
@@ -82,13 +82,13 @@ cJSON *serializeMaterial(const std::shared_ptr<render::Material> &material) {
 }
 
 void serializeCameraComponent(cJSON *json,
-                              std::shared_ptr<ecs::Camera> camera) {
+                              std::shared_ptr<component::Camera> camera) {
     cJSON_AddNumberToObject(json, "fov", camera->getFov());
     cJSON_AddNumberToObject(json, "near", camera->getNear());
     cJSON_AddNumberToObject(json, "far", camera->getFar());
 }
 
-void serializeMeshComponent(cJSON *json, std::shared_ptr<ecs::Mesh> mesh,
+void serializeMeshComponent(cJSON *json, std::shared_ptr<component::Mesh> mesh,
                             MaterialRegistry &registry) {
     cJSON_AddStringToObject(json, "model", mesh->model->filename.c_str());
 
@@ -104,7 +104,7 @@ void serializeMeshComponent(cJSON *json, std::shared_ptr<ecs::Mesh> mesh,
     }
 }
 
-cJSON *serializeComponent(std::shared_ptr<ecs::Component> component,
+cJSON *serializeComponent(std::shared_ptr<component::Component> component,
                           MaterialRegistry &registry) {
     cJSON *json = cJSON_CreateObject();
 
@@ -112,14 +112,14 @@ cJSON *serializeComponent(std::shared_ptr<ecs::Component> component,
     cJSON_AddStringToObject(json, "type_id", component->type_name());
     cJSON_AddBoolToObject(json, "enabled", component->enabled);
     // TODO: Refactor get_component cast to the component too but forget it now
-    if (component->type_id() == ecs::component_type_id<ecs::Camera>()) {
+    if (component->type_id() == component::component_type_id<component::Camera>()) {
         serializeCameraComponent(
-            json, component->node.lock()->get_component<ecs::Camera>());
+            json, component->node.lock()->get_component<component::Camera>());
         // cJSON_AddObjectToObject(cJSON *const object, const char *const name);
-    } else if (component->type_id() == ecs::component_type_id<ecs::Mesh>()) {
+    } else if (component->type_id() == component::component_type_id<component::Mesh>()) {
 
         serializeMeshComponent(
-            json, component->node.lock()->get_component<ecs::Mesh>(), registry);
+            json, component->node.lock()->get_component<component::Mesh>(), registry);
     } else {
         cJSON_AddTrueToObject(json, "missing_serializer");
     }
@@ -139,8 +139,7 @@ cJSON *serializeNode(std::shared_ptr<scn::Node> node,
     // composed matrix, so it round-trips exactly and stays human-editable.
     auto transform = cJSON_AddObjectToObject(json, "transform");
     cJSON_AddItemToObject(transform, "position", serializeVec3(node->localPos));
-    cJSON_AddItemToObject(transform, "rotation",
-                          serializeRotation(node->localRot));
+    cJSON_AddItemToObject(transform, "rotation", serializeVec3(node->localRotEuler));
     cJSON_AddItemToObject(transform, "scale", serializeVec3(node->localScale));
     // Serialize components
     auto components = cJSON_AddArrayToObject(json, "components");

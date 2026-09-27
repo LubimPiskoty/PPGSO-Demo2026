@@ -3,9 +3,9 @@
 #include "ecs.hpp"
 #include <glm/glm.hpp>
 
-namespace ecs {
+namespace component {
 
-class UserMovement : public ComponentBase<ecs::UserMovement> {
+class UserMovement : public ComponentBase<component::UserMovement> {
   public:
     // Keys are GLFW key codes; letters are their uppercase ASCII ('W').
     UserMovement(float speed, float sensitivity)
@@ -42,4 +42,4 @@ class UserMovement : public ComponentBase<ecs::UserMovement> {
     double last_x = 0.0, last_y = 0.0;
     bool first_move = true;
 };
-} // namespace ecs
+} // namespace component

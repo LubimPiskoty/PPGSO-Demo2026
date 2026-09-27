@@ -4,7 +4,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/gtc/quaternion.hpp>
 
-namespace ecs {
+namespace component {
 
 void UserMovement::update(double dt) {
     auto owner = this->node.lock();
@@ -14,7 +14,8 @@ void UserMovement::update(double dt) {
     const glm::vec3 input_weights = glm::vec3(1, 0.5, 1);
     glm::vec3 input = input_vector * input_weights;
     // Horizontal input follows the view direction, vertical stays world up.
-    glm::vec3 dir = owner->localRot * glm::vec3(input.x, 0.f, input.z) +
+    glm::quat rot = glm::quat(owner->localRotEuler);
+    glm::vec3 dir = rot * glm::vec3(input.x, 0.f, input.z) +
                     glm::vec3(0.f, input.y, 0.f);
     owner->localPos += dir * speed * (float)dt;
 }
@@ -52,7 +53,8 @@ void UserMovement::handleMouseButton(int button, bool is_pressed) {
     // Pick up yaw/pitch from the current rotation (e.g. set by lookAt) so the
     // view doesn't snap on the first drag.
     if (auto owner = node.lock(); owner && is_pressed) {
-        glm::vec3 fwd = owner->localRot * glm::vec3(0.f, 0.f, -1.f);
+        glm::quat rot = glm::quat(owner->localRotEuler);
+        glm::vec3 fwd = rot * glm::vec3(0.f, 0.f, -1.f);
         yaw = glm::atan(-fwd.x, -fwd.z);
         pitch = glm::asin(glm::clamp(fwd.y, -1.f, 1.f));
     }
@@ -83,7 +85,7 @@ void UserMovement::handleMouseMove(double x, double y) {
     pitch -= glm::radians(dy * sensitivity);
     pitch = glm::clamp(pitch, glm::radians(-89.f), glm::radians(89.f));
 
-    owner->localRot = glm::angleAxis(yaw, glm::vec3(0.f, 1.f, 0.f)) *
-                      glm::angleAxis(pitch, glm::vec3(1.f, 0.f, 0.f));
+    // Store as Euler angles (pitch, yaw, roll)
+    owner->localRotEuler = glm::vec3(pitch, yaw, 0.f);
 }
-} // namespace ecs
+} // namespace component

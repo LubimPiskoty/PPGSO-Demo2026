@@ -4,7 +4,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/matrix.hpp>
 
-namespace ecs {
+namespace component {
 
 class Camera : public ComponentBase<Camera> {
   public:
@@ -35,4 +35,4 @@ class Camera : public ComponentBase<Camera> {
 
     void calculateProjection();
 };
-} // namespace ecs
+} // namespace component

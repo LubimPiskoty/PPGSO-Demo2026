@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../ecs/camera.hpp"
-#include "../ecs/ecs.hpp"
+#include "../components/camera.hpp"
+#include "../components/ecs.hpp"
 #include "../util/guid.hpp"
 #include <glm/ext/vector_float3.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -42,7 +42,7 @@ class Node : public std::enable_shared_from_this<Node> {
     // Local transform, stored decomposed so components can be edited
     // directly (e.g. by an inspector) without matrix decomposition.
     glm::vec3 localPos{0.f};
-    glm::quat localRot{1.f, 0.f, 0.f, 0.f};
+    glm::vec3 localRotEuler{0.f};  // Euler angles (radians)
     glm::vec3 localScale{1.f};
 
     // Composed/decomposed on demand from the fields above (and, for the
@@ -54,12 +54,12 @@ class Node : public std::enable_shared_from_this<Node> {
     void setGlobalTransform(const glm::mat4 &globalTransform);
 
     // ECS
-    std::vector<std::shared_ptr<ecs::Component>> components;
+    std::vector<std::shared_ptr<component::Component>> components;
 
     template <typename T, typename... Args>
     std::shared_ptr<T> add_component(Args &&...args) {
-        static_assert(std::is_base_of_v<ecs::Component, T>,
-                      "T must derive from ecs::Component");
+        static_assert(std::is_base_of_v<component::Component, T>,
+                      "T must derive from component::Component");
         auto component = std::make_shared<T>(std::forward<Args>(args)...);
         component->node = shared_from_this();
         components.push_back(component);
@@ -69,7 +69,7 @@ class Node : public std::enable_shared_from_this<Node> {
     // Returns the first attached component of type T, or nullptr if none.
     template <typename T> std::shared_ptr<T> get_component() {
         for (auto &c : components) {
-            if (c->type_id() == ecs::component_type_id<T>())
+            if (c->type_id() == component::component_type_id<T>())
                 return std::static_pointer_cast<T>(c);
         }
         return nullptr;
@@ -77,7 +77,7 @@ class Node : public std::enable_shared_from_this<Node> {
 
     // Overridable functions
     void update(double dt);
-    void draw(const std::shared_ptr<ecs::Camera> camera);
+    void draw(const std::shared_ptr<component::Camera> camera);
 
     // General functions
     static std::shared_ptr<Node> create(std::string name);
@@ -99,7 +99,7 @@ std::ostream &operator<<(std::ostream &os, const Node &node);
 
 class Scene {
   public:
-    std::weak_ptr<ecs::Camera> activeCamera;
+    std::weak_ptr<component::Camera> activeCamera;
     Scene();
 
     // Call on whole scene graph

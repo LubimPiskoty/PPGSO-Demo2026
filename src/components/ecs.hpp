@@ -8,7 +8,7 @@ namespace scn {
 class Node;
 } // namespace scn
 
-namespace ecs {
+namespace component {
 
 using ComponentTypeId = std::size_t;
 
@@ -29,14 +29,16 @@ template <typename T> ComponentTypeId component_type_id() {
 
 class Component {
   public:
-    bool enabled;
+    bool enabled = true;
 
-    Component() { enabled = true; }
+    Component() = default;
     virtual ~Component() = default;
 
     virtual void update(double dt) {}
+
     virtual ComponentTypeId type_id() const = 0;
     virtual const char *type_name() const = 0;
+
     // Optional extra detail shown next to type_name() in the inspector
     virtual std::string info() const {
         return "";
@@ -54,8 +56,9 @@ template <typename Derived> class ComponentBase : public Component {
     ComponentTypeId type_id() const override {
         return component_type_id<Derived>();
     }
+
     // type_name() is left for Derived to override with a clean, human-picked
     // name (e.g. "Camera") instead of a mangled typeid name.
 };
 
-} // namespace ecs
+} // namespace component

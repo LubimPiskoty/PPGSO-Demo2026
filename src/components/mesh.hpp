@@ -10,8 +10,8 @@
 #include <memory>
 #include <string>
 
-namespace ecs {
-class Mesh : public ecs::ComponentBase<Mesh> {
+namespace component {
+class Mesh : public component::ComponentBase<Mesh> {
 
   public:
     std::shared_ptr<render::Model> model;
@@ -35,7 +35,7 @@ class Mesh : public ecs::ComponentBase<Mesh> {
         return s;
     }
 
-    void draw(std::shared_ptr<ecs::Camera> camera) {
+    void draw(std::shared_ptr<component::Camera> camera) {
         if (checkInstancedCompatibility())
             return;
 
@@ -58,4 +58,4 @@ class Mesh : public ecs::ComponentBase<Mesh> {
     }
 };
 
-} // namespace ecs
+} // namespace component
