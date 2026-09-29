@@ -3,6 +3,7 @@
 #ifdef WITH_IMGUI
 #include "../loaders/scene_loader.hpp"
 #include "../scene/scene.hpp"
+#include "profiler.hpp"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -36,6 +37,7 @@ void draw(scn::Scene &scene) {
     ImGui::NewFrame();
 
     sceneWindow(scene);
+    profiler::drawWindow();
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
