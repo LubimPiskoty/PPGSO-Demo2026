@@ -12,6 +12,7 @@
 #include "components/camera.hpp"
 #include "components/mesh.hpp"
 #include "debug/debug_ui.hpp"
+#include "debug/profiler.hpp"
 #include "input/input.hpp"
 #include "loaders/model_loader.hpp"
 #include "loaders/shader_loader.hpp"
@@ -171,9 +172,12 @@ int main() {
     glDepthFunc(GL_LESS);
 
     debug_ui::init(window);
+    profiler::init();
 
     double time = glfwGetTime();
     while (!glfwWindowShouldClose(window)) {
+        profiler::beginFrame();
+
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -185,20 +189,31 @@ int main() {
         double dt = std::min(time - last_time, 0.1);
 
         // Update and draw the scene
-        scene.update(dt);
-        scene.draw();
+        {
+            profiler::Scope _(profiler::Stage::Update);
+            scene.update(dt);
+        }
+        {
+            profiler::Scope _(profiler::Stage::Scene);
+            scene.draw();
+        }
 
         // if (time - last_print > 1.0) {
         //     scene.root->print(std::cout);
         //     last_print = time;
         // }
 
-        debug_ui::draw(scene);
+        {
+            profiler::Scope _(profiler::Stage::UI);
+            debug_ui::draw(scene);
+        }
 
+        profiler::endFrame();
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
+    profiler::shutdown();
     debug_ui::shutdown();
 
     glfwTerminate();
