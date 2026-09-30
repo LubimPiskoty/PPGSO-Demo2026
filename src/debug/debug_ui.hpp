@@ -11,7 +11,7 @@ class Scene;
 // their own #ifdefs.
 namespace debug_ui {
 
-// Call after input::bind so ImGui's GLFW callbacks chain to ours
+// Call after input::init so ImGui's GLFW callbacks chain to ours
 void init(GLFWwindow *window);
 
 // Build and render the overlay; call after the scene is drawn

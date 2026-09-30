@@ -1,15 +1,22 @@
 #pragma once
 
 #include <GLFW/glfw3.h>
+#include <functional>
 
-namespace component {
-class UserMovement;
-} // namespace component
-
+// Anything can register a callback for key, mouse button or cursor events.
+// Events ImGui wants are not forwarded.
 namespace input {
 
-// Forward the window's keyboard/mouse input to the movement component. Call
-// before ImGui_ImplGlfw_InitForOpenGL so ImGui's own callbacks chain to these.
-void bind(GLFWwindow *window, component::UserMovement *movement);
+// Install the GLFW callbacks on the window. Call before
+// ImGui_ImplGlfw_InitForOpenGL so ImGui's own callbacks chain to these.
+void init(GLFWwindow *window);
+
+// action is GLFW_PRESS, GLFW_RELEASE or GLFW_REPEAT
+void onKey(std::function<void(int key, int action)> callback);
+void onMouseButton(std::function<void(int button, int action)> callback);
+void onCursorPos(std::function<void(double x, double y)> callback);
+
+// Hide and lock the cursor to the window (for mouse look), or release it
+void setCursorCaptured(bool captured);
 
 } // namespace input

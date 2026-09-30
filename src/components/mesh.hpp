@@ -19,9 +19,7 @@ class Mesh : public component::ComponentBase<Mesh> {
 
     Mesh(std::shared_ptr<render::Model> model,
          std::shared_ptr<render::Material> material)
-        : material(material), model(model) {
-        checkInstancedCompatibility();
-    }
+        : material(material), model(model) {}
 
     const char *type_name() const override {
         return "Mesh";
