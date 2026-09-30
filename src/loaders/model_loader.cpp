@@ -80,13 +80,11 @@ Mesh createMesh(const std::vector<Vertex> &vertices,
     glBindVertexArray(mesh.vao);
 
     glBindBuffer(GL_ARRAY_BUFFER, mesh.vbo);
-    glBufferData(GL_ARRAY_BUFFER,
-                 static_cast<GLsizeiptr>(vertices.size() * sizeof(Vertex)),
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex),
                  vertices.data(), GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 static_cast<GLsizeiptr>(indices.size() * sizeof(unsigned int)),
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int),
                  indices.data(), GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
@@ -146,6 +144,9 @@ std::string extensionOf(const std::string &filename) {
 
 Model loadModel(const std::string &filename) {
     Model model;
+    // Set even when loading fails, so a missing model keeps its name when the
+    // scene is saved again
+    model.filename = filename;
 
     auto fs = cmrc::models::get_filesystem();
     if (!fs.exists(filename)) {
@@ -169,7 +170,6 @@ Model loadModel(const std::string &filename) {
         model.meshes.push_back(processMesh(scene, scene->mMeshes[i]));
     }
 
-    model.filename = filename;
     return model;
 }
 
