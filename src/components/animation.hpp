@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ecs.hpp"
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <type_traits>
@@ -39,111 +40,110 @@ template <typename T> struct Bezier {
         return a * control[i] + b * control[i + 1] + c * control[i + 2] +
                d * control[i + 3];
     }
+
+    // Evaluate the whole curve at u in [0, 1], every segment takes the same
+    // share of u. Needs getSegmentCount() > 0.
+    T sample(float u) const {
+        const int segmentCount = getSegmentCount();
+        float position = std::clamp(u, 0.f, 1.f) * segmentCount;
+        int segmentIndex = std::min((int)position, segmentCount - 1);
+        return eval(segmentIndex, position - segmentIndex);
+    }
 };
 
-template <typename T>
-class Animation : public component::ComponentBase<Animation<T>> {
-    const Bezier<T> curve;
-    T &property;
-    float time, max_time, play_speed;
-    PlayMode play_mode;
-    bool is_playing, forward;
+// Playback state of one animation: time runs from 0 to duration and wraps
+// according to the play mode
+struct Playback {
+    float time = 0.f;
+    float duration = 5.f;
+    float speed = 1.f;
+    PlayMode mode = PlayMode::Loop;
+    bool playing = false;
+    bool forward = true;
 
-  public:
-    Animation(const Bezier<T> &curve, T &property)
-        : curve(curve), time(0), max_time(5.f), play_mode(PlayMode::Loop),
-          play_speed(1.f), property(property), is_playing(false),
-          forward(true) {}
-
-    void update(double dt) override {
-        if (!this->enabled || !is_playing)
+    void advance(double dt) {
+        if (!playing)
             return;
 
-        time += dt * play_speed * (forward ? 1.f : -1.f);
+        time += dt * speed * (forward ? 1.f : -1.f);
 
-        if (play_mode == PlayMode::Single) {
-            if (time >= max_time) {
-                time = max_time;
-                is_playing = false;
+        if (mode == PlayMode::Single) {
+            if (time >= duration) {
+                time = duration;
+                playing = false;
             } else if (time < 0.f) {
                 time = 0.f;
-                is_playing = false;
+                playing = false;
             }
-        } else if (play_mode == PlayMode::Loop) {
+        } else if (mode == PlayMode::Loop) {
             // Reset to 0 explicitly to avoid fmod floating point errors
-            if (time >= max_time) {
+            if (time >= duration) {
                 time = 0.f;
             } else if (time < 0.f) {
-                time = max_time - std::fmod(-time, max_time);
+                time = duration - std::fmod(-time, duration);
             }
-        } else if (play_mode == PlayMode::PingPong) {
-            if (time >= max_time) {
-                time = max_time;
+        } else if (mode == PlayMode::PingPong) {
+            if (time >= duration) {
+                time = duration;
                 forward = false;
             } else if (time < 0.f) {
                 time = 0.f;
                 forward = true;
             }
         }
+    }
 
-        property = sample();
+    // Time mapped to [0, 1]
+    float progress() const {
+        return duration > 0.f ? std::clamp(time / duration, 0.f, 1.f) : 0.f;
+    }
+};
+
+template <typename T>
+class Animation : public component::ComponentBase<Animation<T>> {
+    const Bezier<T> curve;
+    T &property;
+    Playback playback;
+
+  public:
+    Animation(const Bezier<T> &curve, T &property)
+        : curve(curve), property(property) {}
+
+    void update(double dt) override {
+        if (!this->enabled || !playback.playing)
+            return;
+
+        playback.advance(dt);
+        if (curve.getSegmentCount() > 0)
+            property = curve.sample(playback.progress());
     }
 
     void play() {
-        is_playing = true;
+        playback.playing = true;
     }
 
     void stop() {
-        is_playing = false;
+        playback.playing = false;
     }
 
     bool isPlaying() const {
-        return is_playing;
+        return playback.playing;
     }
 
     void setMaxTime(float t) {
-        max_time = t;
+        playback.duration = t;
     }
 
     void setPlayMode(PlayMode mode) {
-        play_mode = mode;
+        playback.mode = mode;
     }
 
     void setPlaySpeed(float s) {
-        play_speed = s;
+        playback.speed = s;
     }
 
     const char *type_name() const override {
         return "Animation";
-    }
-
-  private:
-    T sample() {
-        const int segmentCount = curve.getSegmentCount();
-        if (segmentCount <= 0)
-            return property;
-
-        // Map time [0, max_time] to segment range [0, segmentCount)
-        float normalizedTime = std::max(0.f, std::min(1.f, time / max_time));
-        float position = normalizedTime * segmentCount;
-
-        // Which segment and local t parameter
-        int segmentIndex = (int)position;
-
-        // Clamp segment index, or wrap for Loop mode
-        if (play_mode != PlayMode::Loop) {
-            segmentIndex = std::max(0, std::min(segmentIndex, segmentCount - 1));
-        } else {
-            // For Loop mode: wrap segments so last segment connects to first
-            if (segmentCount > 0)
-                segmentIndex = segmentIndex % segmentCount;
-        }
-
-        // Recalculate t based on (possibly clamped) segment index
-        float t = position - segmentIndex;
-        t = std::max(0.f, std::min(1.f, t));
-
-        return curve.eval(segmentIndex, t);
     }
 };
 } // namespace component

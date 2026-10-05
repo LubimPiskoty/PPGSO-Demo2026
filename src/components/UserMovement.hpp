@@ -15,6 +15,7 @@ class UserMovement : public ComponentBase<component::UserMovement> {
         : speed(speed), sensitivity(sensitivity), up_key(up_key),
           down_key(down_key), forward_key(forward_key),
           backward_key(backward_key), left_key(left_key), right_key(right_key) {
+        subscribeInput();
     }
 
     void update(double dt) override;
@@ -31,6 +32,8 @@ class UserMovement : public ComponentBase<component::UserMovement> {
     int up_key, down_key, forward_key, backward_key, left_key, right_key;
 
   private:
+    void subscribeInput();
+
     // Held state per key, so releasing one key doesn't cancel the other
     // direction on the same axis.
     bool forward_held = false, backward_held = false, left_held = false,

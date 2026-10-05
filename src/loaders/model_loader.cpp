@@ -5,7 +5,10 @@
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <cmrc/cmrc.hpp>
+#include <functional>
 #include <iostream>
+#include <string_view>
+#include <unordered_map>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -53,17 +56,28 @@ GLuint loadMeshTexture(const aiScene *scene, const aiMesh *mesh) {
         return pinkFallbackTexture();
     }
 
+    // Many models embed copies of the same texture atlas, so decode each
+    // distinct image only once and share the GL texture. Keyed by a hash of
+    // the compressed bytes; a 64-bit collision is not a practical concern.
+    static std::unordered_map<std::size_t, GLuint> cache;
+    std::string_view bytes(reinterpret_cast<const char *>(embedded->pcData),
+                           embedded->mWidth);
+    GLuint &texture = cache[std::hash<std::string_view>{}(bytes)];
+    if (texture != 0)
+        return texture;
+
     int width, height, channels;
     unsigned char *pixels = stbi_load_from_memory(
-        reinterpret_cast<const unsigned char *>(embedded->pcData),
-        static_cast<int>(embedded->mWidth), &width, &height, &channels, 4);
+        reinterpret_cast<const unsigned char *>(bytes.data()),
+        static_cast<int>(bytes.size()), &width, &height, &channels, 4);
     if (!pixels) {
         std::cerr << "Failed to decode embedded texture: " << path.C_Str()
                   << std::endl;
-        return pinkFallbackTexture();
+        texture = pinkFallbackTexture();
+        return texture;
     }
 
-    GLuint texture = createTexture(pixels, width, height);
+    texture = createTexture(pixels, width, height);
     stbi_image_free(pixels);
     return texture;
 }
