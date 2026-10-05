@@ -1,10 +1,28 @@
 #include "UserMovement.hpp"
 
+#include "../input/input.hpp"
 #include "../scene/scene.hpp"
 #include <GLFW/glfw3.h>
 #include <glm/gtc/quaternion.hpp>
 
 namespace component {
+
+void UserMovement::subscribeInput() {
+    input::onKey([this](int key, int action) {
+        if (enabled && action != GLFW_REPEAT)
+            handleInput(key, action == GLFW_PRESS);
+    });
+    input::onMouseButton([this](int button, int action) {
+        if (!enabled)
+            return;
+        handleMouseButton(button, action == GLFW_PRESS);
+        input::setCursorCaptured(looking);
+    });
+    input::onCursorPos([this](double x, double y) {
+        if (enabled)
+            handleMouseMove(x, y);
+    });
+}
 
 void UserMovement::update(double dt) {
     auto owner = this->node.lock();
