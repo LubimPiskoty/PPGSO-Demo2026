@@ -12,6 +12,13 @@ cJSON *serializeVec3(const glm::vec3 &v) {
     return json;
 }
 
+cJSON *serializeVec2(const glm::vec2 &v) {
+    auto json = cJSON_CreateArray();
+    cJSON_AddItemToArray(json, cJSON_CreateNumber(v.x));
+    cJSON_AddItemToArray(json, cJSON_CreateNumber(v.y));
+    return json;
+}
+
 cJSON *serializeRotation(const glm::quat &q) {
     return serializeVec3(glm::eulerAngles(q));
 }
@@ -43,6 +50,16 @@ glm::vec3 toVec3(const cJSON *array, glm::vec3 fallback) {
 
 glm::vec3 readVec3(const cJSON *json, const char *key, glm::vec3 fallback) {
     return toVec3(cJSON_GetObjectItemCaseSensitive(json, key), fallback);
+}
+
+glm::vec2 readVec2(const cJSON *json, const char *key, glm::vec2 fallback) {
+    auto array = cJSON_GetObjectItemCaseSensitive(json, key);
+    if (!cJSON_IsArray(array) || cJSON_GetArraySize(array) != 2)
+        return fallback;
+    glm::vec2 v;
+    for (int i = 0; i < 2; i++)
+        v[i] = (float)cJSON_GetNumberValue(cJSON_GetArrayItem(array, i));
+    return v;
 }
 
 util::Guid readGuid(const cJSON *json, const char *key) {

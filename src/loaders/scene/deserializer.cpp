@@ -133,8 +133,88 @@ static void deserializeUserMovementComponent(const cJSON *json,
         (int)readNumber(keys, "down", 'C'));
 }
 
+// Steps with an unknown "fn" are skipped
+static bool deserializeInstanceStep(const cJSON *json,
+                                    component::InstanceStep &step) {
+    using namespace component;
+    std::string fn = readString(json, "fn");
+    if (fn == "generateCircle") {
+        GenerateCircle s;
+        s.center = readVec3(json, "center", s.center);
+        s.radius = readNumber(json, "radius", s.radius);
+        s.up = readVec3(json, "up", s.up);
+        s.count = (int)readNumber(json, "count", (float)s.count);
+        step = s;
+    } else if (fn == "generateDisc") {
+        GenerateDisc s;
+        s.center = readVec3(json, "center", s.center);
+        s.innerRadius = readNumber(json, "innerRadius", s.innerRadius);
+        s.outerRadius = readNumber(json, "outerRadius", s.outerRadius);
+        s.up = readVec3(json, "up", s.up);
+        s.count = (int)readNumber(json, "count", (float)s.count);
+        step = s;
+    } else if (fn == "generateGrid") {
+        GenerateGrid s;
+        s.center = readVec3(json, "center", s.center);
+        s.cellSize = readNumber(json, "cellSize", s.cellSize);
+        s.cellCount = glm::ivec2(
+            readVec2(json, "cellCount", glm::vec2(s.cellCount)));
+        s.up = readVec3(json, "up", s.up);
+        s.count = (int)readNumber(json, "count", (float)s.count);
+        step = s;
+    } else if (fn == "generatePlane") {
+        GeneratePlane s;
+        s.center = readVec3(json, "center", s.center);
+        s.size = readVec2(json, "size", s.size);
+        s.up = readVec3(json, "up", s.up);
+        s.count = (int)readNumber(json, "count", (float)s.count);
+        step = s;
+    } else if (fn == "randomizeScale") {
+        RandomizeScale s;
+        s.min = readNumber(json, "min", s.min);
+        s.max = readNumber(json, "max", s.max);
+        step = s;
+    } else if (fn == "randomizePosition") {
+        RandomizePosition s;
+        s.min = readVec3(json, "min", s.min);
+        s.max = readVec3(json, "max", s.max);
+        step = s;
+    } else if (fn == "randomizeRotation") {
+        RandomizeRotation s;
+        s.min = readVec3(json, "min", s.min);
+        s.max = readVec3(json, "max", s.max);
+        step = s;
+    } else {
+        return false;
+    }
+    return true;
+}
+
 static void deserializeInstancesComponent(const cJSON *json,
                                           std::shared_ptr<scn::Node> node) {
+    // A recipe takes priority over saved transforms
+    auto generate = cJSON_GetObjectItemCaseSensitive(json, "generate");
+    if (cJSON_IsArray(generate)) {
+        component::InstanceRecipe recipe;
+        // Not readNumber, a float can't hold every 32-bit seed
+        auto seed = cJSON_GetObjectItemCaseSensitive(json, "seed");
+        if (cJSON_IsNumber(seed))
+            recipe.seed = (std::uint32_t)seed->valuedouble;
+        const cJSON *s;
+        cJSON_ArrayForEach(s, generate) {
+            component::InstanceStep step;
+            if (deserializeInstanceStep(s, step))
+                recipe.steps.push_back(step);
+            else
+                std::cerr << "[Warning] Unknown instance generator '"
+                          << readString(s, "fn") << "' on '" << node->name
+                          << "', skipped" << std::endl;
+        }
+        node->add_component<component::Instances>()->setRecipe(
+            std::move(recipe));
+        return;
+    }
+
     std::vector<component::Instance> instances;
     const cJSON *item;
     cJSON_ArrayForEach(item,

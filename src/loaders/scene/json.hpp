@@ -14,7 +14,8 @@
 // V3: shaders store whether they're instanced, and UserMovement, Instances
 // and Animator components are serialized. V2 files still load, the missing
 // fields fall back to defaults.
-#define SERIALIZER_VERSION 3.0
+// V3.1: Instances can be saved as a generator recipe instead of transforms
+#define SERIALIZER_VERSION 3.1
 
 namespace loader {
 
@@ -33,6 +34,7 @@ inline const char *animTargetNames[] = {"position", "rotation", "scale"};
 //
 
 cJSON *serializeVec3(const glm::vec3 &v);
+cJSON *serializeVec2(const glm::vec2 &v);
 
 // Serialized as euler angles (radians) for a human-readable file; the engine
 // itself keeps rotations as quaternions internally.
@@ -50,6 +52,7 @@ std::string readString(const cJSON *json, const char *key,
                        const std::string &fallback = "");
 glm::vec3 toVec3(const cJSON *array, glm::vec3 fallback);
 glm::vec3 readVec3(const cJSON *json, const char *key, glm::vec3 fallback);
+glm::vec2 readVec2(const cJSON *json, const char *key, glm::vec2 fallback);
 
 // Null guid when missing or malformed
 util::Guid readGuid(const cJSON *json, const char *key);
