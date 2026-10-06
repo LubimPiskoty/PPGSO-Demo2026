@@ -130,6 +130,13 @@ cmrc_add_resource_library(textures
         WHENCE res/textures
         ${TEXTURE_FILES})
 
+# Bezier curves exported by tools/export_curves.py (raw float32 xyz points)
+file(GLOB CURVE_FILES CONFIGURE_DEPENDS "res/curves/*.bin")
+cmrc_add_resource_library(curves
+        NAMESPACE curves
+        WHENCE res/curves
+        ${CURVE_FILES})
+
 #
 # Target
 #
@@ -148,6 +155,7 @@ target_link_libraries(semestralka PUBLIC
         shaders
         models
         textures
+        curves
         OpenGL::GL
         GLEW::GLEW
         glfw
