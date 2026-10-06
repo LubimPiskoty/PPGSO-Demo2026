@@ -11,8 +11,8 @@
 namespace util {
 
 // Random 64-bit id, stable for an object's lifetime. Used to reference
-// objects (nodes, materials, ...) when serializing, since raw
-// pointers/indices don't survive a save/load round-trip.
+// objects (nodes, materials, ...) in scene files, since raw pointers/indices
+// can't be written there.
 // A default-constructed Guid is null (0) and converts to false.
 class Guid {
   public:

@@ -73,8 +73,8 @@ using InstanceStep =
     std::variant<GenerateCircle, GenerateDisc, GenerateGrid, GeneratePlane,
                  RandomizeScale, RandomizePosition, RandomizeRotation>;
 
-// Saved instead of the transforms, the seed keeps the result the same on
-// every load
+// Scene files can store this instead of the transforms, the seed keeps the
+// result the same on every load
 struct InstanceRecipe {
     std::uint32_t seed = 0;
     std::vector<InstanceStep> steps;
@@ -88,17 +88,10 @@ class Instances : public ComponentBase<Instances> {
     explicit Instances(std::vector<Instance> instances = {})
         : instances(std::move(instances)) {}
 
-    // Uploads on the next update(). Drops the recipe, it no longer matches.
+    // Uploads on the next update()
     void setInstances(std::vector<Instance> instances);
     const std::vector<Instance> &getInstances() const {
         return instances;
-    }
-
-    // Generates the instances from the recipe and keeps it for saving
-    void setRecipe(InstanceRecipe recipe);
-    // Empty when the instances were set directly
-    const InstanceRecipe &getRecipe() const {
-        return recipe;
     }
 
     void update(double dt) override;
@@ -113,7 +106,6 @@ class Instances : public ComponentBase<Instances> {
 
   private:
     std::vector<Instance> instances;
-    InstanceRecipe recipe;
     bool dirty = true;
 };
 

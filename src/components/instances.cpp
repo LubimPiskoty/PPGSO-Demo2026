@@ -1,7 +1,6 @@
 #include "instances.hpp"
 
 #include "../scene/scene.hpp"
-#include "instance_generators.hpp"
 #include "mesh.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -17,13 +16,7 @@ glm::mat4 Instance::matrix() const {
 
 void Instances::setInstances(std::vector<Instance> instances) {
     this->instances = std::move(instances);
-    recipe = {};
     dirty = true;
-}
-
-void Instances::setRecipe(InstanceRecipe recipe) {
-    setInstances(instgen::runRecipe(recipe));
-    this->recipe = std::move(recipe);
 }
 
 void Instances::update(double dt) {

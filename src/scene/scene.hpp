@@ -31,8 +31,8 @@ class Node : public std::enable_shared_from_this<Node> {
     std::weak_ptr<Node> parent; // weak: parent owns children, not the reverse
     std::vector<std::shared_ptr<Node>> children;
 
-    // Randomly assigned on creation. Used to reference nodes (e.g.
-    // activeCamera, parent links) when serializing.
+    // Randomly assigned on creation, or read from the scene file. Used to
+    // reference nodes (e.g. activeCamera) in scene files.
     util::Guid guid;
 
     // Attributes

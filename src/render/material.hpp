@@ -25,7 +25,7 @@ enum class BlendMode {
 };
 
 // Shared shader program + the source paths it was built from, so several
-// materials can reuse one program and the serializer can write the paths.
+// materials can reuse one program.
 struct Shader {
     GLuint program = 0;
     std::string vertexPath;
