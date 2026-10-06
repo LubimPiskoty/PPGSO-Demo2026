@@ -1,7 +1,6 @@
 #include "debug_ui.hpp"
 
 #ifdef WITH_IMGUI
-#include "../loaders/scene_loader.hpp"
 #include "../scene/scene.hpp"
 #include "profiler.hpp"
 #include "imgui.h"
@@ -25,9 +24,6 @@ static void sceneWindow(scn::Scene &scene) {
     ImGui::Text("%.1f fps", ImGui::GetIO().Framerate);
     ImGui::Separator();
     ImGui::TextUnformatted(scene.root->to_string().c_str());
-    ImGui::Separator();
-    if (ImGui::Button("Save scene"))
-        loader::saveScene(&scene, "scene.json");
     ImGui::End();
 }
 

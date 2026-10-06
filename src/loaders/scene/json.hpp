@@ -1,7 +1,7 @@
 #pragma once
 
-// Internal to the scene loader: helpers shared by the serializer and
-// deserializer. Use ../scene_loader.hpp from outside.
+// Internal to the scene loader: JSON read helpers for the deserializer.
+// Use ../scene_loader.hpp from outside.
 
 #include "../../render/material.hpp"
 #include "../../util/guid.hpp"
@@ -12,10 +12,10 @@
 #include <string>
 
 // V3: shaders store whether they're instanced, and UserMovement, Instances
-// and Animator components are serialized. V2 files still load, the missing
+// and Animator components are stored. V2 files still load, the missing
 // fields fall back to defaults.
-// V3.1: Instances can be saved as a generator recipe instead of transforms
-#define SERIALIZER_VERSION 3.1
+// V3.1: Instances can be a generator recipe instead of transforms
+#define SCENE_FORMAT_VERSION 3.1
 
 namespace loader {
 
@@ -28,21 +28,6 @@ inline const char *textureSlotNames[(int)render::TextureSlot::Count] = {
 // Indexed by PlayMode / AnimTarget
 inline const char *playModeNames[] = {"single", "loop", "pingpong"};
 inline const char *animTargetNames[] = {"position", "rotation", "scale"};
-
-//
-// Writing
-//
-
-cJSON *serializeVec3(const glm::vec3 &v);
-cJSON *serializeVec2(const glm::vec2 &v);
-
-// Serialized as euler angles (radians) for a human-readable file; the engine
-// itself keeps rotations as quaternions internally.
-cJSON *serializeRotation(const glm::quat &q);
-
-//
-// Reading
-//
 
 // Read helpers: return the fallback when the key is missing or has the wrong
 // type, so older files and hand-edited ones still load

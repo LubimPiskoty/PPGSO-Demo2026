@@ -4,25 +4,6 @@
 
 namespace loader {
 
-cJSON *serializeVec3(const glm::vec3 &v) {
-    auto json = cJSON_CreateArray();
-    cJSON_AddItemToArray(json, cJSON_CreateNumber(v.x));
-    cJSON_AddItemToArray(json, cJSON_CreateNumber(v.y));
-    cJSON_AddItemToArray(json, cJSON_CreateNumber(v.z));
-    return json;
-}
-
-cJSON *serializeVec2(const glm::vec2 &v) {
-    auto json = cJSON_CreateArray();
-    cJSON_AddItemToArray(json, cJSON_CreateNumber(v.x));
-    cJSON_AddItemToArray(json, cJSON_CreateNumber(v.y));
-    return json;
-}
-
-cJSON *serializeRotation(const glm::quat &q) {
-    return serializeVec3(glm::eulerAngles(q));
-}
-
 float readNumber(const cJSON *json, const char *key, float fallback) {
     auto item = cJSON_GetObjectItemCaseSensitive(json, key);
     return cJSON_IsNumber(item) ? (float)item->valuedouble : fallback;
