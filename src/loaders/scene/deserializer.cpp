@@ -4,6 +4,7 @@
 
 #include "../../components/UserMovement.hpp"
 #include "../../components/animator.hpp"
+#include "../../components/instance_generators.hpp"
 #include "../../components/instances.hpp"
 #include "../../components/mesh.hpp"
 #include "../curve_loader.hpp"
@@ -210,8 +211,8 @@ static void deserializeInstancesComponent(const cJSON *json,
                           << readString(s, "fn") << "' on '" << node->name
                           << "', skipped" << std::endl;
         }
-        node->add_component<component::Instances>()->setRecipe(
-            std::move(recipe));
+        node->add_component<component::Instances>(
+            component::instgen::runRecipe(recipe));
         return;
     }
 
@@ -246,9 +247,9 @@ static void deserializeAnimatorComponent(const cJSON *json,
         track.playback.playing = readBool(t, "playing", true);
 
         // Either a curve file from res/curves or inline control points
-        track.curveFile = readString(t, "curve");
-        if (!track.curveFile.empty()) {
-            track.curve = loadCurve(track.curveFile);
+        std::string curveFile = readString(t, "curve");
+        if (!curveFile.empty()) {
+            track.curve = loadCurve(curveFile);
         } else {
             const cJSON *point;
             cJSON_ArrayForEach(point,
@@ -336,9 +337,9 @@ scn::Scene loadScene(std::string path) {
     }
 
     float version = readNumber(json, "version", 0.f);
-    if (version > SERIALIZER_VERSION)
+    if (version > SCENE_FORMAT_VERSION)
         std::cerr << "[Warning] Scene version " << version
-                  << " is newer than the loader (" << SERIALIZER_VERSION
+                  << " is newer than the loader (" << SCENE_FORMAT_VERSION
                   << "), some data may be skipped" << std::endl;
 
     // Materials first, so meshes can resolve their references

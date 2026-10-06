@@ -1,6 +1,6 @@
 #pragma once
 
-// Procedural instance placement, used by Instances::setRecipe. Typical use:
+// Procedural instance placement, used by the scene loader. Typical use:
 //   generateGrid(center, cellSize, cellCount, up, count)
 //   randomizePosition(min, max)
 //   randomizeRotation(min, max)

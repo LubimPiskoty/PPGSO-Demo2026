@@ -14,16 +14,12 @@ enum class AnimTarget { Position, Rotation, Scale };
 struct AnimatorTrack {
     AnimTarget target = AnimTarget::Position;
     Bezier<glm::vec3> curve;
-    // Curve file in res/curves the control points came from, "" when they
-    // were given inline. Saved instead of the points so the file stays the
-    // source of truth.
-    std::string curveFile;
     Playback playback;
 };
 
 // Animates the owner node's local position / rotation (Euler radians) /
 // scale along Bezier curves. Unlike Animation<T> it only targets the node
-// transform, so it can be saved and loaded with the scene.
+// transform, so it can be loaded with the scene.
 class Animator : public ComponentBase<Animator> {
   public:
     std::vector<AnimatorTrack> tracks;
