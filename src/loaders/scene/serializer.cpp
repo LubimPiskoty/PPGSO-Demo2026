@@ -106,10 +106,66 @@ static void serializeUserMovementComponent(
     cJSON_AddNumberToObject(keys, "down", movement->down_key);
 }
 
-// Each instance is a flat [px, py, pz, rx, ry, rz, sx, sy, sz] array to keep
-// the file small, there can be thousands of them
+static cJSON *serializeInstanceStep(const component::InstanceStep &step) {
+    using namespace component;
+    auto json = cJSON_CreateObject();
+    if (auto s = std::get_if<GenerateCircle>(&step)) {
+        cJSON_AddStringToObject(json, "fn", "generateCircle");
+        cJSON_AddItemToObject(json, "center", serializeVec3(s->center));
+        cJSON_AddNumberToObject(json, "radius", s->radius);
+        cJSON_AddItemToObject(json, "up", serializeVec3(s->up));
+        cJSON_AddNumberToObject(json, "count", s->count);
+    } else if (auto s = std::get_if<GenerateDisc>(&step)) {
+        cJSON_AddStringToObject(json, "fn", "generateDisc");
+        cJSON_AddItemToObject(json, "center", serializeVec3(s->center));
+        cJSON_AddNumberToObject(json, "innerRadius", s->innerRadius);
+        cJSON_AddNumberToObject(json, "outerRadius", s->outerRadius);
+        cJSON_AddItemToObject(json, "up", serializeVec3(s->up));
+        cJSON_AddNumberToObject(json, "count", s->count);
+    } else if (auto s = std::get_if<GenerateGrid>(&step)) {
+        cJSON_AddStringToObject(json, "fn", "generateGrid");
+        cJSON_AddItemToObject(json, "center", serializeVec3(s->center));
+        cJSON_AddNumberToObject(json, "cellSize", s->cellSize);
+        cJSON_AddItemToObject(json, "cellCount",
+                              serializeVec2(glm::vec2(s->cellCount)));
+        cJSON_AddItemToObject(json, "up", serializeVec3(s->up));
+        cJSON_AddNumberToObject(json, "count", s->count);
+    } else if (auto s = std::get_if<GeneratePlane>(&step)) {
+        cJSON_AddStringToObject(json, "fn", "generatePlane");
+        cJSON_AddItemToObject(json, "center", serializeVec3(s->center));
+        cJSON_AddItemToObject(json, "size", serializeVec2(s->size));
+        cJSON_AddItemToObject(json, "up", serializeVec3(s->up));
+        cJSON_AddNumberToObject(json, "count", s->count);
+    } else if (auto s = std::get_if<RandomizeScale>(&step)) {
+        cJSON_AddStringToObject(json, "fn", "randomizeScale");
+        cJSON_AddNumberToObject(json, "min", s->min);
+        cJSON_AddNumberToObject(json, "max", s->max);
+    } else if (auto s = std::get_if<RandomizePosition>(&step)) {
+        cJSON_AddStringToObject(json, "fn", "randomizePosition");
+        cJSON_AddItemToObject(json, "min", serializeVec3(s->min));
+        cJSON_AddItemToObject(json, "max", serializeVec3(s->max));
+    } else if (auto s = std::get_if<RandomizeRotation>(&step)) {
+        cJSON_AddStringToObject(json, "fn", "randomizeRotation");
+        cJSON_AddItemToObject(json, "min", serializeVec3(s->min));
+        cJSON_AddItemToObject(json, "max", serializeVec3(s->max));
+    }
+    return json;
+}
+
+// Generated instances only save their recipe. Otherwise each instance is a
+// flat [px, py, pz, rx, ry, rz, sx, sy, sz] array to keep the file small,
+// there can be thousands of them
 static void serializeInstancesComponent(
     cJSON *json, std::shared_ptr<component::Instances> instances) {
+    const auto &recipe = instances->getRecipe();
+    if (!recipe.steps.empty()) {
+        cJSON_AddNumberToObject(json, "seed", recipe.seed);
+        auto steps = cJSON_AddArrayToObject(json, "generate");
+        for (const auto &step : recipe.steps)
+            cJSON_AddItemToArray(steps, serializeInstanceStep(step));
+        return;
+    }
+
     auto array = cJSON_AddArrayToObject(json, "instances");
     for (const auto &instance : instances->getInstances()) {
         float values[9] = {

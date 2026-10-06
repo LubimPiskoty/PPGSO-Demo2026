@@ -1,73 +1,302 @@
 {
-	"version":	1,
-	"scene":	{
-		"activeCamera":	"6fcc4c15389d6345",
-		"graph":	{
-			"name":	"root",
-			"guid":	"bbfa68a3bb2a1f26",
-			"enabled":	true,
-			"transform":	{
-				"position":	[0, 0, 0],
-				"rotation":	[0, 0, 0],
-				"scale":	[1, 1, 1]
-			},
-			"components":	[],
-			"children":	[{
-					"name":	"Melon crate",
-					"guid":	"6cf7d9044d0e19a2",
-					"enabled":	true,
-					"transform":	{
-						"position":	[0, 0, 0],
-						"rotation":	[0, 0, 0],
-						"scale":	[1, 1, 1]
-					},
-					"components":	[{
-							"type_id":	"Mesh",
-							"enabled":	true,
-							"model":	"SM_PROP_crate_02.glb",
-							"vertex":	"MISSING",
-							"fragment":	"MISSING"
-						}],
-					"children":	[]
-				}, {
-					"name":	"Grass ground",
-					"guid":	"1c16cb37b0002180",
-					"enabled":	true,
-					"transform":	{
-						"position":	[0, -0.20000000298023224, 0],
-						"rotation":	[0, 0, 0],
-						"scale":	[0.699999988079071, 0.699999988079071, 0.699999988079071]
-					},
-					"components":	[{
-							"type_id":	"Mesh",
-							"enabled":	true,
-							"model":	"grass_plane.glb",
-							"vertex":	"MISSING",
-							"fragment":	"MISSING"
-						}],
-					"children":	[]
-				}, {
-					"name":	"Camera",
-					"guid":	"6fcc4c15389d6345",
-					"enabled":	true,
-					"transform":	{
-						"position":	[1.5691561698913574, 0.82461953163146973, 1.0768588781356812],
-						"rotation":	[-0.36069542169570923, 0.99117660522460938, 0],
-						"scale":	[0.99999994039535522, 1.0000001192092896, 1.0000001192092896]
-					},
-					"components":	[{
-							"type_id":	"Camera",
-							"enabled":	true,
-							"fov":	0.87266463041305542,
-							"near":	0.0010000000474974513,
-							"far":	10000
-						}, {
-							"type_id":	"UserMovement",
-							"enabled":	true,
-							"missing_serializer":	true
-						}],
-					"children":	[]
-				}]
-		}
-	}
+    "version": 3.1,
+    "scene": {
+        "activeCamera": "f9f38a23d2bec37a",
+        "graph": {
+            "name": "root",
+            "guid": "670a0a514656071d",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0,
+                    0,
+                    0
+                ],
+                "rotation": [
+                    0,
+                    0,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            },
+            "components": [],
+            "children": [
+                {
+                    "name": "Ground",
+                    "guid": "90dccd7d6b7f3750",
+                    "enabled": true,
+                    "transform": {
+                        "position": [
+                            0,
+                            0,
+                            0
+                        ],
+                        "rotation": [
+                            0,
+                            0,
+                            0
+                        ],
+                        "scale": [
+                            1,
+                            1,
+                            1
+                        ]
+                    },
+                    "components": [
+                        {
+                            "type_id": "Mesh",
+                            "enabled": true,
+                            "model": "grid_plane.glb",
+                            "material": {
+                                "name": "Textured instanced",
+                                "guid": "07fb5de87aeca420"
+                            }
+                        },
+                        {
+                            "type_id": "Instances",
+                            "enabled": true,
+                            "seed": 0,
+                            "generate": [
+                                {
+                                    "fn": "generateGrid",
+                                    "center": [
+                                        0,
+                                        0,
+                                        0
+                                    ],
+                                    "cellSize": 10,
+                                    "cellCount": [
+                                        100,
+                                        100
+                                    ],
+                                    "up": [
+                                        0,
+                                        1,
+                                        0
+                                    ],
+                                    "count": 10000
+                                }
+                            ]
+                        }
+                    ],
+                    "children": []
+                },
+                {
+                    "name": "Grass",
+                    "guid": "3c9e51a7f2d84b60",
+                    "enabled": true,
+                    "transform": {
+                        "position": [
+                            50,
+                            0,
+                            0
+                        ],
+                        "rotation": [
+                            0,
+                            0,
+                            0
+                        ],
+                        "scale": [
+                            1,
+                            1,
+                            1
+                        ]
+                    },
+                    "components": [
+                        {
+                            "type_id": "Mesh",
+                            "enabled": true,
+                            "model": "SM_ENV_PLANT_grass_village.glb",
+                            "material": {
+                                "name": "Textured instanced",
+                                "guid": "07fb5de87aeca420"
+                            }
+                        },
+                        {
+                            "type_id": "Instances",
+                            "enabled": true,
+                            "seed": 1337,
+                            "generate": [
+                                {
+                                    "fn": "generatePlane",
+                                    "center": [
+                                        -20,
+                                        0,
+                                        0
+                                    ],
+                                    "size": [
+                                        50,
+                                        50
+                                    ],
+                                    "up": [
+                                        0,
+                                        1,
+                                        0
+                                    ],
+                                    "count": 5000
+                                },
+                                {
+                                    "fn": "randomizeRotation",
+                                    "min": [
+                                        0,
+                                        0,
+                                        0
+                                    ],
+                                    "max": [
+                                        0,
+                                        6.283185307179586,
+                                        0
+                                    ]
+                                },
+                                {
+                                    "fn": "randomizeScale",
+                                    "min": 0.8,
+                                    "max": 1.3
+                                }
+                            ]
+                        }
+                    ],
+                    "children": []
+                },
+                {
+                    "name": "Palisade",
+                    "guid": "7b2f04c91e6d3a58",
+                    "enabled": true,
+                    "transform": {
+                        "position": [
+                            -50,
+                            0,
+                            0
+                        ],
+                        "rotation": [
+                            0,
+                            0,
+                            0
+                        ],
+                        "scale": [
+                            1,
+                            1,
+                            1
+                        ]
+                    },
+                    "components": [
+                        {
+                            "type_id": "Mesh",
+                            "enabled": true,
+                            "model": "SM_PROP_wall_wood.glb",
+                            "material": {
+                                "name": "Textured instanced",
+                                "guid": "07fb5de87aeca420"
+                            }
+                        },
+                        {
+                            "type_id": "Instances",
+                            "enabled": true,
+                            "seed": 0,
+                            "generate": [
+                                {
+                                    "fn": "generateCircle",
+                                    "center": [
+                                        0,
+                                        0,
+                                        0
+                                    ],
+                                    "radius": 25,
+                                    "up": [
+                                        0,
+                                        1,
+                                        0
+                                    ],
+                                    "count": 28
+                                }
+                            ]
+                        }
+                    ],
+                    "children": []
+                },
+                {
+                    "name": "Camera",
+                    "guid": "f9f38a23d2bec37a",
+                    "enabled": true,
+                    "transform": {
+                        "position": [
+                            0,
+                            12,
+                            45
+                        ],
+                        "rotation": [
+                            -0.20000000298023224,
+                            0,
+                            0
+                        ],
+                        "scale": [
+                            1,
+                            1,
+                            1
+                        ]
+                    },
+                    "components": [
+                        {
+                            "type_id": "Camera",
+                            "enabled": true,
+                            "fov": 0.8726646304130554,
+                            "near": 0.1,
+                            "far": 1000
+                        },
+                        {
+                            "type_id": "UserMovement",
+                            "enabled": true,
+                            "speed": 10,
+                            "sensitivity": 0.10000000149011612,
+                            "keys": {
+                                "forward": 87,
+                                "backward": 83,
+                                "left": 65,
+                                "right": 68,
+                                "up": 32,
+                                "down": 67
+                            }
+                        }
+                    ],
+                    "children": []
+                }
+            ]
+        }
+    },
+    "materials": [
+        {
+            "name": "Textured instanced",
+            "guid": "07fb5de87aeca420",
+            "shader": {
+                "vertex": "default_instanced.vs",
+                "fragment": "texture.fs",
+                "instanced": true
+            },
+            "textures": {},
+            "phong": {
+                "ambient": [
+                    0.1,
+                    0.1,
+                    0.1
+                ],
+                "diffuse": [
+                    1,
+                    1,
+                    1
+                ],
+                "specular": [
+                    0.5,
+                    0.5,
+                    0.5
+                ],
+                "shininess": 32
+            },
+            "opacity": 1,
+            "blend": "opaque"
+        }
+    ]
 }
