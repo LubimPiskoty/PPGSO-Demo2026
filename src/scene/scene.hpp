@@ -12,6 +12,8 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include "../components/skybox.hpp"
+#include "../render/light_buffer.hpp"
 
 namespace scn {
 
@@ -100,6 +102,10 @@ std::ostream &operator<<(std::ostream &os, const Node &node);
 class Scene {
   public:
     std::weak_ptr<component::Camera> activeCamera;
+    std::weak_ptr<component::Skybox> skybox;
+    render::LightBuffer lightBuffer;
+    void uploadLights();
+
     Scene();
 
     // Call on whole scene graph

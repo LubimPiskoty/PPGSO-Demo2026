@@ -20,6 +20,8 @@
 #include "loaders/texture_loader.hpp"
 #include "render/material.hpp"
 #include "scene/scene.hpp"
+#include "components/skybox.hpp"
+#include "components/light.hpp"
 
 #include "glm/gtc/matrix_transform.hpp"
 
@@ -71,6 +73,17 @@ int main() {
     scn::Scene scene = loader::loadScene("scene.json");
     if (auto camera = scene.activeCamera.lock())
         camera->setSize((float)fbWidth, (float)fbHeight);
+
+    // sky box
+    auto skyNode = scn::Node::create("Skybox");
+    scene.skybox = skyNode->add_component<component::Skybox>("skybox.png");
+    scene.root->add_child(skyNode);
+
+    // dir light (slnko)
+    auto sunNode = scn::Node::create("Sun");
+    sunNode->localRotEuler = glm::radians(glm::vec3(-60.f, 30.f, 0.f));
+    sunNode->add_component<component::Light>();
+    scene.root->add_child(sunNode);
 
     double time = glfwGetTime();
     while (!glfwWindowShouldClose(window)) {

@@ -56,6 +56,10 @@ GLuint createShaderProgram(const std::string &vertexPath,
         std::cerr << "Program link error:\n" << infoLog << std::endl;
     }
 
+    GLuint blockIndex = glGetUniformBlockIndex(program, "Lights");
+    if (blockIndex != GL_INVALID_INDEX)
+        glUniformBlockBinding(program, blockIndex, 1);
+
     // Shaders are linked into the program now; the standalone objects aren't
     // needed
     glDeleteShader(vertexShader);

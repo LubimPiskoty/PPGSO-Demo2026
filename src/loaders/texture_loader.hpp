@@ -11,4 +11,6 @@ GLuint createTexture(const unsigned char *pixels, int width, int height);
 
 // filename is the embedded resource path, e.g. "grid_dark.png"
 std::shared_ptr<render::Texture> loadTexture(const std::string &filename);
+    // skybox from cube map
+    GLuint loadCubemapCross(const std::string &filename);
 } // namespace loader

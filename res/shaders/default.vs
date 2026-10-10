@@ -8,9 +8,13 @@ uniform mat4 uView;
 uniform mat4 uProjection;
 
 out vec2 FragTexCoord;
+out vec3 FragNormal;
+out vec3 FragPos;
 
 void main() {
     FragTexCoord = TexCoord;
+    FragPos      = vec3(uModel * vec4(Position, 1.0));
+    FragNormal = mat3(transpose(inverse(uModel))) * Normal;
 
-    gl_Position = uProjection * uView * uModel * vec4(Position, 1.0);
+    gl_Position = uProjection * uView * vec4(FragPos, 1.0);
 }

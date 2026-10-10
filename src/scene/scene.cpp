@@ -1,6 +1,7 @@
 #include "scene.hpp"
 
 #include "../components/mesh.hpp"
+#include "../components/light.hpp"
 #include <cassert>
 #include <cstdio>
 #include <glm/ext/matrix_float4x4.hpp>
@@ -42,6 +43,8 @@ std::shared_ptr<Node> Node::create(std::string name, glm::mat4 localTransform) {
 
     return node;
 }
+
+
 
 void Node::update(double dt) {
     if (!enabled)
@@ -152,7 +155,11 @@ void Scene::draw() {
         std::puts("No camera is active!! Output will be blank");
         return;
     }
+    uploadLights();
     this->root->draw(activeCamera.lock());
+
+    if (auto sky = skybox.lock())
+        sky->draw(activeCamera.lock());
 }
 
 void Scene::update(double dt) {
@@ -170,6 +177,35 @@ std::shared_ptr<Node> Scene::findByGuid(util::Guid guid) const {
             stack.push_back(child);
     }
     return nullptr;
+}
+
+    void Scene::uploadLights() {
+    render::LightBlock block{};
+
+    // camera pos for specular
+    if (auto cam = activeCamera.lock())
+        if (auto camNode = cam->node.lock())
+            block.viewPos = glm::vec4(camNode->globalPosition(), 1.f);
+
+    // find first light in scene
+    std::vector<std::shared_ptr<Node>> stack{root};
+    while (!stack.empty()) {
+        auto node = stack.back();
+        stack.pop_back();
+        if (!node->enabled)
+            continue;
+
+        auto light = node->get_component<component::Light>();
+        if (light && light->enabled) {
+            block.direction = glm::vec4(light->direction(), 0.f);
+            block.color = glm::vec4(light->color * light->intensity, light->ambient);
+            break;   // dir light only now
+        }
+        for (auto &child : node->children)
+            stack.push_back(child);
+    }
+
+    lightBuffer.upload(block);
 }
 
 }; // namespace scn

@@ -41,6 +41,7 @@ void Material::bind() const {
     glUniform1f(uniLoc("uMaterial.shininess"), shininess);
     glUniform1f(uniLoc("uMaterial.opacity"), opacity);
 
+
     // Extra uniforms
     for (auto &[n, v] : uFloats)
         glUniform1f(uniLoc(n), v);

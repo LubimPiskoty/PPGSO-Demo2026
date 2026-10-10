@@ -51,4 +51,63 @@ std::shared_ptr<render::Texture> loadTexture(const std::string &filename) {
     return texture;
 }
 
+GLuint loadCubemapCross(const std::string &filename) {
+    auto fs = cmrc::textures::get_filesystem();
+    if (!fs.exists(filename)) {
+        std::cerr << "Cubemap not found: " << filename << std::endl;
+        return 0;
+    }
+    auto file = fs.open(filename);
+
+    int width, height, channels;
+    unsigned char *data = stbi_load_from_memory(
+        reinterpret_cast<const unsigned char *>(file.begin()),
+        static_cast<int>(file.size()), &width, &height, &channels, 3);
+    if (!data) {
+        std::cerr << "Cubemap failed to decode: " << filename << std::endl;
+        return 0;
+    }
+
+    int face = width / 4;   // cross is 4x width a 3x height
+
+    // column and row for cross
+    const int cells[6][2] = {
+        {2, 1},   // +X right
+        {0, 1},   // -X left
+        {1, 0},   // +Y up
+        {1, 2},   // -Y down
+        {1, 1},   // +Z frotn
+        {3, 1},   // -Z back
+    };
+
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, width);
+
+    for (int i = 0; i < 6; i++) {
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS, cells[i][0] * face);
+        glPixelStorei(GL_UNPACK_SKIP_ROWS,   cells[i][1] * face);
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB,
+                     face, face, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    }
+
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+    glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+    glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+
+    stbi_image_free(data);
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    return textureID;
+}
+
 } // namespace loader
