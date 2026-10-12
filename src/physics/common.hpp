@@ -2,6 +2,7 @@
 
 #include "shape.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <glm/matrix.hpp>
 #include <glm/vec3.hpp>
@@ -26,6 +27,10 @@ struct Body {
     Entity e;
     glm::mat4 tf; // global transform
     AABB aabb;
+    std::size_t index; // position in ctx.cache
+    // Positional correction summed over all contacts of this step, applied
+    // to the node once after solving
+    glm::vec3 correction{0.f};
 
     // World position: translation column of the transform
     glm::vec3 pos() const {
@@ -34,7 +39,7 @@ struct Body {
 };
 
 struct Contact {
-    Body a; // first body (the plane or box comes first in mixed pairs)
+    Body a; // first body (the plane comes first in plane-sphere pairs)
     Body b; // second body
     glm::vec3 normal; // unit length, points from a toward b
     glm::vec3 point;  // world-space contact point
@@ -44,14 +49,17 @@ struct Contact {
 struct Context {
     glm::vec3 gravity{0, -9.8f, 0};
     glm::vec3 windVel{0}; // TODO: make into vec field
-    float drag = 0.3f;
+    float drag = 0.1f;
+    // Angular velocity lost per second, independent of mass and size, so
+    // small spins left over from contacts die out instead of lingering
+    float angularDrag = 2.f;
 
-    // Fixed timestep: real frame time (scaled by timeScale) is accumulated
-    // and consumed in fixedDt sized steps, so the simulation is the same at
-    // any frame rate or timescale. timeScale 0 pauses.
+    // Every frame advances the simulation by fixedDt * timeScale, split into
+    // `substeps` equal steps. Not tied to real frame time, so physics runs
+    // at real speed only at 60 fps (vsync). timeScale 0 pauses.
     float timeScale = 1.f;
-    float fixedDt = 1 / 120.f;
-    float accumulator = 0.f;
+    float fixedDt = 1 / 60.f;
+    int substeps = 6;
 
     std::vector<Entity> bodies;
     // Rebuilt every step from `bodies`. `pairs` point into it, so they are

@@ -30,12 +30,8 @@ void Camera::lookAt(glm::vec3 target, glm::vec3 up) {
     // view->world (camera-to-world), so we need its inverse.
     glm::mat4 transform = glm::inverse(glm::lookAt(eye, target, up));
 
-    glm::vec3 skew;
-    glm::vec4 perspective;
-    glm::quat rot;
-    glm::decompose(transform, owner->localScale, rot,
-                   owner->localPos, skew, perspective);
-    owner->localRotEuler = glm::eulerAngles(rot);
+    // World space transform, goes through the parent chain
+    owner->setGlobalTransform(transform);
 }
 
 float Camera::getFov() {

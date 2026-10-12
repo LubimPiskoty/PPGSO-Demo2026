@@ -1,6 +1,5 @@
 #include "physics_test.hpp"
 
-#include "../components/UserMovement.hpp"
 #include "../components/camera.hpp"
 #include "../components/mesh.hpp"
 #include "../components/physicsbody.hpp"
@@ -13,75 +12,87 @@
 
 namespace scenes {
 
-// Hand built physics test arena: a floor enclosed by four walls, split into
-// mini stages that each show one scenario. Everything uses the grid texture,
-// tinted per material.
-//
-//   back-left   BOUNCE   same drop height, increasing restitution
-//   back-right  SLIDE    boxes and balls on ramps of increasing steepness
-//   front-left  IMPACT   head-on collisions, equal and unequal mass
-//   front-right STACK    box tower and a ball rolled into a box wall
-scn::Scene physicsTest() {
+namespace {
+
+// Shared setup for the physics demo scenes: materials, body helpers, the
+// walled arena and a fixed camera. Everything uses the grid texture, tinted
+// per material.
+class TestSceneBuilder {
+  public:
     scn::Scene scene;
 
-    auto shader =
-        std::make_shared<render::Shader>("grid_lit.vs", "grid_lit.fs");
-    auto grid = loader::loadTexture("grid_dark.png");
+    std::shared_ptr<render::Material> floorMat, wallMat, rampMat;
+    std::shared_ptr<render::Material> ballMats[7];
 
-    auto makeMaterial = [&](const char *name, glm::vec3 color) {
-        auto material = std::make_shared<render::Material>(name, shader);
-        material->setTexture(render::TextureSlot::Albedo, grid);
-        material->diffuse = color;
-        material->setFloat("uBrighten", 4.f);
-        return material;
-    };
+    TestSceneBuilder() {
+        shader = std::make_shared<render::Shader>("grid_lit.vs", "grid_lit.fs");
+        grid = loader::loadTexture("grid_dark.png");
 
-    // Muted tones, between pastel and fully saturated
-    auto floorMat = makeMaterial("Floor", {0.30f, 0.33f, 0.38f});
-    auto wallMat = makeMaterial("Wall", {0.42f, 0.45f, 0.50f});
-    auto rampMat = makeMaterial("Ramp", {0.36f, 0.39f, 0.44f});
-    std::shared_ptr<render::Material> ballMats[] = {
-        makeMaterial("Terracotta", {0.76f, 0.41f, 0.31f}),
-        makeMaterial("Teal", {0.24f, 0.58f, 0.57f}),
-        makeMaterial("Mustard", {0.80f, 0.65f, 0.27f}),
-        makeMaterial("Plum", {0.58f, 0.38f, 0.62f}),
-    };
-    std::shared_ptr<render::Material> boxMats[] = {
-        makeMaterial("Sage", {0.50f, 0.65f, 0.44f}),
-        makeMaterial("Steel blue", {0.31f, 0.49f, 0.72f}),
-        makeMaterial("Rust", {0.80f, 0.48f, 0.33f}),
-    };
+        // Muted tones, between pastel and fully saturated
+        floorMat = makeMaterial("Floor", {0.30f, 0.33f, 0.38f});
+        wallMat = makeMaterial("Wall", {0.42f, 0.45f, 0.50f});
+        rampMat = makeMaterial("Ramp", {0.36f, 0.39f, 0.44f});
+        ballMats[0] = makeMaterial("Terracotta", {0.76f, 0.41f, 0.31f});
+        ballMats[1] = makeMaterial("Teal", {0.24f, 0.58f, 0.57f});
+        ballMats[2] = makeMaterial("Mustard", {0.80f, 0.65f, 0.27f});
+        ballMats[3] = makeMaterial("Plum", {0.58f, 0.38f, 0.62f});
+        ballMats[4] = makeMaterial("Sage", {0.50f, 0.65f, 0.44f});
+        ballMats[5] = makeMaterial("Steel blue", {0.31f, 0.49f, 0.72f});
+        ballMats[6] = makeMaterial("Rust", {0.80f, 0.48f, 0.33f});
+    }
 
-    auto makeStatic = [](component::PhysicsBody &body) {
-        body.body.mass = 0.f;
-        body.body.invMass = 0.f;
-        body.body.invInertiaLocal = glm::mat3(0.f);
-        body.body.invInertiaWorld = glm::mat3(0.f);
-    };
+    // Floor plus four walls at +-halfX / +-halfZ. The wall facing the
+    // camera (+z) is a collider only so it doesn't block the view.
+    void addArena(float halfX, float halfZ) {
+        const float half = glm::half_pi<float>();
+        // Wall meshes are squares, sized to cover the longer side. Centered
+        // at half their size so they start exactly at the floor.
+        const float size = 2.f * glm::max(halfX, halfZ);
+        const float wallH = size * 0.5f;
+        // The floor mesh is much larger than the arena, so the ground in
+        // front of the open (meshless) front wall is covered too, all the
+        // way to the camera. Colliders are infinite planes either way.
+        const float floorSize = 40.f;
+        // Rotations turn each plane's +Y (its colliding side) inward
+        addPlane("Floor", {0, 0, 0}, {0, 0, 0}, floorSize, floorMat);
+        addPlane("Back wall", {0, wallH, -halfZ}, {half, 0, 0}, size, wallMat);
+        addPlane("Left wall", {-halfX, wallH, 0}, {0, 0, -half}, size, wallMat);
+        addPlane("Right wall", {halfX, wallH, 0}, {0, 0, half}, size, wallMat);
+        addPlane("Front wall", {0, wallH, halfZ}, {-half, 0, 0}, size, nullptr);
+    }
 
-    // A static infinite plane: dot(normal, p) == offset. The visual is a
-    // createPlane rotated so its +Y faces `normal`. A null material gives a
-    // collider only (used for the wall facing the camera, so it doesn't
-    // block the view).
-    auto addPlane = [&](const char *name, glm::vec3 normal, float offset,
-                        glm::vec3 center, glm::vec3 rotEuler, float size,
-                        std::shared_ptr<render::Material> material) {
+    // Static infinite plane through `center`, facing the node's local +Y
+    // after `rotEuler`. The visual is a size x size createPlane; null
+    // material = collider only.
+    void addPlane(const char *name, glm::vec3 center, glm::vec3 rotEuler,
+                  float size, std::shared_ptr<render::Material> material) {
         auto node = scn::Node::create(name, center);
-        node->localRotEuler = rotEuler;
+        node->setLocalRotEuler(rotEuler);
         if (material)
             node->add_component<component::Mesh>(
                 std::make_shared<render::Model>(loader::createPlane(size, 2.f)),
                 material);
-        auto body = node->add_component<component::PhysicsBody>();
-        body->collider = physics::PlaneDesc{normal, offset};
-        makeStatic(*body);
-        scene.root->add_child(node);
-    };
+        addStaticBody(node, physics::PlaneDesc{}, 1.f);
+    }
 
-    auto addBall = [&](const char *name, glm::vec3 pos, float radius,
-                       float mass, float restitution,
-                       std::shared_ptr<render::Material> material,
-                       glm::vec3 velocity = glm::vec3(0.f)) {
+    // Static finite plane (rectangle) of 2 * halfSize, otherwise like
+    // addPlane. For ramps and pads.
+    void addRect(const char *name, glm::vec3 center, glm::vec3 rotEuler,
+                 glm::vec2 halfSize, float restitution,
+                 std::shared_ptr<render::Material> material) {
+        auto node = scn::Node::create(name, center);
+        node->setLocalRotEuler(rotEuler);
+        node->add_component<component::Mesh>(
+            std::make_shared<render::Model>(loader::createRect(halfSize, 2.f)),
+            material);
+        addStaticBody(node, physics::PlaneDesc{halfSize}, restitution);
+    }
+
+    // Returns the body so scenes can tweak more (e.g. friction)
+    std::shared_ptr<component::PhysicsBody>
+    addBall(const char *name, glm::vec3 pos, float radius, float mass,
+            float restitution, std::shared_ptr<render::Material> material,
+            glm::vec3 velocity = glm::vec3(0.f)) {
         auto node = scn::Node::create(name, pos);
         node->add_component<component::Mesh>(
             std::make_shared<render::Model>(loader::createSphere(radius, 2.f)),
@@ -96,139 +107,156 @@ scn::Scene physicsTest() {
             glm::mat3(1.f / (0.4f * mass * radius * radius));
         body->body.invInertiaWorld = body->body.invInertiaLocal;
         scene.root->add_child(node);
-    };
+        return body;
+    }
 
-    // mass == 0 makes the box static (ramps, pedestals)
-    auto addBox = [&](const char *name, glm::vec3 pos, glm::vec3 halfExtents,
-                      glm::vec3 rotEuler, float mass, float restitution,
-                      std::shared_ptr<render::Material> material) {
-        auto node = scn::Node::create(name, pos);
-        node->localRotEuler = rotEuler;
-        node->add_component<component::Mesh>(
-            std::make_shared<render::Model>(
-                loader::createBox(halfExtents, 2.f)),
-            material);
+    // Fixed camera, no user movement
+    void addCamera(glm::vec3 pos, glm::vec3 target) {
+        auto camNode = scn::Node::create("Camera", pos);
+        auto camera = camNode->add_component<component::Camera>(60.f, 1.f, 1.f);
+        scene.root->add_child(camNode);
+        scene.activeCamera = camera;
+        camera->lookAt(target);
+    }
+
+  private:
+    std::shared_ptr<render::Shader> shader;
+    std::shared_ptr<render::Texture> grid;
+
+    std::shared_ptr<render::Material> makeMaterial(const char *name,
+                                                   glm::vec3 color) {
+        auto material = std::make_shared<render::Material>(name, shader);
+        material->setTexture(render::TextureSlot::Albedo, grid);
+        material->diffuse = color;
+        material->setFloat("uBrighten", 4.f);
+        return material;
+    }
+
+    // Restitution 1.0 is neutral: with min() combining, the ball's own
+    // value decides the bounce
+    void addStaticBody(const std::shared_ptr<scn::Node> &node,
+                       physics::PlaneDesc collider, float restitution) {
         auto body = node->add_component<component::PhysicsBody>();
-        body->collider = physics::BoxDesc{halfExtents};
+        body->collider = collider;
+        body->body.mass = 0.f;
+        body->body.invMass = 0.f;
+        body->body.invInertiaLocal = glm::mat3(0.f);
+        body->body.invInertiaWorld = glm::mat3(0.f);
         body->body.restitution = restitution;
-        if (mass <= 0.f) {
-            makeStatic(*body);
-        } else {
-            body->body.mass = mass;
-            body->body.invMass = 1.f / mass;
-            // Solid cuboid: I = m/3 * (sum of the other two half extents
-            // squared)
-            glm::vec3 sq = halfExtents * halfExtents;
-            glm::vec3 inertia =
-                mass / 3.f * glm::vec3(sq.y + sq.z, sq.x + sq.z, sq.x + sq.y);
-            body->body.invInertiaLocal = glm::mat3(1.f);
-            for (int i = 0; i < 3; i++)
-                body->body.invInertiaLocal[i][i] = 1.f / inertia[i];
-            body->body.invInertiaWorld = body->body.invInertiaLocal;
-        }
         scene.root->add_child(node);
-    };
+    }
+};
 
-    // ---- Arena: floor + four walls, so nothing can leave ----
-    const float half = glm::half_pi<float>();
-    const float arena = 16.f; // walls at +-arena on x and z
-    const float wallY = 6.f;
-    addPlane("Floor", {0, 1, 0}, 0.f, {0, 0, 0}, {0, 0, 0}, 2 * arena,
-             floorMat);
-    addPlane("Back wall", {0, 0, 1}, -arena, {0, wallY, -arena}, {half, 0, 0},
-             2 * arena, wallMat);
-    addPlane("Left wall", {1, 0, 0}, -arena, {-arena, wallY, 0}, {0, 0, -half},
-             2 * arena, wallMat);
-    addPlane("Right wall", {-1, 0, 0}, -arena, {arena, wallY, 0}, {0, 0, half},
-             2 * arena, wallMat);
-    addPlane("Front wall", {0, 0, -1}, -arena, {0, wallY, arena}, {-half, 0, 0},
-             2 * arena, nullptr);
+} // namespace
 
-    // ---- Stage 1, BOUNCE: identical balls, same height, restitution
-    // 0.2 -> 0.95. Each sits above its own pedestal so the stages are
-    // readable at a glance. ----
-    {
-        const float restitutions[] = {0.2f, 0.5f, 0.8f, 0.95f};
-        for (int i = 0; i < 4; i++) {
-            float x = -13.f + i * 2.5f;
-            addBox("Bounce pad", {x, 0.1f, -10.f}, {1.f, 0.1f, 1.f}, {0, 0, 0},
-                   0.f, 0.5f, rampMat);
-            addBall("Bounce ball", {x, 8.f, -10.f}, 0.5f, 1.f, restitutions[i],
-                    ballMats[i]);
-        }
+scn::Scene physicsBounce() {
+    TestSceneBuilder b;
+    b.addArena(7.f, 4.f);
+
+    // Same ball, same height, only restitution differs. Pads are neutral
+    // (1.0) so each ball's own value decides the bounce.
+    const float restitutions[] = {0.2f, 0.5f, 0.8f, 0.95f};
+    for (int i = 0; i < 4; i++) {
+        float x = -3.75f + i * 2.5f;
+        b.addRect("Bounce pad", {x, 0.2f, 0.f}, {0, 0, 0}, {1.f, 1.f}, 1.f,
+                  b.rampMat);
+        b.addBall("Bounce ball", {x, 8.f, 0.f}, 0.5f, 1.f, restitutions[i],
+                  b.ballMats[i]);
     }
 
-    // ---- Stage 2, SLIDE: ramps at 15, 30 and 45 degrees, descending
-    // toward -x. A box rests near the top of each, and a ball next to it
-    // so sliding and rolling can be compared. ----
-    {
-        const float angles[] = {15.f, 30.f, 45.f};
-        const glm::vec3 rampHalf{3.f, 0.15f, 1.2f};
-        for (int i = 0; i < 3; i++) {
-            float theta = glm::radians(angles[i]);
-            float z = -13.f + i * 3.f;
-            // Raise the ramp so its low end just touches the floor
-            glm::vec3 center{8.f, 3.f * std::sin(theta) + 0.2f, z};
-            glm::vec3 rot{0.f, 0.f, theta};
-            addBox("Ramp", center, rampHalf, rot, 0.f, 0.2f, rampMat);
+    b.addCamera({0.f, 4.5f, 10.f}, {0.f, 3.f, 0.f});
+    return std::move(b.scene);
+}
 
-            // Point on the ramp's top surface, `along` units from its
-            // center (local +x is uphill), lifted `lift` off the surface
-            auto onRamp = [&](float along, float lift, float zOff) {
-                glm::vec3 up{-std::sin(theta), std::cos(theta), 0.f};
-                glm::vec3 dir{std::cos(theta), std::sin(theta), 0.f};
-                return center + dir * along + up * (rampHalf.y + lift + 0.02f) +
-                       glm::vec3(0, 0, zOff);
-            };
-            addBox("Slide box", onRamp(2.f, 0.4f, -0.5f), glm::vec3(0.4f), rot,
-                   1.f, 0.1f, boxMats[i]);
-            addBall("Roll ball", onRamp(2.f, 0.35f, 0.6f), 0.35f, 1.f, 0.2f,
-                    ballMats[i]);
-        }
+scn::Scene physicsSlide() {
+    TestSceneBuilder b;
+    b.addArena(8.f, 6.f);
+
+    // Finite planes as ramps, descending toward -x, side by side along z,
+    // with a ball near the top of each. Friction makes the balls roll
+    // instead of slide.
+    const float angles[] = {15.f, 30.f, 45.f};
+    const glm::vec2 rampHalf{3.f, 1.2f};
+    for (int i = 0; i < 3; i++) {
+        float theta = glm::radians(angles[i]);
+        // Steepest (tallest) ramp at the back so it doesn't hide the others
+        float z = 3.f - i * 3.f;
+        // Raise the ramp so its low end just touches the floor
+        glm::vec3 center{1.f, rampHalf.x * std::sin(theta) + 0.02f, z};
+        b.addRect("Ramp", center, {0.f, 0.f, theta}, rampHalf, 0.2f, b.rampMat);
+
+        // Point `along` units uphill from the ramp's center, `lift` above
+        // its surface
+        const glm::vec3 up{-std::sin(theta), std::cos(theta), 0.f};
+        const glm::vec3 dir{std::cos(theta), std::sin(theta), 0.f};
+        const float radius = 0.35f;
+        b.addBall("Roll ball", center + dir * 2.f + up * (radius + 0.02f),
+                  radius, 1.f, 0.2f, b.ballMats[i]);
     }
 
-    // ---- Stage 3, IMPACT: pairs of balls launched at each other ----
-    {
-        // Equal mass: velocities should swap
-        addBall("Impact A", {-13.f, 0.5f, 4.f}, 0.5f, 1.f, 0.9f, ballMats[0],
-                {5.f, 0.f, 0.f});
-        addBall("Impact B", {-3.f, 0.5f, 4.f}, 0.5f, 1.f, 0.9f, ballMats[1],
-                {-5.f, 0.f, 0.f});
-        // Heavy vs light: light ball gets thrown back
-        addBall("Impact heavy", {-13.f, 1.f, 9.f}, 1.f, 8.f, 0.9f, ballMats[3],
-                {4.f, 0.f, 0.f});
-        addBall("Impact light", {-3.f, 0.4f, 9.f}, 0.4f, 0.5f, 0.9f,
-                ballMats[2], {-4.f, 0.f, 0.f});
-    }
+    // Centered on the ramps (they span x -2..4)
+    b.addCamera({1.f, 4.f, 8.5f}, {1.f, 1.f, 0.f});
+    return std::move(b.scene);
+}
 
-    // ---- Stage 4, STACK: a resting tower, and a ball rolled into a
-    // wall of boxes ----
-    {
-        const float s = 0.5f;
-        for (int i = 0; i < 5; i++)
-            addBox("Tower box", {12.f, s + i * 2.f * s + 0.01f * i, 4.f},
-                   glm::vec3(s), {0, 0, 0}, 1.f, 0.1f, boxMats[i % 3]);
+scn::Scene physicsImpact() {
+    TestSceneBuilder b;
+    // Side walls close to the start positions (balls at +-4) so the
+    // rebounds hit them inside the camera view
+    b.addArena(5.5f, 4.f);
 
-        for (int row = 0; row < 3; row++)
-            for (int col = 0; col < 4 - row; col++)
-                addBox("Wall box",
-                       {4.f + col * 2.f * s + row * s,
-                        s + row * 2.f * s + 0.01f * row, 10.f},
-                       glm::vec3(s), {0, 0, 0}, 1.f, 0.1f,
-                       boxMats[(row + col) % 3]);
-        addBall("Wrecking ball", {13.f, 1.f, 10.f}, 1.f, 6.f, 0.3f, ballMats[3],
-                {-8.f, 0.f, 0.f});
-    }
+    // Launched fast and fairly close together, so drag and rolling
+    // friction don't slow them down much before they meet (~0.4 s)
 
-    auto camNode = scn::Node::create("Camera", glm::vec3{0.f, 14.f, 26.f});
-    auto camera =
-        camNode->add_component<component::Camera>(60.f, 1.f, 1.f);
-    camNode->add_component<component::UserMovement>(8.f, 0.1f);
-    scene.root->add_child(camNode);
-    scene.activeCamera = camera;
-    camera->lookAt({0.f, 2.f, 0.f});
+    // Heavy vs light, at the back so the big ball doesn't hide the other
+    // pair: the light ball gets thrown back
+    b.addBall("Impact heavy", {-4.f, 1.f, -2.f}, 1.f, 8.f, 0.9f, b.ballMats[3],
+              {10.f, 0.f, 0.f});
+    b.addBall("Impact light", {4.f, 0.4f, -2.f}, 0.4f, 0.5f, 0.9f,
+              b.ballMats[2], {-10.f, 0.f, 0.f});
+    // Equal mass, in front: velocities should swap
+    b.addBall("Impact A", {-4.f, 0.5f, 2.f}, 0.5f, 1.f, 0.9f, b.ballMats[0],
+              {10.f, 0.f, 0.f});
+    b.addBall("Impact B", {4.f, 0.5f, 2.f}, 0.5f, 1.f, 0.9f, b.ballMats[1],
+              {-10.f, 0.f, 0.f});
 
-    return scene;
+    b.addCamera({0.f, 5.f, 8.5f}, {0.f, 0.5f, 0.f});
+    return std::move(b.scene);
+}
+
+scn::Scene physicsBreak() {
+    TestSceneBuilder b;
+    b.addArena(6.f, 6.f);
+
+    // Pool style break: a triangle of 10 balls with gaps between them, and
+    // a cue ball rolled into its tip, away from the camera
+    const float r = 0.4f;
+    const float spacing = 2.f * r + 0.3f;                  // center to center
+    const float rowStep = std::sqrt(3.f) * 0.5f * spacing; // equilateral
+    //
+    // Billiard balls are nearly perfectly elastic and smooth: high
+    // restitution, and low friction so ball-ball hits don't turn the balls'
+    // rolling spin into vertical hops (the floor still makes them roll,
+    // friction combines as sqrt(0.05 * 0.5) ~ 0.16 there). Walls are 1.0, so
+    // the cushions use the ball's value too.
+    const float restitution = 0.97f;
+    const float friction = 0.05f;
+    // Almost no air drag, so the balls keep their speed across the arena
+    b.scene.physics_context.drag = 0.02f;
+
+    int index = 0;
+    for (int row = 0; row < 6; row++)
+        for (int i = 0; i <= row; i++)
+            b.addBall("Rack ball",
+                      {(i - row * 0.5f) * spacing, r, 1.f - row * rowStep}, r,
+                      1.f, restitution, b.ballMats[index++ % 7])
+                ->body.friction = friction;
+    b.addBall("Cue ball", {0.f, r, 4.5f}, r, 4.f, restitution, b.ballMats[0],
+              {0.f, 0.f, -15.f})
+        ->body.friction = friction;
+
+    b.addCamera({0.f, 7.f, 8.f}, {0.f, 0.f, -0.5f});
+    return std::move(b.scene);
 }
 
 } // namespace scenes

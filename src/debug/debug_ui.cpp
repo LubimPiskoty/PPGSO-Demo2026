@@ -1,6 +1,8 @@
 #include "debug_ui.hpp"
 
 #ifdef WITH_IMGUI
+#include "../components/UserMovement.hpp"
+#include "../components/camera.hpp"
 #include "../scene/scene.hpp"
 #include "../scenes/scene_manager.hpp"
 #include "profiler.hpp"
@@ -24,6 +26,21 @@ void init(GLFWwindow *window) {
 static void sceneWindow(scn::Scene &scene) {
     ImGui::Begin("Scene");
     ImGui::Text("%.1f fps", ImGui::GetIO().Framerate);
+
+    // Controls for a user-movable camera (scenes with fixed cameras have
+    // no UserMovement, so this section is hidden there)
+    if (auto camera = scene.activeCamera.lock())
+        if (auto camNode = camera->node.lock())
+            if (auto movement =
+                    camNode->get_component<component::UserMovement>()) {
+                ImGui::SeparatorText("Camera");
+                ImGui::SliderFloat("Speed", &movement->speed, 1.f, 100.f,
+                                   "%.1f", ImGuiSliderFlags_Logarithmic);
+                ImGui::SliderFloat("Sensitivity", &movement->sensitivity,
+                                   0.01f, 1.f, "%.2f",
+                                   ImGuiSliderFlags_Logarithmic);
+            }
+
     ImGui::Separator();
     ImGui::TextUnformatted(scene.root->to_string().c_str());
     ImGui::End();

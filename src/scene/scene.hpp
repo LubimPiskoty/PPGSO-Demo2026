@@ -20,7 +20,9 @@ class Scene {
 
     // Call on whole scene graph
     void update(float dt);
-    void physics_step(float dt);
+    // Advances physics by one frame: physics_context.fixedDt (scaled by
+    // timeScale) in physics_context.substeps steps
+    void physics_step();
     void draw();
 
     // Depth-first search for the node with the given guid, or nullptr if not

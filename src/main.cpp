@@ -7,6 +7,7 @@
 #include "debug/profiler.hpp"
 #include "input/input.hpp"
 #include "loaders/scene_loader.hpp"
+#include "scenes/ball_jar.hpp"
 #include "scenes/physics_test.hpp"
 #include "scenes/scene_manager.hpp"
 
@@ -30,6 +31,9 @@ int main() {
         return -1;
     }
     glfwMakeContextCurrent(window);
+    // Lock the frame rate to the display's refresh. Physics advances a
+    // fixed 1/60 s per frame, so it relies on this for real time speed.
+    glfwSwapInterval(1);
 
     // glewExperimental = GL_TRUE; // required for core profile contexts
     GLenum glewStatus = glewInit();
@@ -57,8 +61,14 @@ int main() {
     profiler::init();
 
     scenes::SceneManager scenes;
-    scenes.add("Physics test", scenes::physicsTest);
+    scenes.add("Physics: bounce", scenes::physicsBounce);
+    scenes.add("Physics: slide", scenes::physicsSlide);
+    scenes.add("Physics: impact", scenes::physicsImpact);
+    scenes.add("Physics: break", scenes::physicsBreak);
+    scenes.add("Ball jar", scenes::ballJar);
     scenes.add("scene.json", [] { return loader::loadScene("scene.json"); });
+    scenes.add("village_scene.json",
+               [] { return loader::loadScene("village_scene.json"); });
     scenes.setViewport((float)fbWidth, (float)fbHeight);
     scenes.load(0);
 
@@ -85,7 +95,10 @@ int main() {
         {
             profiler::Scope _(profiler::Stage::Update);
             scene.update(dt);
-            scene.physics_step(dt);
+        }
+        {
+            profiler::Scope _(profiler::Stage::Physics);
+            scene.physics_step();
         }
         {
             profiler::Scope _(profiler::Stage::Scene);

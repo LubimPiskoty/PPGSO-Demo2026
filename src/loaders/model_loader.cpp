@@ -189,7 +189,11 @@ Model loadModel(const std::string &filename) {
 }
 
 Model createPlane(float size, float unitsPerTile) {
-    float h = size / 2.f;
+    return createRect(glm::vec2(size / 2.f), unitsPerTile);
+}
+
+Model createRect(glm::vec2 halfSize, float unitsPerTile) {
+    const float hx = halfSize.x, hz = halfSize.y;
     glm::vec3 up{0.f, 1.f, 0.f};
     // UVs in world units / tile size, so the texture repeats at a fixed
     // world scale no matter how big the plane is (needs GL_REPEAT)
@@ -197,10 +201,10 @@ Model createPlane(float size, float unitsPerTile) {
         return Vertex{{x, 0.f, z}, up, glm::vec2{x, z} / unitsPerTile};
     };
     std::vector<Vertex> vertices = {
-        vertex(-h, -h),
-        vertex(h, -h),
-        vertex(h, h),
-        vertex(-h, h),
+        vertex(-hx, -hz),
+        vertex(hx, -hz),
+        vertex(hx, hz),
+        vertex(-hx, hz),
     };
     // Counter-clockwise when seen from above
     std::vector<unsigned int> indices = {0, 2, 1, 0, 3, 2};

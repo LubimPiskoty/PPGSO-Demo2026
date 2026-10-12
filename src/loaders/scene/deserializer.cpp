@@ -272,9 +272,9 @@ static std::shared_ptr<scn::Node> deserializeNode(const cJSON *json,
     node->enabled = readBool(json, "enabled", true);
 
     auto transform = cJSON_GetObjectItemCaseSensitive(json, "transform");
-    node->localPos = readVec3(transform, "position", glm::vec3(0.f));
-    node->localRotEuler = readVec3(transform, "rotation", glm::vec3(0.f));
-    node->localScale = readVec3(transform, "scale", glm::vec3(1.f));
+    node->setLocalPos(readVec3(transform, "position", glm::vec3(0.f)));
+    node->setLocalRotEuler(readVec3(transform, "rotation", glm::vec3(0.f)));
+    node->setLocalScale(readVec3(transform, "scale", glm::vec3(1.f)));
 
     auto components = cJSON_GetObjectItemCaseSensitive(json, "components");
     const cJSON *c;

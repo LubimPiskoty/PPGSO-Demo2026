@@ -27,7 +27,8 @@ class Node : public std::enable_shared_from_this<Node> {
   public:
     virtual ~Node() = default;
 
-    // Tree structure
+    // Tree structure. Change it only through add_child, which also
+    // invalidates the cached global transforms.
     std::weak_ptr<Node> parent; // weak: parent owns children, not the reverse
     std::vector<std::shared_ptr<Node>> children;
 
@@ -39,19 +40,33 @@ class Node : public std::enable_shared_from_this<Node> {
     bool enabled;
     std::string name;
 
-    // Local transform, stored decomposed so components can be edited
-    // directly (e.g. by an inspector) without matrix decomposition.
-    glm::vec3 localPos{0.f};
-    glm::vec3 localRotEuler{0.f}; // Euler angles (radians)
-    glm::vec3 localScale{1.f};
+    // Local transform, stored decomposed so it can be edited (e.g. by an
+    // inspector) without matrix decomposition. Only changeable through the
+    // setters, so the cached matrices below know when to rebuild.
+    const glm::vec3 &localPos() const { return pos_; }
+    const glm::quat &localRot() const { return rot_; }
+    const glm::vec3 &localScale() const { return scale_; }
+    void setLocalPos(const glm::vec3 &pos);
+    void setLocalRot(const glm::quat &rot);
+    // Convenience for scene files, animations and hand written scenes:
+    // (pitch, yaw, roll) in radians, converted to a quaternion
+    void setLocalRotEuler(const glm::vec3 &rotEuler);
+    void setLocalScale(const glm::vec3 &scale);
 
-    // Composed/decomposed on demand from the fields above (and, for the
-    // global variants, the parent chain) rather than cached.
+    // Cached: rebuilt only after this node or an ancestor changed
     glm::mat4 localTransform() const;
     glm::mat4 globalTransform() const;
     glm::vec3 globalPosition() const;
     PosRotScale globalPosRotScale() const;
+    glm::quat globalRotation() const;
+    // Identity for root nodes
+    glm::mat4 parentGlobalTransform() const;
+
+    // Setters take world space values and convert them into the local
+    // fields through the parent chain
     void setGlobalTransform(const glm::mat4 &globalTransform);
+    void setGlobalPosition(const glm::vec3 &pos);
+    void setGlobalRotation(const glm::quat &rot);
 
     // ECS
     std::vector<std::shared_ptr<component::Component>> components;
@@ -92,6 +107,22 @@ class Node : public std::enable_shared_from_this<Node> {
     std::string to_string() const;
 
   private:
+    glm::vec3 pos_{0.f};
+    glm::quat rot_{1.f, 0.f, 0.f, 0.f};
+    glm::vec3 scale_{1.f};
+
+    // Invariant: a node with a clean global cache has clean ancestors. So
+    // once a node is dirty its whole subtree is too, and markGlobalDirty can
+    // stop early.
+    mutable glm::mat4 localCache{1.f};
+    mutable glm::mat4 globalCache{1.f};
+    mutable glm::quat globalRotCache{1.f, 0.f, 0.f, 0.f};
+    mutable bool localDirty = true;
+    mutable bool globalDirty = true;
+
+    void markLocalDirty();  // local changed: rebuild local + subtree globals
+    void markGlobalDirty(); // ancestor changed: rebuild subtree globals
+
     void print_subtree(std::ostream &os, int depth) const;
 };
 

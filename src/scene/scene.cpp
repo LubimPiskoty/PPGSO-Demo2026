@@ -1,5 +1,7 @@
 #include "scene.hpp"
 
+#include "../debug/profiler.hpp"
+
 #include <cstdio>
 #include <memory>
 #include <vector>
@@ -35,24 +37,20 @@ std::shared_ptr<Node> Scene::findByGuid(util::Guid guid) const {
     return nullptr;
 }
 
-void Scene::physics_step(float frameDt) {
+void Scene::physics_step() {
     // Gather physics bodies
     physics_context.bodies.clear();
     gatherPhysicsBodies(root);
+    profiler::addCount(profiler::PhysicsCounter::Bodies,
+                       (int)physics_context.bodies.size());
 
     auto &ctx = physics_context;
-    ctx.accumulator += frameDt * ctx.timeScale;
+    if (ctx.timeScale <= 0.f || ctx.substeps <= 0)
+        return; // Paused
 
-    // Cap the catch-up so a stall doesn't run hundreds of steps
-    const int maxSteps = 8;
-    int steps = 0;
-    while (ctx.accumulator >= ctx.fixedDt && steps < maxSteps) {
-        physics::step(ctx, ctx.fixedDt);
-        ctx.accumulator -= ctx.fixedDt;
-        steps++;
-    }
-    if (steps == maxSteps)
-        ctx.accumulator = 0.f; // drop the backlog
+    const float dt = ctx.fixedDt * ctx.timeScale / (float)ctx.substeps;
+    for (int i = 0; i < ctx.substeps; i++)
+        physics::step(ctx, dt);
 }
 
 void Scene::gatherPhysicsBodies(std::shared_ptr<Node> node) {
