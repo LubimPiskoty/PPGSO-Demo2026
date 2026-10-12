@@ -4,7 +4,6 @@
 #include "rigidbody.hpp"
 #include <cstddef>
 #include <utility>
-#include <variant>
 #include <vector>
 
 namespace physics {
@@ -38,12 +37,13 @@ static void broadPhase(Context &ctx) {
     }
 }
 
-// ---- One collide per unordered shape pair. Convention (matches Contact):
-// plane < box < sphere, the "lower" shape is `a`, the normal points from a
-// toward b. Return true and fill `out` when the shapes touch. ----
+// ---- One collide function per shape pair. Convention (matches Contact):
+// `a` has the lower Shape::Type (plane < box < sphere), the normal points
+// from a toward b. Return true and fill `c` when the shapes touch. ----
 
-static bool collide(const PlaneDesc &p, const Body &pb, const SphereDesc &s,
-                    const Body &sb, Contact &c) {
+static bool collidePlaneSphere(const PlaneDesc &p, const Body &pb,
+                               const SphereDesc &s, const Body &sb,
+                               Contact &c) {
     // Plane is in world space (dot(normal, x) == offset), the node's
     // transform is ignored, so use offset rather than pb.pos()
     const glm::vec3 center = sb.pos();
@@ -61,65 +61,61 @@ static bool collide(const PlaneDesc &p, const Body &pb, const SphereDesc &s,
     return true;
 }
 
-static bool collide(const PlaneDesc &, const Body &, const BoxDesc &,
-                    const Body &, Contact &) {
+static bool collidePlaneBox(const PlaneDesc &, const Body &, const BoxDesc &,
+                            const Body &, Contact &) {
     // TODO
     return false;
 }
 
-static bool collide(const BoxDesc &, const Body &, const SphereDesc &,
-                    const Body &, Contact &) {
+static bool collideBoxSphere(const BoxDesc &, const Body &,
+                             const SphereDesc &, const Body &, Contact &) {
     // TODO
     return false;
 }
 
-static bool collide(const BoxDesc &, const Body &, const BoxDesc &,
-                    const Body &, Contact &) {
+static bool collideBoxBox(const BoxDesc &, const Body &, const BoxDesc &,
+                          const Body &, Contact &) {
     // TODO
     return false;
 }
 
-static bool collide(const SphereDesc &, const Body &, const SphereDesc &,
-                    const Body &, Contact &) {
+static bool collideSphereSphere(const SphereDesc &, const Body &,
+                                const SphereDesc &, const Body &, Contact &) {
     // TODO
     return false;
 }
 
-// Planes are always static, and the broad phase skips static pairs
-static bool collide(const PlaneDesc &, const Body &, const PlaneDesc &,
-                    const Body &, Contact &) {
+// Picks the collide function for the pair. Orders the bodies so `a` has
+// the lower type first, so each pair needs only one function.
+static bool collide(const Body *a, const Body *b, Contact &c) {
+    if (a->e->collider.type > b->e->collider.type)
+        std::swap(a, b);
+
+    using T = Shape::Type;
+    const Shape &sa = a->e->collider;
+    const Shape &sb = b->e->collider;
+
+    if (sa.type == T::Plane && sb.type == T::Sphere)
+        return collidePlaneSphere(sa.plane, *a, sb.sphere, *b, c);
+    if (sa.type == T::Plane && sb.type == T::Box)
+        return collidePlaneBox(sa.plane, *a, sb.box, *b, c);
+    if (sa.type == T::Box && sb.type == T::Sphere)
+        return collideBoxSphere(sa.box, *a, sb.sphere, *b, c);
+    if (sa.type == T::Box && sb.type == T::Box)
+        return collideBoxBox(sa.box, *a, sb.box, *b, c);
+    if (sa.type == T::Sphere && sb.type == T::Sphere)
+        return collideSphereSphere(sa.sphere, *a, sb.sphere, *b, c);
+
+    // Plane vs plane: both static, the broad phase already skips those
     return false;
 }
 
-// Reversed pairs (sphere vs plane, ...): swap, then flip the result.
-// Overload resolution prefers the exact overloads above, so this is only
-// picked when none matches.
-template <typename A, typename B>
-static bool collide(const A &sa, const Body &a, const B &sb, const Body &b,
-                    Contact &out) {
-    if (!collide(sb, b, sa, a, out))
-        return false;
-    std::swap(out.a, out.b);
-    out.normal = -out.normal;
-    return true;
-}
-
-// for each pair: collide(shapeA, tfA, shapeB, tfB) -> ctx.contacts
+// for each pair: collide -> ctx.contacts
 static void narrowPhase(Context &ctx) {
     ctx.contacts.clear();
-    for (const auto &pair : ctx.pairs) {
-        // Plain references, not a structured binding: lambdas can only
-        // capture structured bindings since C++20
-        const Body &a = *pair.first;
-        const Body &b = *pair.second;
-
+    for (const auto &[a, b] : ctx.pairs) {
         Contact c{};
-        bool hit =
-            std::visit([&](const auto &sa,
-                           const auto &sb) { return collide(sa, a, sb, b, c); },
-                       a.e->collider, b.e->collider);
-
-        if (hit)
+        if (collide(a, b, c))
             ctx.contacts.push_back(c);
     }
 }

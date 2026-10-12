@@ -6,12 +6,10 @@
 #include <glm/mat4x4.hpp>
 #include <limits>
 #include <glm/vec3.hpp>
-#include <variant>
 
 namespace physics {
 
 struct SphereDesc {
-
     float radius = 0.5f;
 };
 
@@ -26,7 +24,22 @@ struct PlaneDesc {
     float offset = 0.0f;
 };
 
-typedef std::variant<SphereDesc, BoxDesc, PlaneDesc> Shape;
+// Collider: `type` says which of the descs below is in use, the others are
+// ignored. Assign a desc directly: `collider = SphereDesc{0.5f};`
+struct Shape {
+    // Order matters: the narrow phase always passes the lower type as `a`
+    enum class Type { Plane, Box, Sphere };
+
+    Type type = Type::Sphere;
+    SphereDesc sphere;
+    BoxDesc box;
+    PlaneDesc plane;
+
+    Shape() = default;
+    Shape(SphereDesc s) : type(Type::Sphere), sphere(s) {}
+    Shape(BoxDesc b) : type(Type::Box), box(b) {}
+    Shape(PlaneDesc p) : type(Type::Plane), plane(p) {}
+};
 
 // Axis aligned bounding box in world space
 struct AABB {
@@ -42,48 +55,34 @@ inline bool overlaps(const AABB &a, const AABB &b) {
 // World AABB of the shape under `transform` (the node's global transform,
 // rotation and scale included)
 inline AABB getAABB(const Shape &shape, const glm::mat4 &transform) {
-    // Infinite plane: infinite AABB, so it overlaps everything and every
-    // plane pair goes to the narrow phase
-    if (std::holds_alternative<PlaneDesc>(shape)) {
+    glm::vec3 center(transform[3]);
+    glm::mat3 m(transform);
+    glm::vec3 extents(0.f);
+
+    switch (shape.type) {
+    case Shape::Type::Plane: {
+        // Infinite plane: infinite AABB, so it overlaps everything and every
+        // plane pair goes to the narrow phase
         constexpr float inf = std::numeric_limits<float>::infinity();
         return {glm::vec3(-inf), glm::vec3(inf)};
     }
-
-    glm::vec3 center(transform[3]);
-    glm::mat3 m(transform);
-
-    // Box-like shapes: a rotated/scaled box with local half extents h has
-    // world half extents |M| * h (abs of each matrix element)
-    auto boxExtents = [&](glm::vec3 h) {
+    case Shape::Type::Box: {
+        // A rotated/scaled box with local half extents h has world half
+        // extents |M| * h (abs of each matrix element)
         glm::mat3 absM;
         for (int c = 0; c < 3; c++)
             absM[c] = glm::abs(m[c]);
-        return absM * h;
-    };
-
-    struct Visitor {
-        const glm::mat3 &m;
-        decltype(boxExtents) &box;
-
+        extents = absM * shape.box.halfExtents;
+        break;
+    }
+    case Shape::Type::Sphere: {
         // Rotation doesn't change a sphere, only the largest scale axis
-        glm::vec3 operator()(const SphereDesc &s) const {
-            float maxScale =
-                glm::max(glm::length(m[0]),
-                         glm::max(glm::length(m[1]), glm::length(m[2])));
-            return glm::vec3(s.radius * maxScale);
-        }
-
-        glm::vec3 operator()(const BoxDesc &b) const {
-            return box(b.halfExtents);
-        }
-
-        // Handled above
-        glm::vec3 operator()(const PlaneDesc &) const {
-            return glm::vec3(0.f);
-        }
-    };
-
-    glm::vec3 extents = std::visit(Visitor{m, boxExtents}, shape);
+        float maxScale = glm::max(
+            glm::length(m[0]), glm::max(glm::length(m[1]), glm::length(m[2])));
+        extents = glm::vec3(shape.sphere.radius * maxScale);
+        break;
+    }
+    }
     return {center - extents, center + extents};
 }
 
