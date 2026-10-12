@@ -24,7 +24,7 @@ void UserMovement::subscribeInput() {
     });
 }
 
-void UserMovement::update(double dt) {
+void UserMovement::update(float dt) {
     auto owner = this->node.lock();
     if (!owner)
         return;
@@ -33,9 +33,9 @@ void UserMovement::update(double dt) {
     glm::vec3 input = input_vector * input_weights;
     // Horizontal input follows the view direction, vertical stays world up.
     glm::quat rot = glm::quat(owner->localRotEuler);
-    glm::vec3 dir = rot * glm::vec3(input.x, 0.f, input.z) +
-                    glm::vec3(0.f, input.y, 0.f);
-    owner->localPos += dir * speed * (float)dt;
+    glm::vec3 dir =
+        rot * glm::vec3(input.x, 0.f, input.z) + glm::vec3(0.f, input.y, 0.f);
+    owner->localPos += dir * speed * dt;
 }
 
 // W = (0, 0, -1), S = (0, 0, +1), A = (-1, 0, 0), D = (+1, 0, 0)

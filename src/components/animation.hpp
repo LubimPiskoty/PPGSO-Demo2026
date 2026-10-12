@@ -109,7 +109,7 @@ class Animation : public component::ComponentBase<Animation<T>> {
     Animation(const Bezier<T> &curve, T &property)
         : curve(curve), property(property) {}
 
-    void update(double dt) override {
+    void update(float dt) override {
         if (!this->enabled || !playback.playing)
             return;
 

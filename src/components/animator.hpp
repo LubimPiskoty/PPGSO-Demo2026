@@ -24,7 +24,7 @@ class Animator : public ComponentBase<Animator> {
   public:
     std::vector<AnimatorTrack> tracks;
 
-    void update(double dt) override;
+    void update(float dt) override;
 
     AnimatorTrack &addTrack(AnimTarget target, Bezier<glm::vec3> curve,
                             float duration, PlayMode mode = PlayMode::Loop);

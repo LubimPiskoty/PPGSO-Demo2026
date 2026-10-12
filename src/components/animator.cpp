@@ -4,7 +4,7 @@
 
 namespace component {
 
-void Animator::update(double dt) {
+void Animator::update(float dt) {
     auto owner = node.lock();
     if (!owner)
         return;

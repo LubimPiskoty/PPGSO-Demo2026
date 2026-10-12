@@ -34,7 +34,7 @@ class Component {
     Component() = default;
     virtual ~Component() = default;
 
-    virtual void update(double dt) {}
+    virtual void update(float dt) {}
 
     virtual ComponentTypeId type_id() const = 0;
     virtual const char *type_name() const = 0;

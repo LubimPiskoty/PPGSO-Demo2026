@@ -1,27 +1,14 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <algorithm>
-#include <cstdio>
 #include <iostream>
-#include <random>
-#include <sys/types.h>
-#include <vector>
 
-#include "components/UserMovement.hpp"
-#include "components/animation.hpp"
-#include "components/camera.hpp"
-#include "components/mesh.hpp"
 #include "debug/debug_ui.hpp"
 #include "debug/profiler.hpp"
 #include "input/input.hpp"
-#include "loaders/model_loader.hpp"
 #include "loaders/scene_loader.hpp"
-#include "loaders/shader_loader.hpp"
-#include "loaders/texture_loader.hpp"
-#include "render/material.hpp"
-#include "scene/scene.hpp"
-
-#include "glm/gtc/matrix_transform.hpp"
+#include "scenes/physics_test.hpp"
+#include "scenes/scene_manager.hpp"
 
 int main() {
     if (!glfwInit()) {
@@ -33,6 +20,7 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_DEPTH_BITS, 24);
+    glfwWindowHint(GLFW_SAMPLES, 8);
 
     GLFWwindow *window =
         glfwCreateWindow(1600, 900, "Hello Triangle", nullptr, nullptr);
@@ -68,13 +56,20 @@ int main() {
     debug_ui::init(window);
     profiler::init();
 
-    scn::Scene scene = loader::loadScene("scene.json");
-    if (auto camera = scene.activeCamera.lock())
-        camera->setSize((float)fbWidth, (float)fbHeight);
+    scenes::SceneManager scenes;
+    scenes.add("Physics test", scenes::physicsTest);
+    scenes.add("scene.json", [] { return loader::loadScene("scene.json"); });
+    scenes.setViewport((float)fbWidth, (float)fbHeight);
+    scenes.load(0);
 
     double time = glfwGetTime();
     while (!glfwWindowShouldClose(window)) {
         profiler::beginFrame();
+
+        // Scene switches/reloads requested by the UI last frame happen here,
+        // never in the middle of an update or draw
+        scenes.applyPending();
+        scn::Scene &scene = scenes.scene();
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -90,6 +85,7 @@ int main() {
         {
             profiler::Scope _(profiler::Stage::Update);
             scene.update(dt);
+            scene.physics_step(dt);
         }
         {
             profiler::Scope _(profiler::Stage::Scene);
@@ -103,7 +99,7 @@ int main() {
 
         {
             profiler::Scope _(profiler::Stage::UI);
-            debug_ui::draw(scene);
+            debug_ui::draw(scenes);
         }
 
         profiler::endFrame();

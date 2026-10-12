@@ -10,6 +10,7 @@ class UserMovement : public ComponentBase<component::UserMovement> {
     // Keys are GLFW key codes; letters are their uppercase ASCII ('W').
     UserMovement(float speed, float sensitivity)
         : UserMovement(speed, sensitivity, 'W', 'A', 'S', 'D', ' ', 'C') {}
+
     UserMovement(float speed, float sensitivity, int forward_key, int left_key,
                  int backward_key, int right_key, int up_key, int down_key)
         : speed(speed), sensitivity(sensitivity), up_key(up_key),
@@ -18,12 +19,15 @@ class UserMovement : public ComponentBase<component::UserMovement> {
         subscribeInput();
     }
 
-    void update(double dt) override;
+    void update(float dt) override;
     void handleInput(int key, bool is_pressed);
     // Right mouse button toggles mouse look, cursor position drives rotation.
     void handleMouseButton(int button, bool is_pressed);
     void handleMouseMove(double x, double y);
-    const char *type_name() const override { return "UserMovement"; }
+
+    const char *type_name() const override {
+        return "UserMovement";
+    }
 
     glm::vec3 input_vector{0.f};
     float speed;
