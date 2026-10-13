@@ -45,12 +45,10 @@ void Scene::physics_step() {
                        (int)physics_context.bodies.size());
 
     auto &ctx = physics_context;
-    if (ctx.timeScale <= 0.f || ctx.substeps <= 0)
+    if (ctx.timeScale <= 0.f)
         return; // Paused
 
-    const float dt = ctx.fixedDt * ctx.timeScale / (float)ctx.substeps;
-    for (int i = 0; i < ctx.substeps; i++)
-        physics::step(ctx, dt);
+    physics::step(ctx, ctx.fixedDt * ctx.timeScale);
 }
 
 void Scene::gatherPhysicsBodies(std::shared_ptr<Node> node) {

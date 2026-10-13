@@ -18,12 +18,12 @@
   - [ ] (2b) Procedural animation (simulating complex object behavior/decision-making: branching, cycles, a closed-form method with parameters, etc.) [Timon]
   - [x] (3b) Keyframe-based animation with interpolation (a keyframe is a dedicated data structure storing an object's transform — at least position and rotation — over time)
   - [x] (1b) Animation driven by complex animation curves for smooth motion (linear interpolation and smoothstep are not sufficient)
-- [ ] Simulation, particle system [7b]
-  - [ ] (3b) Efficient collision detection between objects, implemented with bounding-volume tests, with dynamic collision response (correct bounce off an inclined/slanted surface based on the surface normal at the point of collision) [Timon]
-  - [ ] (2b) Simulation with at least two forces using vector algebra
-    - [ ] Must compute acceleration in addition to velocity (e.g. gravity + wind), and support mass [Timon]
-    - [ ] Correct numerical integration, e.g. semi-implicit Euler or RK4 [Timon]
-  - [ ] (2b) Rigid body simulation with correct force computation, combining linear and angular motion, and applying torque [Timon]
+- [x] Simulation, particle system [7b]
+  - [x] (3b) Efficient collision detection between objects, implemented with bounding-volume tests, with dynamic collision response (correct bounce off an inclined/slanted surface based on the surface normal at the point of collision) [Timon]
+  - [x] (2b) Simulation with at least two forces using vector algebra
+    - x ] Must compute acceleration in addition to velocity (e.g. gravity + wind), and support mass [Timon]
+    - [x] Correct numerical integration, e.g. semi-implicit Euler or RK4 [Timon]
+  - [x] (2b) Rigid body simulation with correct force computation, combining linear and angular motion, and applying torque [Timon]
 - [ ] Camera work [3b]
   - [ ] (2b) Perspective-projection camera; correct handling of window/viewport resizing; adjustable camera parameters (Chyba resizable funkcia) [David]
   - [ ] (1b) Animated camera using keyframes storing position and look-at direction over time, using interpolation other than linear [David]

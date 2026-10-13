@@ -54,12 +54,9 @@ struct Context {
     // small spins left over from contacts die out instead of lingering
     float angularDrag = 2.f;
 
-    // Every frame advances the simulation by fixedDt * timeScale, split into
-    // `substeps` equal steps. Not tied to real frame time, so physics runs
-    // at real speed only at 60 fps (vsync). timeScale 0 pauses.
+    // One step advances fixedDt * timeScale. timeScale 0 pauses.
     float timeScale = 1.f;
-    float fixedDt = 1 / 60.f;
-    int substeps = 6;
+    float fixedDt = 1 / 360.f;
 
     std::vector<Entity> bodies;
     // Rebuilt every step from `bodies`. `pairs` point into it, so they are

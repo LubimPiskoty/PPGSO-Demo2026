@@ -94,6 +94,9 @@ class TestSceneBuilder {
             float restitution, std::shared_ptr<render::Material> material,
             glm::vec3 velocity = glm::vec3(0.f)) {
         auto node = scn::Node::create(name, pos);
+        // node->add_component<component::Mesh>(
+        //     std::make_shared<render::Model>(loader::createSphere(radius, 2.f)),
+        //     material);
         node->add_component<component::Mesh>(
             std::make_shared<render::Model>(loader::createSphere(radius, 2.f)),
             material);
@@ -243,6 +246,7 @@ scn::Scene physicsBreak() {
     const float friction = 0.05f;
     // Almost no air drag, so the balls keep their speed across the arena
     b.scene.physics_context.drag = 0.02f;
+    b.scene.physics_context.windVel = {5.f, 0, 0};
 
     int index = 0;
     for (int row = 0; row < 6; row++)

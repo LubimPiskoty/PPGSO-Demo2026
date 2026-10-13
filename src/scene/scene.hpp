@@ -20,8 +20,7 @@ class Scene {
 
     // Call on whole scene graph
     void update(float dt);
-    // Advances physics by one frame: physics_context.fixedDt (scaled by
-    // timeScale) in physics_context.substeps steps
+    // Advances physics by physics_context.fixedDt (scaled by timeScale)
     void physics_step();
     void draw();
 

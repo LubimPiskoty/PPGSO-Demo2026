@@ -31,8 +31,7 @@ int main() {
         return -1;
     }
     glfwMakeContextCurrent(window);
-    // Lock the frame rate to the display's refresh. Physics advances a
-    // fixed 1/60 s per frame, so it relies on this for real time speed.
+    // Vsync, physics has its own fixed timestep
     glfwSwapInterval(1);
 
     // glewExperimental = GL_TRUE; // required for core profile contexts
@@ -70,9 +69,10 @@ int main() {
     scenes.add("village_scene.json",
                [] { return loader::loadScene("village_scene.json"); });
     scenes.setViewport((float)fbWidth, (float)fbHeight);
-    scenes.load(0);
+    scenes.load(4);
 
     double time = glfwGetTime();
+    double physicsAccumulator = 0.0;
     while (!glfwWindowShouldClose(window)) {
         profiler::beginFrame();
 
@@ -98,17 +98,20 @@ int main() {
         }
         {
             profiler::Scope _(profiler::Stage::Physics);
-            scene.physics_step();
+            // Fixed timestep, capped so slow frames don't spiral
+            constexpr int kMaxPhysicsSteps = 12;
+            const double fixedDt = scene.physics_context.fixedDt;
+            physicsAccumulator =
+                std::min(physicsAccumulator + dt, kMaxPhysicsSteps * fixedDt);
+            while (physicsAccumulator >= fixedDt) {
+                scene.physics_step();
+                physicsAccumulator -= fixedDt;
+            }
         }
         {
             profiler::Scope _(profiler::Stage::Scene);
             scene.draw();
         }
-
-        // if (time - last_print > 1.0) {
-        //     scene.root->print(std::cout);
-        //     last_print = time;
-        // }
 
         {
             profiler::Scope _(profiler::Stage::UI);

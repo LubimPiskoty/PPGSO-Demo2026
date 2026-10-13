@@ -11,6 +11,7 @@
 #include <deque>
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <iostream>
 #include <random>
 
 namespace scenes {
@@ -37,6 +38,18 @@ class BallSpawner : public component::ComponentBase<BallSpawner> {
             timer -= interval;
             spawn();
         }
+
+        // Once a second, warn if the average fps was below 60
+        fpsTimer += dt;
+        fpsFrames++;
+        if (fpsTimer >= 1.f) {
+            float fps = fpsFrames / fpsTimer;
+            if (fps < 60.f)
+                std::cout << "[ball jar] fps dropped to " << (int)fps
+                          << " with " << balls.size() << " balls\n";
+            fpsTimer = 0.f;
+            fpsFrames = 0;
+        }
     }
 
     const char *type_name() const override {
@@ -49,6 +62,8 @@ class BallSpawner : public component::ComponentBase<BallSpawner> {
 
   private:
     float timer = 0.f;
+    float fpsTimer = 0.f;
+    int fpsFrames = 0;
     std::deque<std::shared_ptr<scn::Node>> balls;
     std::mt19937 rng{1234};
 
