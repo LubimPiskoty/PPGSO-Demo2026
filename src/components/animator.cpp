@@ -4,7 +4,7 @@
 
 namespace component {
 
-void Animator::update(double dt) {
+void Animator::update(float dt) {
     auto owner = node.lock();
     if (!owner)
         return;
@@ -17,13 +17,13 @@ void Animator::update(double dt) {
         glm::vec3 value = track.curve.sample(track.playback.progress());
         switch (track.target) {
         case AnimTarget::Position:
-            owner->localPos = value;
+            owner->setLocalPos(value);
             break;
         case AnimTarget::Rotation:
-            owner->localRotEuler = value;
+            owner->setLocalRotEuler(value);
             break;
         case AnimTarget::Scale:
-            owner->localScale = value;
+            owner->setLocalScale(value);
             break;
         }
     }

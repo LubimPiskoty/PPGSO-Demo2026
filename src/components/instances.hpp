@@ -90,11 +90,12 @@ class Instances : public ComponentBase<Instances> {
 
     // Uploads on the next update()
     void setInstances(std::vector<Instance> instances);
+
     const std::vector<Instance> &getInstances() const {
         return instances;
     }
 
-    void update(double dt) override;
+    void update(float dt) override;
 
     const char *type_name() const override {
         return "Instances";

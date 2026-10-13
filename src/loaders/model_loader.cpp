@@ -6,6 +6,7 @@
 #include <assimp/scene.h>
 #include <cmrc/cmrc.hpp>
 #include <functional>
+#include <glm/gtc/constants.hpp>
 #include <iostream>
 #include <string_view>
 #include <unordered_map>
@@ -188,7 +189,11 @@ Model loadModel(const std::string &filename) {
 }
 
 Model createPlane(float size, float unitsPerTile) {
-    float h = size / 2.f;
+    return createRect(glm::vec2(size / 2.f), unitsPerTile);
+}
+
+Model createRect(glm::vec2 halfSize, float unitsPerTile) {
+    const float hx = halfSize.x, hz = halfSize.y;
     glm::vec3 up{0.f, 1.f, 0.f};
     // UVs in world units / tile size, so the texture repeats at a fixed
     // world scale no matter how big the plane is (needs GL_REPEAT)
@@ -196,10 +201,10 @@ Model createPlane(float size, float unitsPerTile) {
         return Vertex{{x, 0.f, z}, up, glm::vec2{x, z} / unitsPerTile};
     };
     std::vector<Vertex> vertices = {
-        vertex(-h, -h),
-        vertex(h, -h),
-        vertex(h, h),
-        vertex(-h, h),
+        vertex(-hx, -hz),
+        vertex(hx, -hz),
+        vertex(hx, hz),
+        vertex(-hx, hz),
     };
     // Counter-clockwise when seen from above
     std::vector<unsigned int> indices = {0, 2, 1, 0, 3, 2};
@@ -207,6 +212,77 @@ Model createPlane(float size, float unitsPerTile) {
     Model model;
     model.meshes.push_back(createMesh(vertices, indices));
     model.filename = "<plane>";
+    return model;
+}
+
+Model createBox(glm::vec3 halfExtents, float unitsPerTile) {
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+
+    // Each face: outward normal plus two tangent axes (u x v == normal, so
+    // the corners below wind counter-clockwise seen from outside)
+    struct Face {
+        glm::vec3 normal, u, v;
+    };
+    const Face faces[] = {
+        {{1, 0, 0}, {0, 0, -1}, {0, 1, 0}},  {{-1, 0, 0}, {0, 0, 1}, {0, 1, 0}},
+        {{0, 1, 0}, {1, 0, 0}, {0, 0, -1}},  {{0, -1, 0}, {1, 0, 0}, {0, 0, 1}},
+        {{0, 0, 1}, {1, 0, 0}, {0, 1, 0}},   {{0, 0, -1}, {-1, 0, 0}, {0, 1, 0}},
+    };
+
+    for (const Face &f : faces) {
+        unsigned int base = static_cast<unsigned int>(vertices.size());
+        glm::vec3 center = f.normal * halfExtents;
+        glm::vec3 du = f.u * halfExtents;
+        glm::vec3 dv = f.v * halfExtents;
+        float us = glm::length(du), vs = glm::length(dv);
+        for (auto [su, sv] : {std::pair{-1, -1}, {1, -1}, {1, 1}, {-1, 1}}) {
+            glm::vec3 p = center + du * (float)su + dv * (float)sv;
+            glm::vec2 uv{(su * us) / unitsPerTile, (sv * vs) / unitsPerTile};
+            vertices.push_back(Vertex{p, f.normal, uv});
+        }
+        for (unsigned int i : {0u, 1u, 2u, 0u, 2u, 3u})
+            indices.push_back(base + i);
+    }
+
+    Model model;
+    model.meshes.push_back(createMesh(vertices, indices));
+    model.filename = "<box>";
+    return model;
+}
+
+Model createSphere(float radius, float unitsPerTile, int segments, int rings) {
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+
+    const float pi = glm::pi<float>();
+    float uScale = 2.f * pi * radius / unitsPerTile;
+    float vScale = pi * radius / unitsPerTile;
+
+    for (int r = 0; r <= rings; r++) {
+        float v = (float)r / rings;
+        float phi = v * pi; // 0 at the top pole
+        for (int s = 0; s <= segments; s++) {
+            float u = (float)s / segments;
+            float theta = u * 2.f * pi;
+            glm::vec3 n{glm::sin(phi) * glm::cos(theta), glm::cos(phi),
+                        glm::sin(phi) * glm::sin(theta)};
+            vertices.push_back(Vertex{n * radius, n, {u * uScale, v * vScale}});
+        }
+    }
+
+    unsigned int stride = segments + 1;
+    for (int r = 0; r < rings; r++) {
+        for (int s = 0; s < segments; s++) {
+            unsigned int a = r * stride + s, b = a + stride;
+            for (unsigned int i : {a, a + 1, b, a + 1, b + 1, b})
+                indices.push_back(i);
+        }
+    }
+
+    Model model;
+    model.meshes.push_back(createMesh(vertices, indices));
+    model.filename = "<sphere>";
     return model;
 }
 } // namespace loader

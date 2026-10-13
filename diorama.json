@@ -1,0 +1,81 @@
+{
+  "version": 3.2,
+  "materials": [
+    {
+      "name": "Material",
+      "guid": "5b16abea7886e7fd",
+      "shader": {
+        "vertex": "default.vs",
+        "fragment": "texture.fs",
+        "instanced": false
+      },
+      "textures": {},
+      "phong": {
+        "ambient": [0.1, 0.1, 0.1],
+        "diffuse": [1.0, 1.0, 1.0],
+        "specular": [0.5, 0.5, 0.5],
+        "shininess": 32
+      },
+      "opacity": 1,
+      "blend": "opaque"
+    }
+  ],
+  "scene": {
+    "activeCamera": "5c7fc6d97c2b6c01",
+    "graph": {
+      "name": "Root",
+      "guid": "9942ad72525e96d9",
+      "enabled": true,
+      "components": [],
+      "children": [
+        {
+          "name": "Camera",
+          "guid": "5c7fc6d97c2b6c01",
+          "enabled": true,
+          "transform": {
+            "position": [0.0, 5.0, 15.0],
+            "rotation": [-0.2, 0.0, 0.0],
+            "scale": [1.0, 1.0, 1.0]
+          },
+          "components": [
+            {
+              "type_id": "Camera",
+              "fov": 0.873,
+              "near": 0.1,
+              "far": 500
+            },
+            {
+              "type_id": "UserMovement",
+              "speed": 1.0,
+              "sensitivity": 0.1,
+              "enabled": true
+            }
+          ],
+          "children": []
+        },
+        {
+          "name": "Diorama",
+          "guid": "0f7f59e2d727cb14",
+          "enabled": true,
+          "transform": {
+            "position": [0.0, 0.0, 0.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [0.01, 0.01, 0.01]
+          },
+          "components": [
+            {
+              "type_id": "Mesh",
+              "model": "diorama_forest_farm.glb",
+              "material": {
+                "name": "Material",
+                "guid": "5b16abea7886e7fd"
+              },
+              "enabled": true
+            }
+          ],
+          "children": []
+        }
+      ]
+    }
+  }
+}

@@ -15,7 +15,8 @@
 // and Animator components are stored. V2 files still load, the missing
 // fields fall back to defaults.
 // V3.1: Instances can be a generator recipe instead of transforms
-#define SCENE_FORMAT_VERSION 3.1
+// V3.2: PhysicsBody components and scene physics settings
+#define SCENE_FORMAT_VERSION 3.2
 
 namespace loader {
 

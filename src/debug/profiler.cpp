@@ -21,7 +21,16 @@ namespace {
 using Clock = std::chrono::steady_clock;
 
 constexpr int kStages = static_cast<int>(Stage::Count);
-constexpr const char *kStageNames[kStages] = {"Update", "Scene", "UI"};
+constexpr const char *kStageNames[kStages] = {"Update", "Physics", "Scene",
+                                              "UI"};
+
+constexpr int kPhases = static_cast<int>(PhysicsPhase::Count);
+constexpr const char *kPhaseNames[kPhases] = {"  Integrate", "  Cache",
+                                              "  Broad", "  Narrow",
+                                              "  Solve"};
+constexpr int kCounters = static_cast<int>(PhysicsCounter::Count);
+constexpr const char *kCounterNames[kCounters] = {"Steps", "Bodies", "Pairs",
+                                                  "Contacts"};
 
 // How many frames of GPU queries are in flight before we read one back
 constexpr int kLatency = 4;
@@ -87,7 +96,12 @@ History cpuStage[kStages];
 History gpuFrame;
 History gpuStage[kStages];
 
-bool vsync = true;
+// Physics: summed over all steps of the current frame
+Clock::time_point phaseStart[kPhases];
+float phaseMsThisFrame[kPhases] = {};
+int countThisFrame[kCounters] = {};
+History phaseHistory[kPhases];
+int lastCount[kCounters] = {};
 
 float msSince(Clock::time_point start) {
     return std::chrono::duration<float, std::milli>(Clock::now() - start)
@@ -156,7 +170,6 @@ void init() {
             glGenQueries(kStages * 2, &set.stage[0][0]);
         }
     }
-    glfwSwapInterval(vsync ? 1 : 0);
 }
 
 void shutdown() {
@@ -179,6 +192,8 @@ void beginFrame() {
 
     for (int s = 0; s < kStages; s++)
         stageCpuMs[s] = -1.f;
+    std::fill(std::begin(phaseMsThisFrame), std::end(phaseMsThisFrame), 0.f);
+    std::fill(std::begin(countThisFrame), std::end(countThisFrame), 0);
 
     if (gpuSupported) {
         QuerySet &set = queries[current];
@@ -193,6 +208,10 @@ void endFrame() {
     for (int s = 0; s < kStages; s++)
         if (stageCpuMs[s] >= 0.f)
             cpuStage[s].push(stageCpuMs[s]);
+    for (int p = 0; p < kPhases; p++)
+        phaseHistory[p].push(phaseMsThisFrame[p]);
+    std::copy(std::begin(countThisFrame), std::end(countThisFrame),
+              std::begin(lastCount));
 
     if (gpuSupported) {
         QuerySet &set = queries[current];
@@ -219,14 +238,25 @@ void end(Stage stage) {
     }
 }
 
+void beginPhase(PhysicsPhase phase) {
+    phaseStart[static_cast<int>(phase)] = Clock::now();
+}
+
+void endPhase(PhysicsPhase phase) {
+    int p = static_cast<int>(phase);
+    phaseMsThisFrame[p] += msSince(phaseStart[p]);
+}
+
+void addCount(PhysicsCounter counter, int value) {
+    countThisFrame[static_cast<int>(counter)] += value;
+}
+
 void drawWindow() {
     ImGui::Begin("Profiler");
 
     float frameMs = frameTime.average();
     ImGui::Text("Frame: %.2f ms (%.0f fps)", frameMs,
                 frameMs > 0.f ? 1000.f / frameMs : 0.f);
-    if (ImGui::Checkbox("VSync", &vsync))
-        glfwSwapInterval(vsync ? 1 : 0);
 
     // Frame time graph, scaled so a 60 fps frame sits in the middle
     float graphMax = std::max(33.3f, frameTime.max() * 1.1f);
@@ -248,12 +278,24 @@ void drawWindow() {
         ImGui::TableSetupColumn("GPU max");
         ImGui::TableHeadersRow();
 
-        for (int s = 0; s < kStages; s++)
-            timingRow(kStageNames[s], cpuStage[s], &gpuStage[s]);
+        for (int s = 0; s < kStages; s++) {
+            // Physics is CPU only, no GPU column
+            bool physics = s == static_cast<int>(Stage::Physics);
+            timingRow(kStageNames[s], cpuStage[s],
+                      physics ? nullptr : &gpuStage[s]);
+            if (physics)
+                for (int p = 0; p < kPhases; p++)
+                    timingRow(kPhaseNames[p], phaseHistory[p], nullptr);
+        }
         timingRow("Total", cpuFrame, &gpuFrame);
 
         ImGui::EndTable();
     }
+
+    // Last frame's physics counts (pairs/contacts summed over its steps)
+    ImGui::SeparatorText("Physics (last frame)");
+    for (int i = 0; i < kCounters; i++)
+        ImGui::Text("%-9s %d", kCounterNames[i], lastCount[i]);
 
     if (!gpuSupported)
         ImGui::TextDisabled("GPU timer queries not available");
@@ -270,6 +312,9 @@ void beginFrame() {}
 void endFrame() {}
 void begin(Stage) {}
 void end(Stage) {}
+void beginPhase(PhysicsPhase) {}
+void endPhase(PhysicsPhase) {}
+void addCount(PhysicsCounter, int) {}
 void drawWindow() {}
 
 #endif

@@ -1,150 +1,12 @@
 #include "scene.hpp"
 
-#include "../components/mesh.hpp"
-#include "../components/light.hpp"
-#include <cassert>
+#include "../debug/profiler.hpp"
+
 #include <cstdio>
-#include <glm/ext/matrix_float4x4.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/matrix_decompose.hpp>
-#include <glm/matrix.hpp>
 #include <memory>
-#include <sstream>
-#include <string>
 #include <vector>
 
 namespace scn {
-
-std::shared_ptr<Node> Node::create(std::string name) {
-    std::shared_ptr<Node> node = std::make_shared<Node>();
-
-    node->guid = util::Guid::generate();
-    node->enabled = true;
-    node->name = name;
-
-    return node;
-}
-
-std::shared_ptr<Node> Node::create(std::string name, glm::vec3 localPos) {
-    auto node = Node::create(name);
-    node->localPos = localPos;
-    return node;
-}
-
-std::shared_ptr<Node> Node::create(std::string name, glm::mat4 localTransform) {
-    auto node = Node::create(name);
-
-    glm::vec3 skew;
-    glm::vec4 perspective;
-    glm::quat rot;
-    glm::decompose(localTransform, node->localScale, rot,
-                   node->localPos, skew, perspective);
-    node->localRotEuler = glm::eulerAngles(rot);
-
-    return node;
-}
-
-
-
-void Node::update(double dt) {
-    if (!enabled)
-        return;
-
-    for (auto &component : this->components)
-        if (component->enabled)
-            component->update(dt);
-
-    for (auto const &child : this->children)
-        child->update(dt);
-}
-
-void Node::draw(const std::shared_ptr<component::Camera> camera) {
-    if (!enabled)
-        return;
-
-    std::weak_ptr<component::Mesh> mesh = get_component<component::Mesh>();
-    if (!mesh.expired() && mesh.lock()->enabled)
-        mesh.lock()->draw(camera);
-
-    for (auto const &child : this->children)
-        child->draw(camera);
-}
-
-void Node::add_child(std::shared_ptr<Node> child) {
-    this->children.push_back(child);
-    child->parent = shared_from_this();
-}
-
-glm::mat4 Node::localTransform() const {
-    // Build rotation matrix from Euler angles (convert to quat then to matrix)
-    glm::quat rot = glm::quat(localRotEuler);
-    return glm::translate(glm::mat4(1.f), localPos) * glm::mat4_cast(rot) *
-           glm::scale(glm::mat4(1.f), localScale);
-}
-
-glm::mat4 Node::globalTransform() const {
-    glm::mat4 transform = this->localTransform();
-    for (auto p = parent.lock(); p; p = p->parent.lock())
-        transform = p->localTransform() * transform;
-    return transform;
-}
-
-glm::vec3 Node::globalPosition() const {
-    return globalPosRotScale().pos;
-}
-
-PosRotScale Node::globalPosRotScale() const {
-    PosRotScale result;
-    glm::vec3 skew;
-    glm::vec4 perspective;
-    glm::decompose(globalTransform(), result.scale, result.rot, result.pos,
-                   skew, perspective);
-    return result;
-}
-
-void Node::print_subtree(std::ostream &os, int depth) const {
-    for (int i = 0; i < depth; ++i)
-        os << "  ";
-    os << "- " << name;
-    if (!enabled)
-        os << " (disabled)";
-    const glm::vec3 pos = localPos;
-    os << "  [" << pos.x << ", " << pos.y << ", " << pos.z << "]\n";
-
-    for (const auto &component : components) {
-        for (int i = 0; i < depth + 1; ++i)
-            os << "  ";
-        os << "* " << component->type_name();
-        std::string info = component->info();
-        if (!info.empty())
-            os << " (" << info << ")";
-        os << "\n";
-    }
-
-    for (const auto &child : children)
-        child->print_subtree(os, depth + 1);
-}
-
-void Node::print(std::ostream &os) const {
-    print_subtree(os, 0);
-}
-
-std::string Node::to_string() const {
-    std::ostringstream os;
-    print(os);
-    return os.str();
-}
-
-std::ostream &operator<<(std::ostream &os, const Node &node) {
-    node.print(os);
-    return os;
-}
-
-[[deprecated("NotImplemented")]]
-void Node::destroy() {}
-
-[[deprecated("NotImplemented")]]
-void Node::setGlobalTransform(const glm::mat4 &globalTransform) {}
 
 Scene::Scene() {
     this->root = Node::create("root");
@@ -155,14 +17,10 @@ void Scene::draw() {
         std::puts("No camera is active!! Output will be blank");
         return;
     }
-    uploadLights();
     this->root->draw(activeCamera.lock());
-
-    if (auto sky = skybox.lock())
-        sky->draw(activeCamera.lock());
 }
 
-void Scene::update(double dt) {
+void Scene::update(float dt) {
     this->root->update(dt);
 }
 
@@ -179,33 +37,29 @@ std::shared_ptr<Node> Scene::findByGuid(util::Guid guid) const {
     return nullptr;
 }
 
-    void Scene::uploadLights() {
-    render::LightBlock block{};
+void Scene::physics_step() {
+    // Gather physics bodies
+    physics_context.bodies.clear();
+    gatherPhysicsBodies(root);
+    profiler::addCount(profiler::PhysicsCounter::Bodies,
+                       (int)physics_context.bodies.size());
 
-    // camera pos for specular
-    if (auto cam = activeCamera.lock())
-        if (auto camNode = cam->node.lock())
-            block.viewPos = glm::vec4(camNode->globalPosition(), 1.f);
+    auto &ctx = physics_context;
+    if (ctx.timeScale <= 0.f)
+        return; // Paused
 
-    // find first light in scene
-    std::vector<std::shared_ptr<Node>> stack{root};
-    while (!stack.empty()) {
-        auto node = stack.back();
-        stack.pop_back();
-        if (!node->enabled)
-            continue;
-
-        auto light = node->get_component<component::Light>();
-        if (light && light->enabled) {
-            block.direction = glm::vec4(light->direction(), 0.f);
-            block.color = glm::vec4(light->color * light->intensity, light->ambient);
-            break;   // dir light only now
-        }
-        for (auto &child : node->children)
-            stack.push_back(child);
-    }
-
-    lightBuffer.upload(block);
+    physics::step(ctx, ctx.fixedDt * ctx.timeScale);
 }
 
+void Scene::gatherPhysicsBodies(std::shared_ptr<Node> node) {
+    if (!node->enabled)
+        return;
+
+    auto pBody = node->get_component<component::PhysicsBody>();
+    if (pBody)
+        physics_context.bodies.push_back(pBody.get());
+
+    for (const auto &child : node->children)
+        gatherPhysicsBodies(child);
+}
 }; // namespace scn

@@ -19,7 +19,7 @@ void Instances::setInstances(std::vector<Instance> instances) {
     dirty = true;
 }
 
-void Instances::update(double dt) {
+void Instances::update(float dt) {
     if (!dirty)
         return;
     auto owner = node.lock();

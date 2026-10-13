@@ -8,7 +8,7 @@
 // frames late (ring of query sets) so the CPU never stalls waiting on them.
 namespace profiler {
 
-enum class Stage { Update, Scene, UI, Count };
+enum class Stage { Update, Physics, Scene, UI, Count };
 
 // Call once after the GL context is current
 void init();
@@ -27,6 +27,24 @@ struct Scope {
     Stage stage;
     explicit Scope(Stage stage) : stage(stage) { begin(stage); }
     ~Scope() { end(stage); }
+};
+
+// ---- Physics breakdown (CPU only) ----
+// The physics stage runs several fixed steps per frame, so phase times and
+// counters are summed over the frame instead of measured once.
+enum class PhysicsPhase { Integrate, Cache, Broad, Narrow, Solve, Count };
+enum class PhysicsCounter { Steps, Bodies, Pairs, Contacts, Count };
+
+void beginPhase(PhysicsPhase phase);
+void endPhase(PhysicsPhase phase);
+void addCount(PhysicsCounter counter, int value);
+
+struct PhaseScope {
+    PhysicsPhase phase;
+    explicit PhaseScope(PhysicsPhase phase) : phase(phase) {
+        beginPhase(phase);
+    }
+    ~PhaseScope() { endPhase(phase); }
 };
 
 // Draws the "Profiler" ImGui window; call between ImGui::NewFrame/Render
