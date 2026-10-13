@@ -21,8 +21,8 @@ static void buildCache(Context &ctx) {
         if (!n)
             continue;
         glm::mat4 tf = n->globalTransform();
-        ctx.cache.push_back(
-            {e, tf, getAABB(e->collider, tf), ctx.cache.size()});
+        ctx.cache.push_back({e, tf, getAABB(e->collider, tf),
+                             shapeCenter(e->collider, tf), ctx.cache.size()});
     }
 }
 

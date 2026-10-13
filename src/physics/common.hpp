@@ -27,6 +27,7 @@ struct Body {
     Entity e;
     glm::mat4 tf; // global transform
     AABB aabb;
+    glm::vec3 center; // world center of the collider (with its offset)
     std::size_t index; // position in ctx.cache
     // Positional correction summed over all contacts of this step, applied
     // to the node once after solving

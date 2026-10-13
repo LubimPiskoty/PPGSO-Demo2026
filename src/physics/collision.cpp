@@ -24,7 +24,7 @@ static bool collidePlaneSphere(const PlaneDesc &p, const Body &pb,
     // Plane's local space: the plane is y = 0, the rectangle
     // |x| <= halfSize.x, |z| <= halfSize.y (infinite: no limit), front +Y
     const glm::mat3 R = rotationOf(pb);
-    const glm::vec3 local = glm::transpose(R) * (sb.pos() - pb.pos());
+    const glm::vec3 local = glm::transpose(R) * (sb.center - pb.center);
 
     // Closest point of the rectangle to the sphere center
     const glm::vec3 closest(glm::clamp(local.x, -p.halfSize.x, p.halfSize.x),
@@ -56,7 +56,7 @@ static bool collidePlaneSphere(const PlaneDesc &p, const Body &pb,
     c.a = pb;
     c.b = sb;
     c.normal = R * nLocal; // plane -> sphere
-    c.point = pb.pos() + R * closest;
+    c.point = pb.center + R * closest;
     c.depth = depth;
     return true;
 }
@@ -64,7 +64,7 @@ static bool collidePlaneSphere(const PlaneDesc &p, const Body &pb,
 static bool collideSphereSphere(const SphereDesc &sA, const Body &sbA,
                                 const SphereDesc &sB, const Body &sbB,
                                 Contact &c) {
-    const glm::vec3 d = sbB.pos() - sbA.pos();
+    const glm::vec3 d = sbB.center - sbA.center;
     const float dist = glm::length(d);
     if (dist < 1e-6f) // Zero guard with epsilon
         return false;
@@ -75,7 +75,7 @@ static bool collideSphereSphere(const SphereDesc &sA, const Body &sbA,
     c.a = sbA;
     c.b = sbB;
     c.normal = n;
-    c.point = sbA.pos() + n * (sA.radius - c.depth / 2);
+    c.point = sbA.center + n * (sA.radius - c.depth / 2);
     return true;
 }
 

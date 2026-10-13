@@ -36,9 +36,14 @@ struct Shape {
     Type type = Type::Sphere;
     SphereDesc sphere;
     PlaneDesc plane;
+    // Shape center in the node's local space (moves with its rotation and
+    // scale). Set after assigning the desc: `collider.offset = {0, 1, 0};`
+    glm::vec3 offset{0.f};
 
     Shape() = default;
+
     Shape(SphereDesc s) : type(Type::Sphere), sphere(s) {}
+
     Shape(PlaneDesc p) : type(Type::Plane), plane(p) {}
 };
 
@@ -53,9 +58,14 @@ inline bool overlaps(const AABB &a, const AABB &b) {
            a.min.z <= b.max.z && a.max.z >= b.min.z;
 }
 
+// World position of the shape's center under `transform`
+inline glm::vec3 shapeCenter(const Shape &shape, const glm::mat4 &transform) {
+    return glm::vec3(transform * glm::vec4(shape.offset, 1.f));
+}
+
 // World AABB of the shape under `transform` (the node's global transform)
 inline AABB getAABB(const Shape &shape, const glm::mat4 &transform) {
-    const glm::vec3 center(transform[3]);
+    const glm::vec3 center = shapeCenter(shape, transform);
     const glm::mat3 m(transform);
     glm::vec3 extents(0.f);
 
