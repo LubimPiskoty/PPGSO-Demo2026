@@ -7,6 +7,7 @@
 #include "../../components/instance_generators.hpp"
 #include "../../components/instances.hpp"
 #include "../../components/mesh.hpp"
+#include "../../components/physicsbody.hpp"
 #include "../curve_loader.hpp"
 #include "../model_loader.hpp"
 #include "../texture_loader.hpp"
@@ -260,6 +261,58 @@ static void deserializeAnimatorComponent(const cJSON *json,
     }
 }
 
+// Mass 0 (or missing) makes the body static. Inertia is computed from the
+// collider, so it isn't stored
+static void deserializePhysicsBodyComponent(const cJSON *json,
+                                            std::shared_ptr<scn::Node> node) {
+    auto pb = node->add_component<component::PhysicsBody>();
+    auto &body = pb->body;
+
+    auto collider = cJSON_GetObjectItemCaseSensitive(json, "collider");
+    if (readString(collider, "shape") == "plane") {
+        physics::PlaneDesc plane;
+        plane.halfSize = readVec2(collider, "halfSize", plane.halfSize);
+        pb->collider = plane;
+    } else {
+        physics::SphereDesc sphere;
+        sphere.radius = readNumber(collider, "radius", sphere.radius);
+        pb->collider = sphere;
+    }
+    pb->collider.offset = readVec3(collider, "offset", glm::vec3(0.f));
+
+    body.restitution = readNumber(json, "restitution", body.restitution);
+    body.friction = readNumber(json, "friction", body.friction);
+    body.velocity = readVec3(json, "velocity", glm::vec3(0.f));
+    body.angularVelocity = readVec3(json, "angularVelocity", glm::vec3(0.f));
+
+    // Planes can only be static
+    float mass = readNumber(json, "mass", 0.f);
+    if (mass <= 0.f || pb->collider.type == physics::Shape::Type::Plane) {
+        body.mass = body.invMass = 0.f;
+        body.invInertiaLocal = glm::mat3(0.f);
+    } else {
+        // Solid sphere: I = 2/5 m r^2
+        float r = pb->collider.sphere.radius;
+        body.mass = mass;
+        body.invMass = 1.f / mass;
+        body.invInertiaLocal = glm::mat3(1.f / (0.4f * mass * r * r));
+    }
+    body.invInertiaWorld = body.invInertiaLocal;
+}
+
+static void deserializePhysicsContext(const cJSON *json,
+                                      physics::Context &ctx) {
+    ctx.gravity = readVec3(json, "gravity", ctx.gravity);
+    ctx.windVel = readVec3(json, "wind", ctx.windVel);
+    ctx.drag = readNumber(json, "drag", ctx.drag);
+    ctx.angularDrag = readNumber(json, "angularDrag", ctx.angularDrag);
+    ctx.timeScale = readNumber(json, "timeScale", ctx.timeScale);
+    // 0 or less would never advance and hang the main loop
+    float fixedDt = readNumber(json, "fixedDt", ctx.fixedDt);
+    if (fixedDt > 0.f)
+        ctx.fixedDt = fixedDt;
+}
+
 //
 // Graph
 //
@@ -300,6 +353,8 @@ static std::shared_ptr<scn::Node> deserializeNode(const cJSON *json,
             deserializeInstancesComponent(c, node);
         else if (type == "Animator")
             deserializeAnimatorComponent(c, node);
+        else if (type == "PhysicsBody")
+            deserializePhysicsBodyComponent(c, node);
         else
             std::cerr << "[Warning] Can't load component '" << type << "' on '"
                       << node->name << "', skipped" << std::endl;
@@ -354,6 +409,9 @@ scn::Scene loadScene(std::string path) {
     auto graph = cJSON_GetObjectItemCaseSensitive(sceneJson, "graph");
     if (cJSON_IsObject(graph))
         scene.root = deserializeNode(graph, ctx);
+    deserializePhysicsContext(
+        cJSON_GetObjectItemCaseSensitive(sceneJson, "physics"),
+        scene.physics_context);
 
     if (auto cameraNode = scene.findByGuid(readGuid(sceneJson, "activeCamera")))
         scene.activeCamera = cameraNode->get_component<component::Camera>();

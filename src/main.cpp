@@ -8,6 +8,7 @@
 #include "input/input.hpp"
 #include "loaders/scene_loader.hpp"
 #include "scenes/ball_jar.hpp"
+#include "scenes/barrel_run.hpp"
 #include "scenes/physics_test.hpp"
 #include "scenes/scene_manager.hpp"
 
@@ -65,6 +66,7 @@ int main() {
     scenes.add("Physics: impact", scenes::physicsImpact);
     scenes.add("Physics: break", scenes::physicsBreak);
     scenes.add("Ball jar", scenes::ballJar);
+    scenes.add("Barrel run", scenes::barrelRun);
     scenes.add("scene.json", [] { return loader::loadScene("scene.json"); });
     scenes.add("village_scene.json",
                [] { return loader::loadScene("village_scene.json"); });
