@@ -1,7 +1,7 @@
 #include "scene.hpp"
 
 #include "../debug/profiler.hpp"
-
+#include "../components/light.hpp"
 #include <cstdio>
 #include <memory>
 #include <vector>
@@ -17,7 +17,11 @@ void Scene::draw() {
         std::puts("No camera is active!! Output will be blank");
         return;
     }
+    uploadLights(); // upload all lights before draw
     this->root->draw(activeCamera.lock());
+
+    if (auto sky = skybox.lock())
+        sky->draw(activeCamera.lock()); // skybox last
 }
 
 void Scene::update(float dt) {
@@ -62,4 +66,34 @@ void Scene::gatherPhysicsBodies(std::shared_ptr<Node> node) {
     for (const auto &child : node->children)
         gatherPhysicsBodies(child);
 }
+
+void Scene::uploadLights() {
+    std::vector<render::GpuLight> lights;   // vector of all lights
+    glm::vec3 viewPos{0.f};
+
+    // camera position for specular calc
+    if (auto cam = activeCamera.lock())
+        if (auto camNode = cam->node.lock())
+            viewPos = camNode->globalPosition();
+
+    // go throught all nodes and take lioghts
+    std::vector<std::shared_ptr<Node>> stack{root};
+    while (!stack.empty()) {
+        auto node = stack.back();
+        stack.pop_back();
+        if (!node->enabled)
+            continue;
+
+        auto light = node->get_component<component::Light>(); // get the light
+        if (light && light->enabled)
+            lights.push_back(light->toGpu());
+
+        for (auto &child : node->children) // look for child components
+            stack.push_back(child);
+
+    }
+
+    lightBuffer.upload(lights, viewPos); // upload to UBOO
+}
+
 }; // namespace scn

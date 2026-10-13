@@ -57,8 +57,9 @@ GLuint createShaderProgram(const std::string &vertexPath,
     }
 
     GLuint blockIndex = glGetUniformBlockIndex(program, "Lights");
-    if (blockIndex != GL_INVALID_INDEX)
+    if (blockIndex != GL_INVALID_INDEX) {
         glUniformBlockBinding(program, blockIndex, 1);
+    }
 
     // Shaders are linked into the program now; the standalone objects aren't
     // needed

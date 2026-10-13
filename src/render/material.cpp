@@ -2,6 +2,7 @@
 
 #include <glm/gtc/type_ptr.hpp>
 #include <string>
+#include <cstdio>
 
 namespace render {
 

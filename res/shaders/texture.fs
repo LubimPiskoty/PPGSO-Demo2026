@@ -17,14 +17,27 @@ struct Material {
 uniform sampler2D uTexture;
 uniform Material uMaterial;
 
-// ligt buffer UBO slot 1
-layout(std140) uniform Lights {
-    vec4 uLightDirection;   // xyz light dir
-    vec4 uLightColor;       // rgb color
-    vec4 uViewPos;          // xyz camera pos
+// same as in cpp file
+#define MAX_LIGHTS 16
+
+struct Light {
+    vec4 position;            // xyz pos, w type of light
+    vec4 direction;           // xyz  dir
+    vec4 color;               // rgb = col, w = ambient
+    vec4 attenuation;         // x = constant, y = linear, z = quadratic
 };
 
-vec3 CalcDirLight(vec3 normal, vec3 viewDir, vec3 texColor);
+layout(std140) uniform Lights {
+    vec4 uLightPosition[MAX_LIGHTS];
+    vec4 uLightDirection[MAX_LIGHTS];
+    vec4 uLightColor[MAX_LIGHTS];
+    vec4 uLightAttenuation[MAX_LIGHTS];
+    vec4 uViewPos;
+    ivec4 uLightCount;
+};
+
+vec3 CalcDirLight(Light light, vec3 normal, vec3 viewDir, vec3 texColor);
+vec3 CalcPointLight(Light light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 texColor);
 
 void main() {
     vec3 texColor = texture(uTexture, FragTexCoord).rgb;
@@ -32,29 +45,60 @@ void main() {
     vec3 norm    = normalize(FragNormal);
     vec3 viewDir = normalize(uViewPos.xyz - FragPos);
 
-    vec3 result = CalcDirLight(norm, viewDir, texColor);
-
+    // add all lights together
+    vec3 result = vec3(0.0);
+    for (int i = 0; i < uLightCount.x; i++) {
+        Light light = Light(uLightPosition[i], uLightDirection[i],
+                            uLightColor[i], uLightAttenuation[i]);
+        if (light.position.w < 0.5)
+            result += CalcDirLight(light, norm, viewDir, texColor);
+        else
+            result += CalcPointLight(light, norm, FragPos, viewDir, texColor);
+    }
     FragColor = vec4(result, 1.0);
-
 }
 
-vec3 CalcDirLight(vec3 normal, vec3 viewDir, vec3 texColor)
+vec3 CalcDirLight(Light light, vec3 normal, vec3 viewDir, vec3 texColor)
 {
-    vec3 lightDir = normalize(-uLightDirection.xyz);
-    vec3 color    = uLightColor.rgb;
+    vec3 lightDir = normalize(-light.direction.xyz);
+    vec3 color    = light.color.rgb;
 
-    // diffuse
     float diff = max(dot(normal, lightDir), 0.0);
 
-    // specular
     float spec = 0.0;
-    if (diff > 0.0) {
+    if (diff > 0.0) { // only if its directed to ligbht
         vec3 reflectDir = reflect(-lightDir, normal);
         spec = pow(max(dot(viewDir, reflectDir), 0.0), max(uMaterial.shininess, 1.0));
     }
 
-    vec3 ambient  = color * uLightColor.w * texColor;
+    vec3 ambient  = color * light.color.w * texColor;
     vec3 diffuse  = color * diff * texColor;
     vec3 specular = color * spec * uMaterial.specular;
     return ambient + diffuse + specular;
+}
+
+vec3 CalcPointLight(Light light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 texColor)
+{
+    vec3 toLight  = light.position.xyz - fragPos;   // od povrchu k žiarovke
+    vec3 lightDir = normalize(toLight);
+    vec3 color    = light.color.rgb;
+
+    float diff = max(dot(normal, lightDir), 0.0);
+
+    float spec = 0.0;
+    if (diff > 0.0) { // only if its directed to ligbht
+        vec3 reflectDir = reflect(-lightDir, normal);
+        spec = pow(max(dot(viewDir, reflectDir), 0.0), max(uMaterial.shininess, 1.0));
+    }
+
+    // the more far away the weaker light is
+    float distance    = length(toLight);
+    float attenuation = 1.0 / (light.attenuation.x +
+                               light.attenuation.y * distance +
+                               light.attenuation.z * distance * distance);
+
+    vec3 ambient  = color * light.color.w * texColor;
+    vec3 diffuse  = color * diff * texColor;
+    vec3 specular = color * spec * uMaterial.specular;
+    return (ambient + diffuse + specular) * attenuation;
 }

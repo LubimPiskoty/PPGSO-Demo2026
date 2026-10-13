@@ -6,6 +6,8 @@
 #include "../loaders/model_loader.hpp"
 #include "../loaders/texture_loader.hpp"
 #include "../render/material.hpp"
+#include "../components/light.hpp"
+#include "../components/skybox.hpp"
 
 #include <cmath>
 #include <deque>
@@ -241,6 +243,35 @@ scn::Scene barrelRun() {
     scene.root->add_child(camNode);
     scene.activeCamera = camera;
     camera->lookAt({0.f, 5.f, 0.f});
+
+    // sun
+    {
+        auto node = scn::Node::create("Sun");
+        node->setLocalRot(glm::quat(glm::radians(glm::vec3(-60.f, 30.f, 0.f))));
+        auto light = node->add_component<component::Light>();
+        light->color = {1.f, 0.95f, 0.85f};   // slightly warm
+        light->intensity = 0.9f;
+        scene.root->add_child(node);
+    }
+
+    //torch
+    {
+        auto node = scn::Node::create("Torch", glm::vec3(-3.5f, 2.f, 2.f));
+        auto light = node->add_component<component::Light>(component::LightType::Point); // point light!!
+        light->color = {1.f, 0.55f, 0.2f};   // orange
+        light->intensity = 3.f;
+        light->ambient = 0.f;
+        light->linear = 0.35f;
+        light->quadratic = 0.44f;
+        scene.root->add_child(node);
+    }
+
+    // skybox
+    {
+        auto node = scn::Node::create("Skybox");
+        scene.skybox = node->add_component<component::Skybox>("skybox.png");
+        scene.root->add_child(node);
+    }
 
     return scene;
 }
