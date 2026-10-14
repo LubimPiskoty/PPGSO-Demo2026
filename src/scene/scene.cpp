@@ -1,5 +1,6 @@
 #include "scene.hpp"
 
+#include "../components/camera.hpp"
 #include "../debug/profiler.hpp"
 
 #include <cstdio>
@@ -17,7 +18,10 @@ void Scene::draw() {
         std::puts("No camera is active!! Output will be blank");
         return;
     }
-    this->root->draw(activeCamera.lock());
+    const auto camera_projection = activeCamera.lock()->projection;
+    const auto inv_camera_transform =
+        glm::inverse(activeCamera.lock()->node.lock()->globalTransform());
+    this->root->draw(camera_projection, inv_camera_transform);
 }
 
 void Scene::update(float dt) {

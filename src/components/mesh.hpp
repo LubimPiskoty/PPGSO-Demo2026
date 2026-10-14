@@ -28,18 +28,17 @@ class Mesh : public component::ComponentBase<Mesh> {
     std::string info() const override {
         std::string s = model->filename;
         if (model->isInstanced())
-            s += ", " + std::to_string(model->getInstanceCount()) +
-                 " instances";
+            s +=
+                ", " + std::to_string(model->getInstanceCount()) + " instances";
         return s;
     }
 
-    void draw(std::shared_ptr<component::Camera> camera) {
+    void draw(glm::mat4 projection, glm::mat4 invCameraTransform) override {
         if (checkInstancedCompatibility())
             return;
 
-        material->setMat4("uProjection", camera->projection);
-        material->setMat4("uView",
-                          glm::inverse(camera->node.lock()->globalTransform()));
+        material->setMat4("uProjection", projection);
+        material->setMat4("uView", invCameraTransform);
         material->setMat4("uModel", this->node.lock()->globalTransform());
         material->bind();
 

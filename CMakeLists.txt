@@ -112,7 +112,7 @@ endif()
 #
 # WHENCE strips the folder, so files are looked up by bare name
 # (e.g. "default.vs", "grass_plane.glb")
-file(GLOB SHADER_FILES CONFIGURE_DEPENDS "res/shaders/*.vs" "res/shaders/*.fs")
+file(GLOB SHADER_FILES CONFIGURE_DEPENDS "res/shaders/*.vs" "res/shaders/*.fs" "res/shaders/*.comp")
 cmrc_add_resource_library(shaders
         NAMESPACE shaders
         WHENCE res/shaders

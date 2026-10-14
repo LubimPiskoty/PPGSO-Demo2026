@@ -5,6 +5,7 @@
 #include <iostream>
 
 CMRC_DECLARE(shaders);
+
 namespace loader {
 
 std::string loadShaderSource(const std::string &filepath) {
@@ -17,7 +18,8 @@ std::string loadShaderSource(const std::string &filepath) {
     return std::string(file.begin(), file.end());
 }
 
-GLuint compileShader(GLenum type, const std::string &source) {
+GLuint compileShader(GLenum type, const std::string &source,
+                     const std::string &name) {
     GLuint shader = glCreateShader(type);
     const char *src = source.c_str();
     glShaderSource(shader, 1, &src, nullptr);
@@ -28,7 +30,7 @@ GLuint compileShader(GLenum type, const std::string &source) {
     if (!success) {
         char infoLog[1024];
         glGetShaderInfoLog(shader, 1024, nullptr, infoLog);
-        std::cerr << "Shader compile error:\n" << infoLog << std::endl;
+        std::cerr << "[ERROR]Shader compile error (" << name << "):\n" << infoLog << std::endl;
         glDeleteShader(shader);
         return 0;
     }
@@ -40,8 +42,8 @@ GLuint createShaderProgram(const std::string &vertexPath,
     std::string vertexSrc = loadShaderSource(vertexPath);
     std::string fragmentSrc = loadShaderSource(fragmentPath);
 
-    GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexSrc);
-    GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentSrc);
+    GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexSrc, vertexPath);
+    GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentSrc, fragmentPath);
 
     GLuint program = glCreateProgram();
     glAttachShader(program, vertexShader);

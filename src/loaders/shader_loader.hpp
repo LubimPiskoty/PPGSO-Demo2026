@@ -8,7 +8,8 @@ namespace loader {
 
 std::string loadShaderSource(const std::string &filepath);
 
-GLuint compileShader(GLenum type, const std::string &source);
+GLuint compileShader(GLenum type, const std::string &source,
+                     const std::string &name = "");
 
 GLuint createShaderProgram(const std::string &vertexPath,
                            const std::string &fragmentPath);
