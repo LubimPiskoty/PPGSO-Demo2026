@@ -15,10 +15,7 @@ namespace render {
 
         LightBlock block{};
         for (int i = 0; i < (int)lights.size() && i < MAX_LIGHTS; i++) {
-            block.position[i]    = lights[i].position;
-            block.direction[i]   = lights[i].direction;
-            block.color[i]       = lights[i].color;
-            block.attenuation[i] = lights[i].attenuation;
+            block.lights[i] = lights[i];
             block.count.x++;
         }
         block.viewPos = glm::vec4(viewPos, 1.f);

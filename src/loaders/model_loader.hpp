@@ -22,7 +22,9 @@ render::Model createRect(glm::vec2 halfSize, float unitsPerTile = 1.f);
 render::Model createBox(glm::vec3 halfExtents, float unitsPerTile = 1.f);
 
 // UV sphere centered at the origin, UVs in world units / unitsPerTile
-// (u around the equator, v pole to pole).
+// (u around the equator, v pole to pole). invertNormals points the normals
+// inward, so a light placed at the center lights the whole surface.
 render::Model createSphere(float radius, float unitsPerTile = 1.f,
-                           int segments = 32, int rings = 16);
+                           int segments = 32, int rings = 16,
+                           bool invertNormals = false);
 } // namespace loader

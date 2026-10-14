@@ -3,28 +3,72 @@
 
 namespace render {
 
-void Mesh::draw() const {
-    // Meshes without their own texture keep the one the material bound
-    if (textureId != 0) {
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, textureId);
+// Uniform telling the shader whether a slot holds a map, for slots that are
+// optional (albedo always has one)
+static const char *hasMapNames[(int)TextureSlot::Count] = {
+    nullptr,
+    "uHasNormalMap",
+    "uHasRoughnessMap",
+    "uHasSpecularMap",
+};
+
+// Binds the mesh's own textures over the material's and returns what was
+// there, so restoreTextures() can put it back for the next mesh
+Mesh::Overridden Mesh::bindTextures() const {
+    Overridden saved;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &saved.program);
+
+    // Slots the mesh has no texture for keep the one the material bound
+    for (int i = 0; i < (int)TextureSlot::Count; i++) {
+        if (textures[i] == 0)
+            continue;
+        glActiveTexture(GL_TEXTURE0 + i);
+        glGetIntegerv(GL_TEXTURE_BINDING_2D, &saved.texture[i]);
+        glBindTexture(GL_TEXTURE_2D, textures[i]);
+
+        if (!hasMapNames[i] || saved.program == 0)
+            continue;
+        GLint loc = glGetUniformLocation(saved.program, hasMapNames[i]);
+        if (loc < 0)
+            continue;
+        glGetUniformiv(saved.program, loc, &saved.hasMap[i]);
+        glUniform1i(loc, 1);
     }
+    glActiveTexture(GL_TEXTURE0);
+    return saved;
+}
+
+void Mesh::restoreTextures(const Overridden &saved) const {
+    for (int i = 0; i < (int)TextureSlot::Count; i++) {
+        if (textures[i] == 0)
+            continue;
+        glActiveTexture(GL_TEXTURE0 + i);
+        glBindTexture(GL_TEXTURE_2D, saved.texture[i]);
+
+        if (!hasMapNames[i] || saved.program == 0)
+            continue;
+        GLint loc = glGetUniformLocation(saved.program, hasMapNames[i]);
+        if (loc >= 0)
+            glUniform1i(loc, saved.hasMap[i]);
+    }
+    glActiveTexture(GL_TEXTURE0);
+}
+
+void Mesh::draw() const {
+    Overridden saved = bindTextures();
     glBindVertexArray(vao);
     glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, nullptr);
     glBindVertexArray(0);
+    restoreTextures(saved);
 }
 
 void Mesh::draw_instanced(GLsizei instance_count) const {
-
-    // Meshes without their own texture keep the one the material bound
-    if (textureId != 0) {
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, textureId);
-    }
+    Overridden saved = bindTextures();
     glBindVertexArray(vao);
     glDrawElementsInstanced(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, nullptr,
                             instance_count);
     glBindVertexArray(0);
+    restoreTextures(saved);
 }
 
 void Model::draw() const {

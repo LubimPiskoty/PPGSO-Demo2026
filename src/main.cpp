@@ -9,6 +9,7 @@
 #include "loaders/scene_loader.hpp"
 #include "scenes/ball_jar.hpp"
 #include "scenes/barrel_run.hpp"
+#include "scenes/light_test.hpp"
 #include "scenes/physics_test.hpp"
 #include "scenes/scene_manager.hpp"
 
@@ -61,18 +62,9 @@ int main() {
   profiler::init();
 
   scenes::SceneManager scenes;
-  scenes.add("Physics: bounce", scenes::physicsBounce);
-  scenes.add("Physics: slide", scenes::physicsSlide);
-  scenes.add("Physics: impact", scenes::physicsImpact);
-  scenes.add("Physics: break", scenes::physicsBreak);
-  scenes.add("Ball jar", scenes::ballJar);
-  scenes.add("Barrel run", scenes::barrelRun);
-  scenes.add("scene.json", [] { return loader::loadScene("scene.json"); });
-  scenes.add("diorama.json", [] { return loader::loadScene("diorama.json"); });
-  scenes.add("village_scene.json",
-             [] { return loader::loadScene("village_scene.json"); });
+  scenes.add("Light test", scenes::lightTest);
   scenes.setViewport((float)fbWidth, (float)fbHeight);
-  scenes.load(4);
+  scenes.load(0);
 
   double time = glfwGetTime();
   double physicsAccumulator = 0.0;

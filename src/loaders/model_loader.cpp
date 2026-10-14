@@ -6,6 +6,7 @@
 #include <assimp/scene.h>
 #include <cmrc/cmrc.hpp>
 #include <functional>
+#include <initializer_list>
 #include <glm/gtc/constants.hpp>
 #include <iostream>
 #include <string_view>
@@ -33,19 +34,25 @@ GLuint pinkFallbackTexture() {
     return texture;
 }
 
-GLuint loadMeshTexture(const aiScene *scene, const aiMesh *mesh) {
+// Decodes the first texture of the given types found on the mesh's material.
+// Returns 0 when there is none (or it can't be loaded).
+GLuint loadMeshTexture(const aiScene *scene, const aiMesh *mesh,
+                       std::initializer_list<aiTextureType> types) {
     if (mesh->mMaterialIndex >= scene->mNumMaterials) {
-        return pinkFallbackTexture();
+        return 0;
     }
     const aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
 
     aiString path;
-    bool hasTexture =
-        material->GetTexture(aiTextureType_BASE_COLOR, 0, &path) ==
-            AI_SUCCESS ||
-        material->GetTexture(aiTextureType_DIFFUSE, 0, &path) == AI_SUCCESS;
+    bool hasTexture = false;
+    for (aiTextureType type : types) {
+        if (material->GetTexture(type, 0, &path) == AI_SUCCESS) {
+            hasTexture = true;
+            break;
+        }
+    }
     if (!hasTexture) {
-        return pinkFallbackTexture();
+        return 0;
     }
 
     // glTF/GLB textures are embedded in the file itself, referenced as "*N";
@@ -54,7 +61,7 @@ GLuint loadMeshTexture(const aiScene *scene, const aiMesh *mesh) {
     if (!embedded || embedded->mHeight != 0) {
         std::cerr << "Unsupported or missing embedded texture: " << path.C_Str()
                   << std::endl;
-        return pinkFallbackTexture();
+        return 0;
     }
 
     // Many models embed copies of the same texture atlas, so decode each
@@ -63,9 +70,9 @@ GLuint loadMeshTexture(const aiScene *scene, const aiMesh *mesh) {
     static std::unordered_map<std::size_t, GLuint> cache;
     std::string_view bytes(reinterpret_cast<const char *>(embedded->pcData),
                            embedded->mWidth);
-    GLuint &texture = cache[std::hash<std::string_view>{}(bytes)];
-    if (texture != 0)
-        return texture;
+    auto cached = cache.find(std::hash<std::string_view>{}(bytes));
+    if (cached != cache.end())
+        return cached->second;
 
     int width, height, channels;
     unsigned char *pixels = stbi_load_from_memory(
@@ -74,13 +81,36 @@ GLuint loadMeshTexture(const aiScene *scene, const aiMesh *mesh) {
     if (!pixels) {
         std::cerr << "Failed to decode embedded texture: " << path.C_Str()
                   << std::endl;
-        texture = pinkFallbackTexture();
-        return texture;
+        return 0;
     }
 
-    texture = createTexture(pixels, width, height);
+    GLuint texture = createTexture(pixels, width, height);
     stbi_image_free(pixels);
+    cache[std::hash<std::string_view>{}(bytes)] = texture;
     return texture;
+}
+
+void loadMeshTextures(const aiScene *scene, const aiMesh *mesh, Mesh &result) {
+    using render::TextureSlot;
+    auto slot = [&](TextureSlot s) -> GLuint & {
+        return result.textures[(int)s];
+    };
+
+    slot(TextureSlot::Albedo) = loadMeshTexture(
+        scene, mesh, {aiTextureType_BASE_COLOR, aiTextureType_DIFFUSE});
+    // Albedo always gets something, so the shader has a valid texture to
+    // sample even for untextured meshes
+    if (slot(TextureSlot::Albedo) == 0)
+        slot(TextureSlot::Albedo) = pinkFallbackTexture();
+
+    slot(TextureSlot::Normal) = loadMeshTexture(
+        scene, mesh, {aiTextureType_NORMALS, aiTextureType_NORMAL_CAMERA});
+    // glTF packs roughness into the G channel of its metallicRoughness
+    // texture, which older Assimp versions report as UNKNOWN
+    slot(TextureSlot::Roughness) = loadMeshTexture(
+        scene, mesh, {aiTextureType_DIFFUSE_ROUGHNESS, aiTextureType_UNKNOWN});
+    slot(TextureSlot::Specular) =
+        loadMeshTexture(scene, mesh, {aiTextureType_SPECULAR});
 }
 
 Mesh createMesh(const std::vector<Vertex> &vertices,
@@ -114,6 +144,11 @@ Mesh createMesh(const std::vector<Vertex> &vertices,
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                           (void *)offsetof(Vertex, texCoord));
 
+    // Location 7, since the instance transform takes 3-6
+    glEnableVertexAttribArray(7);
+    glVertexAttribPointer(7, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                          (void *)offsetof(Vertex, tangent));
+
     glBindVertexArray(0);
 
     return mesh;
@@ -135,6 +170,11 @@ Mesh processMesh(const aiScene *scene, const aiMesh *mesh) {
                               ? glm::vec2{mesh->mTextureCoords[0][i].x,
                                           mesh->mTextureCoords[0][i].y}
                               : glm::vec2{0.0f, 0.0f};
+        vertex.tangent = mesh->HasTangentsAndBitangents()
+                             ? glm::vec3{mesh->mTangents[i].x,
+                                         mesh->mTangents[i].y,
+                                         mesh->mTangents[i].z}
+                             : glm::vec3{0.0f, 0.0f, 0.0f};
         vertices.push_back(vertex);
     }
 
@@ -148,7 +188,7 @@ Mesh processMesh(const aiScene *scene, const aiMesh *mesh) {
     }
 
     Mesh result = createMesh(vertices, indices);
-    result.textureId = loadMeshTexture(scene, mesh);
+    loadMeshTextures(scene, mesh, result);
     return result;
 }
 
@@ -172,7 +212,8 @@ Model loadModel(const std::string &filename) {
 
     Assimp::Importer importer;
     const aiScene *scene = importer.ReadFileFromMemory(
-        file.begin(), file.size(), aiProcess_Triangulate | aiProcess_FlipUVs,
+        file.begin(), file.size(), aiProcess_Triangulate | aiProcess_FlipUVs |
+            aiProcess_CalcTangentSpace,
         extensionOf(filename).c_str());
 
     if (!scene || !scene->mRootNode) {
@@ -198,7 +239,8 @@ Model createRect(glm::vec2 halfSize, float unitsPerTile) {
     // UVs in world units / tile size, so the texture repeats at a fixed
     // world scale no matter how big the plane is (needs GL_REPEAT)
     auto vertex = [&](float x, float z) {
-        return Vertex{{x, 0.f, z}, up, glm::vec2{x, z} / unitsPerTile};
+        return Vertex{{x, 0.f, z}, up, glm::vec2{x, z} / unitsPerTile,
+                      {1.f, 0.f, 0.f}};
     };
     std::vector<Vertex> vertices = {
         vertex(-hx, -hz),
@@ -239,7 +281,7 @@ Model createBox(glm::vec3 halfExtents, float unitsPerTile) {
         for (auto [su, sv] : {std::pair{-1, -1}, {1, -1}, {1, 1}, {-1, 1}}) {
             glm::vec3 p = center + du * (float)su + dv * (float)sv;
             glm::vec2 uv{(su * us) / unitsPerTile, (sv * vs) / unitsPerTile};
-            vertices.push_back(Vertex{p, f.normal, uv});
+            vertices.push_back(Vertex{p, f.normal, uv, f.u});
         }
         for (unsigned int i : {0u, 1u, 2u, 0u, 2u, 3u})
             indices.push_back(base + i);
@@ -251,7 +293,8 @@ Model createBox(glm::vec3 halfExtents, float unitsPerTile) {
     return model;
 }
 
-Model createSphere(float radius, float unitsPerTile, int segments, int rings) {
+Model createSphere(float radius, float unitsPerTile, int segments, int rings,
+                   bool invertNormals) {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
 
@@ -267,7 +310,10 @@ Model createSphere(float radius, float unitsPerTile, int segments, int rings) {
             float theta = u * 2.f * pi;
             glm::vec3 n{glm::sin(phi) * glm::cos(theta), glm::cos(phi),
                         glm::sin(phi) * glm::sin(theta)};
-            vertices.push_back(Vertex{n * radius, n, {u * uScale, v * vScale}});
+            // Direction of increasing u (theta)
+            glm::vec3 t{-glm::sin(theta), 0.f, glm::cos(theta)};
+            vertices.push_back(Vertex{n * radius, invertNormals ? -n : n,
+                                      {u * uScale, v * vScale}, t});
         }
     }
 

@@ -8,9 +8,10 @@ namespace render {
 
 // Sampler name for each TextureSlot, indexed by the slot
 static const char *samplerNames[(int)TextureSlot::Count] = {
-    "uTexture",
-    "uNormalMap",
-    "uSpecularMap",
+    "uAlbedoTex",
+    "uNormalTex",
+    "uRoughnessTex",
+    "uSpecularTex",
 };
 
 Material::Material(const std::string &name, std::shared_ptr<Shader> shader)
@@ -33,6 +34,8 @@ void Material::bind() const {
     }
     glActiveTexture(GL_TEXTURE0);
     glUniform1i(uniLoc("uHasNormalMap"), hasTexture(TextureSlot::Normal));
+    glUniform1i(uniLoc("uHasRoughnessMap"),
+                hasTexture(TextureSlot::Roughness));
     glUniform1i(uniLoc("uHasSpecularMap"), hasTexture(TextureSlot::Specular));
 
     // Material parameters
