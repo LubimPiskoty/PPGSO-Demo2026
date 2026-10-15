@@ -3,7 +3,7 @@
 layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
 
 // std430: vec3 is 16-byte aligned, so pack floats into the gaps.
-// Total size 96 bytes - the C++ struct must match exactly.
+// Total size 112 bytes - PARTICLE_SIZE in particle.cpp must match exactly.
 struct Particle {
     vec4 color;
     vec4 startColor;

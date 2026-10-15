@@ -12,7 +12,7 @@ namespace component {
 // TODO: Draw call types
 // https://evanvoodoo.github.io/2025-01-24-gpu-particles/
 
-const uint32_t DEFAULT_MAX_PARTICLES = 1 << 16;
+const uint32_t DEFAULT_MAX_PARTICLES = 1 << 12;
 
 class ParticleSystem : public ComponentBase<ParticleSystem> {
   public:
@@ -25,6 +25,8 @@ class ParticleSystem : public ComponentBase<ParticleSystem> {
     glm::vec3 minAccel = glm::vec3(0), maxAccel = glm::vec3(0, 0, -0.5f);
     float minLife = 1, maxLife = 10;
     float spawnInterval = 0.00001f, timer = 0;
+    // Motion smear: seconds of movement stretched behind each particle, 0 = off
+    float stretch = 0.05f;
     uint32_t maxParticles = DEFAULT_MAX_PARTICLES;
     uint32_t drawnParticleCount = 0;
 
@@ -43,9 +45,7 @@ class ParticleSystem : public ComponentBase<ParticleSystem> {
 
     void draw(glm::mat4 projection, glm::mat4 invCameraTransform) override;
 
-    const char *type_name() const override {
-        return "ParticleSystem";
-    }
+    const char *type_name() const override { return "ParticleSystem"; }
 
   private:
     GLuint vao, vbo;

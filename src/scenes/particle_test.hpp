@@ -12,7 +12,7 @@
 #include <memory>
 
 namespace scenes {
-scn::Scene testingScene() {
+scn::Scene particle_test() {
     scn::Scene scene;
 
     const auto shader =
@@ -33,10 +33,10 @@ scn::Scene testingScene() {
 
     auto camera_node = scn::Node::create("Camera");
     scene.activeCamera =
-        camera_node->add_component<component::Camera>(50, 600, 600);
+        camera_node->add_component<component::Camera>(90, 600, 600);
     camera_node->setLocalPos({5, 2, 0});
     scene.root->add_child(camera_node);
-    scene.activeCamera.lock()->lookAt({0, 1.3, -0.5});
+    scene.activeCamera.lock()->lookAt({0, 3, -0.5});
 
     auto floor_node = scn::Node::create("Floor");
     floor_node->add_component<component::Mesh>(plane_model, material);
@@ -48,14 +48,15 @@ scn::Scene testingScene() {
         std::make_shared<render::ComputeShader>("spawnParticle.comp"),
         std::make_shared<render::ComputeShader>("updateParticle.comp"));
     // Sparks: short-lived, burst upwards, fall back down, fade orange -> red
-    particles->maxParticles = 10000;
-    particles->spawnInterval = 0.0001f;
-    particles->minLife = 0.5f;
-    particles->maxLife = 4.0f;
-    particles->minPosition = glm::vec3(-0.1f, 0, -0.1f);
-    particles->maxPosition = glm::vec3(0.1f, 0, 0.1f);
-    particles->minVelocity = glm::vec3(-1, 2, -1) * 2.f;
-    particles->maxVelocity = glm::vec3(1, 4, 1) * 2.f;
+    particles->stretch = 0.02;
+    particles->maxParticles = 1000000;
+    particles->spawnInterval = 0.001f;
+    particles->minLife = 0.1f;
+    particles->maxLife = 2.0f;
+    particles->minPosition = glm::vec3(-0.3f, 0, -0.3f);
+    particles->maxPosition = glm::vec3(0.3f, 0, 0.3f);
+    particles->minVelocity = glm::vec3(-1, 1, -1) * 2.f;
+    particles->maxVelocity = glm::vec3(1, 6, 1) * 2.f;
     particles->minAccel = glm::vec3(0, -9.81f, 0);
     particles->maxAccel = glm::vec3(0, -9.81f, 0);
     particles->minColor = glm::vec4(1.0f, 0.8f, 0.3f, 1.0f);

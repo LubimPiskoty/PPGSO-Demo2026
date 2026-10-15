@@ -2,7 +2,7 @@
 
 layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
 
-// Must match spawnParticle.comp (96 bytes, std430)
+// Must match spawnParticle.comp (112 bytes, std430)
 struct Particle {
     vec4 color;
     vec4 startColor;

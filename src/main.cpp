@@ -10,9 +10,9 @@
 #include "scenes/ball_jar.hpp"
 #include "scenes/barrel_run.hpp"
 #include "scenes/light_test.hpp"
+#include "scenes/particle_test.hpp"
 #include "scenes/physics_test.hpp"
 #include "scenes/scene_manager.hpp"
-#include "scenes/testingScene.hpp"
 
 int main() {
     if (!glfwInit()) {
@@ -70,7 +70,7 @@ int main() {
     // scenes.add("Physics: impact", scenes::physicsImpact);
     // scenes.add("Physics: break", scenes::physicsBreak);
     // scenes.add("Ball jar", scenes::ballJar);
-    scenes.add("Particle test", scenes::testingScene);
+    scenes.add("Particle test", scenes::particle_test);
     scenes.add("Barrel run", scenes::barrelRun);
     scenes.add("scene.json", [] { return loader::loadScene("scene.json"); });
     scenes.add("diorama.json",
@@ -98,7 +98,7 @@ int main() {
         time = glfwGetTime();
         // Clamp so a long stall (window drag, breakpoint) doesn't teleport
         // everything in one update
-        double dt = std::min(time - last_time, 0.1);
+        float dt = std::min((float)(time - last_time), 0.1f);
 
         // Update and draw the scene
         {

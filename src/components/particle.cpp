@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdio>
 #include <limits>
 #include <numeric>
 #include <vector>
@@ -11,18 +12,24 @@ namespace component {
 
 namespace {
 // Mirrors `struct Particle` in the compute shaders (std430)
-constexpr size_t PARTICLE_SIZE = 96;
+constexpr size_t PARTICLE_SIZE = 112;
 constexpr uint32_t PARTICLES_PER_THREAD = 128;
 
 // Mirrors `uniform EmitterSettings` (std140: vec3s padded to 16 bytes)
 struct EmitterSettingsGPU {
     glm::vec4 minColor, maxColor;
-    glm::vec3 minOffset; float pad0;
-    glm::vec3 maxOffset; float pad1;
-    glm::vec3 minVelocity; float pad2;
-    glm::vec3 maxVelocity; float pad3;
-    glm::vec3 minAccel; float pad4;
-    glm::vec3 maxAccel; float pad5;
+    glm::vec3 minOffset;
+    float pad0;
+    glm::vec3 maxOffset;
+    float pad1;
+    glm::vec3 minVelocity;
+    float pad2;
+    glm::vec3 maxVelocity;
+    float pad3;
+    glm::vec3 minAccel;
+    float pad4;
+    glm::vec3 maxAccel;
+    float pad5;
     glm::mat4 modelMatrix;
     glm::mat4 rotationMatrix;
     float minLife, maxLife;
@@ -69,6 +76,19 @@ ParticleSystem::ParticleSystem(
 };
 
 void ParticleSystem::allocateBuffers() {
+    // A shader can only see GL_MAX_SHADER_STORAGE_BLOCK_SIZE bytes of an
+    // SSBO; a bigger particle buffer leaves the shaders with nothing to draw
+    GLint64 maxBlockSize = 0;
+    glGetInteger64v(GL_MAX_SHADER_STORAGE_BLOCK_SIZE, &maxBlockSize);
+    const uint64_t limit = static_cast<uint64_t>(maxBlockSize) / PARTICLE_SIZE;
+    if (maxParticles > limit) {
+        std::fprintf(stderr,
+                     "ParticleSystem: maxParticles %u exceeds the GPU limit, "
+                     "clamped to %llu\n",
+                     maxParticles, static_cast<unsigned long long>(limit));
+        maxParticles = static_cast<uint32_t>(limit);
+    }
+
     // life = 0 everywhere -> all dead
     std::vector<char> zeros(maxParticles * PARTICLE_SIZE, 0);
     particles.setData(zeros.size(), zeros.data());
@@ -157,8 +177,8 @@ void ParticleSystem::update(float dt) {
     glUniform3f(glGetUniformLocation(prog, "u_viewPos"), 0, 0, 0);
     glUniform3f(glGetUniformLocation(prog, "u_forwardDir"), 0, 0, -1);
     glUniform1f(glGetUniformLocation(prog, "u_cullingMinAngle"), -2.f);
-    updateCompute->run(workGroupsFor(
-        maxParticles, updateCompute->QueryLinearWorkGroupSize()));
+    updateCompute->run(
+        workGroupsFor(maxParticles, updateCompute->QueryLinearWorkGroupSize()));
 }
 
 void ParticleSystem::draw(glm::mat4 projection, glm::mat4 invCameraTransform) {
@@ -167,6 +187,8 @@ void ParticleSystem::draw(glm::mat4 projection, glm::mat4 invCameraTransform) {
 
     material->setMat4("uProjection", projection);
     material->setMat4("uView", invCameraTransform);
+    material->setVec3("uViewPos", glm::vec3(glm::inverse(invCameraTransform)[3]));
+    material->setFloat("uStretch", stretch);
     material->bind();
     particles.bindSSBO(0);
     drawlist.bindSSBO(3);
