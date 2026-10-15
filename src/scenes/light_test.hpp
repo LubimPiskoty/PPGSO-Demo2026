@@ -8,6 +8,7 @@
 #include "../loaders/texture_loader.hpp"
 #include "../render/material.hpp"
 #include "../scene/scene.hpp"
+#include <cmath>
 #include <memory>
 #include <string>
 
@@ -75,14 +76,15 @@ scn::Scene lightTest() {
         test_node->setLocalScale(glm::vec3(10.f));
         test_node->setLocalPos(
             glm::vec3(0.f, 0.4f, 0.f)); // wheels on the floor
-        test_node->setLocalRotEuler(
-            glm::radians(glm::vec3(0.f, -30.f, 0.f))); // front turned to the left
+        test_node->setLocalRotEuler(glm::radians(
+            glm::vec3(0.f, -30.f, 0.f))); // front turned to the left
         scene.root->add_child(test_node);
     }
 
     // camera
     {
         auto pivot = scn::Node::create("Camera pivot");
+        pivot->add_component<Spin>(5.f);
         scene.root->add_child(pivot);
 
         auto camNode = scn::Node::create("Camera", glm::vec3{0.f, 2.f, 7.f});
@@ -90,21 +92,35 @@ scn::Scene lightTest() {
         pivot->add_child(camNode);
         scene.activeCamera = camera;
         camera->lookAt({0.f, 0.8f, 0.f}); // car center, orbit pivot below it
+
+        // Shading test sphere, child of the camera so it sits in the bottom
+        // right corner of the screen (camera looks down its -Z)
+        auto test_sphere = std::make_shared<render::Model>(
+            loader::createSphere(1.f, 1.f, 32, 16));
+        auto sphereNode = scn::Node::create("Shading test sphere",
+                                            glm::vec3{1.2f, -0.6f, -3.f});
+        sphereNode->setLocalScale(glm::vec3(0.25f));
+        sphereNode->add_component<component::Mesh>(test_sphere, bulb_material);
+        camNode->add_child(sphereNode);
     }
-    // sun
+    // sun: tilted child of a spinning pivot, so its direction sweeps around Y
     {
-        auto node = scn::Node::create("Sun");
-        node->setLocalRot(glm::quat(glm::radians(glm::vec3(-60.f, 30.f, 0.f))));
-        node->add_component<component::Light>(component::Light::directional(
-            {1.f, 0.95f, 0.85f}, 0.9f)); // slightly warm
-        scene.root->add_child(node);
+        auto pivot = scn::Node::create("Sun pivot");
+        scene.root->add_child(pivot);
+
+        auto node = scn::Node::create("Sun", glm::vec3(0, 1.8, 0));
+        node->setLocalRot(glm::quat(glm::radians(glm::vec3(-40.f, 30.f, 0.f))));
+
+        node->add_component<component::Light>(
+            component::Light::directional(glm::vec3(1), 1.2f)); // slightly warm
+        pivot->add_child(node);
     }
 
     // point lights orbiting the car: children of a spinning pivot, spread
     // evenly around it
     {
         auto pivot = scn::Node::create("Light pivot");
-        pivot->add_component<Spin>(30.f);
+        pivot->add_component<Spin>(10.f);
         scene.root->add_child(pivot);
 
         const glm::vec3 colors[] = {
@@ -114,12 +130,12 @@ scn::Scene lightTest() {
         };
         const float radius = 3.f, height = 1.5f;
         for (int i = 0; i < 3; i++) {
-            float angle = glm::radians(120.f * i);
+            float angle = glm::radians(120.f * i + 60.f);
             glm::vec3 pos{radius * glm::cos(angle), height,
                           radius * glm::sin(angle)};
 
-            auto node = scn::Node::create("Point light " + std::to_string(i),
-                                          pos);
+            auto node =
+                scn::Node::create("Point light " + std::to_string(i), pos);
             node->add_component<component::Light>(
                 component::Light::point(colors[i], 3.f, 0.35f, 0.44f));
             node->add_component<component::Mesh>(sphere_model, bulb_material);

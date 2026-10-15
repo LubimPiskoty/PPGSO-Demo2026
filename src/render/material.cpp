@@ -14,6 +14,21 @@ static const char *samplerNames[(int)TextureSlot::Count] = {
     "uSpecularTex",
 };
 
+// 1x1 magenta, bound in place of a missing albedo texture
+static GLuint missingTexture() {
+    static GLuint id = 0;
+    if (id == 0) {
+        const unsigned char magenta[4] = {255, 0, 255, 255};
+        glGenTextures(1, &id);
+        glBindTexture(GL_TEXTURE_2D, id);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA,
+                     GL_UNSIGNED_BYTE, magenta);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
+    return id;
+}
+
 Material::Material(const std::string &name, std::shared_ptr<Shader> shader)
     : name(name), shader(shader) {
     guid = util::Guid::generate();
@@ -29,7 +44,11 @@ void Material::bind() const {
     // Textures: slot index == texture unit
     for (int i = 0; i < (int)TextureSlot::Count; i++) {
         glActiveTexture(GL_TEXTURE0 + i);
-        glBindTexture(GL_TEXTURE_2D, textures[i] ? textures[i]->id : 0);
+        GLuint id = textures[i] ? textures[i]->id : 0;
+        // Missing albedo shows up magenta instead of silently black
+        if (!id && i == (int)TextureSlot::Albedo)
+            id = missingTexture();
+        glBindTexture(GL_TEXTURE_2D, id);
         glUniform1i(uniLoc(samplerNames[i]), i);
     }
     glActiveTexture(GL_TEXTURE0);
