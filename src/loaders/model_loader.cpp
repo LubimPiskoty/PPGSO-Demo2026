@@ -293,6 +293,44 @@ Model createBox(glm::vec3 halfExtents, float unitsPerTile) {
     return model;
 }
 
+Model createPyramid(float halfBase, float height) {
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+
+    const glm::vec3 apex{0.f, height, 0.f};
+    // Base corners, counter-clockwise seen from above
+    const glm::vec3 c[4] = {{-halfBase, 0.f, halfBase},
+                            {halfBase, 0.f, halfBase},
+                            {halfBase, 0.f, -halfBase},
+                            {-halfBase, 0.f, -halfBase}};
+
+    // Sides: own vertices per face so the shading stays flat
+    for (int i = 0; i < 4; i++) {
+        glm::vec3 a = c[i], b = c[(i + 1) % 4];
+        glm::vec3 edge = glm::normalize(b - a);
+        glm::vec3 n = glm::normalize(glm::cross(b - a, apex - a));
+        unsigned int base = static_cast<unsigned int>(vertices.size());
+        vertices.push_back(Vertex{a, n, {0.f, 0.f}, edge});
+        vertices.push_back(Vertex{b, n, {1.f, 0.f}, edge});
+        vertices.push_back(Vertex{apex, n, {0.5f, 1.f}, edge});
+        for (unsigned int k : {0u, 1u, 2u})
+            indices.push_back(base + k);
+    }
+
+    // Base, facing down
+    unsigned int base = static_cast<unsigned int>(vertices.size());
+    for (int i = 0; i < 4; i++)
+        vertices.push_back(Vertex{c[i], {0.f, -1.f, 0.f},
+                                  {c[i].x > 0.f, c[i].z > 0.f}, {1.f, 0.f, 0.f}});
+    for (unsigned int k : {0u, 2u, 1u, 0u, 3u, 2u})
+        indices.push_back(base + k);
+
+    Model model;
+    model.meshes.push_back(createMesh(vertices, indices));
+    model.filename = "<pyramid>";
+    return model;
+}
+
 Model createSphere(float radius, float unitsPerTile, int segments, int rings,
                    bool invertNormals) {
     std::vector<Vertex> vertices;

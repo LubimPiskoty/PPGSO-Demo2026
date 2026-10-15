@@ -21,6 +21,10 @@ render::Model createRect(glm::vec2 halfSize, float unitsPerTile = 1.f);
 // in world units / unitsPerTile on every face.
 render::Model createBox(glm::vec3 halfExtents, float unitsPerTile = 1.f);
 
+// Square pyramid, flat shaded: base (2 * halfBase)^2 on XZ at y = 0, apex at
+// (0, height, 0). Handy as an arrow tip, rotate it to point elsewhere.
+render::Model createPyramid(float halfBase, float height);
+
 // UV sphere centered at the origin, UVs in world units / unitsPerTile
 // (u around the equator, v pole to pole). invertNormals points the normals
 // inward, so a light placed at the center lights the whole surface.
