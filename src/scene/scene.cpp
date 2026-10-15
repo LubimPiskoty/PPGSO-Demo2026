@@ -1,16 +1,15 @@
 #include "scene.hpp"
 
-#include "../debug/profiler.hpp"
+#include "../components/camera.hpp"
 #include "../components/light.hpp"
+#include "../debug/profiler.hpp"
 #include <cstdio>
 #include <memory>
 #include <vector>
 
 namespace scn {
 
-Scene::Scene() {
-    this->root = Node::create("root");
-}
+Scene::Scene() { this->root = Node::create("root"); }
 
 void Scene::draw() {
     if (activeCamera.expired()) {
@@ -18,15 +17,15 @@ void Scene::draw() {
         return;
     }
     uploadLights(); // upload all lights before draw
-    this->root->draw(activeCamera.lock());
-
     if (auto sky = skybox.lock())
         sky->draw(activeCamera.lock()); // skybox last
+    const auto camera_projection = activeCamera.lock()->projection;
+    const auto inv_camera_transform =
+        glm::inverse(activeCamera.lock()->node.lock()->globalTransform());
+    this->root->draw(camera_projection, inv_camera_transform);
 }
 
-void Scene::update(float dt) {
-    this->root->update(dt);
-}
+void Scene::update(float dt) { this->root->update(dt); }
 
 std::shared_ptr<Node> Scene::findByGuid(util::Guid guid) const {
     std::vector<std::shared_ptr<Node>> stack{root};
@@ -68,7 +67,7 @@ void Scene::gatherPhysicsBodies(std::shared_ptr<Node> node) {
 }
 
 void Scene::uploadLights() {
-    std::vector<render::GpuLight> lights;   // vector of all lights
+    std::vector<render::GpuLight> lights; // vector of all lights
     glm::vec3 viewPos{0.f};
 
     // camera position for specular calc
@@ -90,7 +89,6 @@ void Scene::uploadLights() {
 
         for (auto &child : node->children) // look for child components
             stack.push_back(child);
-
     }
 
     lightBuffer.upload(lights, viewPos); // upload to UBOO

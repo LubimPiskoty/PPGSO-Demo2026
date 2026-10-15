@@ -53,16 +53,15 @@ void Node::update(float dt) {
         child->update(dt);
 }
 
-void Node::draw(const std::shared_ptr<component::Camera> camera) {
+void Node::draw(glm::mat4 projection, glm::mat4 invCameraTransform) {
     if (!enabled)
         return;
 
-    std::weak_ptr<component::Mesh> mesh = get_component<component::Mesh>();
-    if (!mesh.expired() && mesh.lock()->enabled)
-        mesh.lock()->draw(camera);
+    for (const auto &component : components)
+        component->draw(projection, invCameraTransform);
 
     for (auto const &child : this->children)
-        child->draw(camera);
+        child->draw(projection, invCameraTransform);
 }
 
 void Node::add_child(std::shared_ptr<Node> child) {

@@ -1,0 +1,108 @@
+#version 430
+
+layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+// std430: vec3 is 16-byte aligned, so pack floats into the gaps.
+// Total size 96 bytes - the C++ struct must match exactly.
+struct Particle {
+    vec4 color;
+    vec4 startColor;
+    vec4 endColor;
+    vec3 pos;
+    float life;
+    vec3 velocity;
+    float initialLife;
+    vec3 accel;
+    float _pad0;
+    vec2 scale;
+    vec2 _pad1;
+};
+
+layout(std430, binding = 0) buffer ParticleBuffer {
+    Particle particles[];
+};
+
+layout(std430, binding = 1) buffer FreelistBuffer {
+    int count;
+    int indices[];
+} freelist;
+
+// std140: every vec3 starts on a 16-byte boundary
+layout(std140, binding = 0) uniform EmitterSettings {
+    vec4 minColor, maxColor;
+    vec3 minOffset, maxOffset;
+    vec3 minVelocity, maxVelocity;
+    vec3 minAccel, maxAccel;
+    mat4 modelMatrix;
+    mat4 rotationMatrix;
+    float minLife, maxLife;
+} u_emitter;
+
+uniform uint u_particlesToSpawn;
+uniform uint u_seed;
+
+uint rng_state;
+
+// PCG hash
+uint pcg(uint v) {
+    uint state = v * 747796405u + 2891336453u;
+    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    return (word >> 22u) ^ word;
+}
+
+float random() {
+    rng_state = pcg(rng_state);
+    return float(rng_state) / 4294967295.0;
+}
+
+vec3 randomVec3(vec3 a, vec3 b) {
+    return mix(a, b, vec3(random(), random(), random()));
+}
+
+void MakeParticle(uint i) {
+    Particle p;
+    p.life = max(0.1, mix(u_emitter.minLife, u_emitter.maxLife, random()));
+    p.initialLife = p.life;
+
+    vec3 offset = randomVec3(u_emitter.minOffset, u_emitter.maxOffset);
+    p.pos = u_emitter.modelMatrix[3].xyz + mat3(u_emitter.rotationMatrix) * offset;
+    p.scale = vec2(0.1);
+
+    // w = 0: directions must not pick up translation
+    p.velocity = mat3(u_emitter.rotationMatrix) *
+            randomVec3(u_emitter.minVelocity, u_emitter.maxVelocity);
+    p.accel = mat3(u_emitter.rotationMatrix) *
+            randomVec3(u_emitter.minAccel, u_emitter.maxAccel);
+
+    p.startColor = p.color = u_emitter.minColor;
+    p.endColor = u_emitter.maxColor;
+    p._pad0 = 0.0;
+    p._pad1 = vec2(0.0);
+
+    particles[i] = p;
+}
+
+void SpawnParticle(uint index) {
+    if (index >= u_particlesToSpawn)
+        return;
+
+    // Pop from freelist; undo the decrement if it was empty
+    int freeListIndex = atomicAdd(freelist.count, -1) - 1;
+    if (freeListIndex < 0) {
+        atomicAdd(freelist.count, 1);
+        return;
+    }
+
+    uint particleIndex = uint(freelist.indices[freeListIndex]);
+    rng_state = pcg(particleIndex ^ pcg(u_seed));
+    MakeParticle(particleIndex);
+}
+
+const uint PARTICLES_PER_THREAD = 128u;
+
+void main() {
+    uint index = gl_GlobalInvocationID.x * PARTICLES_PER_THREAD;
+    for (uint i = 0u; i < PARTICLES_PER_THREAD; i++) {
+        SpawnParticle(index + i);
+    }
+}

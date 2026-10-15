@@ -12,6 +12,7 @@
 #include "scenes/light_test.hpp"
 #include "scenes/physics_test.hpp"
 #include "scenes/scene_manager.hpp"
+#include "scenes/testingScene.hpp"
 
 int main() {
     if (!glfwInit()) {
@@ -19,7 +20,7 @@ int main() {
         return -1;
     }
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_DEPTH_BITS, 24);
@@ -57,12 +58,25 @@ int main() {
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
+    glEnable(GL_MULTISAMPLE);
 
     debug_ui::init(window);
     profiler::init();
 
     scenes::SceneManager scenes;
     scenes.add("Light test", scenes::lightTest);
+    // scenes.add("Physics: bounce", scenes::physicsBounce);
+    // scenes.add("Physics: slide", scenes::physicsSlide);
+    // scenes.add("Physics: impact", scenes::physicsImpact);
+    // scenes.add("Physics: break", scenes::physicsBreak);
+    // scenes.add("Ball jar", scenes::ballJar);
+    scenes.add("Particle test", scenes::testingScene);
+    scenes.add("Barrel run", scenes::barrelRun);
+    scenes.add("scene.json", [] { return loader::loadScene("scene.json"); });
+    scenes.add("diorama.json",
+               [] { return loader::loadScene("diorama.json"); });
+    // scenes.add("village_scene.json",
+    //            [] { return loader::loadScene("village_scene.json"); });
     scenes.setViewport((float)fbWidth, (float)fbHeight);
     scenes.load(0);
 
@@ -89,7 +103,7 @@ int main() {
         // Update and draw the scene
         {
             profiler::Scope _(profiler::Stage::Update);
-            scene.update(dt);
+            scene.update(dt * scene.physics_context.timeScale);
         }
         {
             profiler::Scope _(profiler::Stage::Physics);

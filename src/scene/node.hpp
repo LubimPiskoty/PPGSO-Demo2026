@@ -43,9 +43,18 @@ class Node : public std::enable_shared_from_this<Node> {
     // Local transform, stored decomposed so it can be edited (e.g. by an
     // inspector) without matrix decomposition. Only changeable through the
     // setters, so the cached matrices below know when to rebuild.
-    const glm::vec3 &localPos() const { return pos_; }
-    const glm::quat &localRot() const { return rot_; }
-    const glm::vec3 &localScale() const { return scale_; }
+    const glm::vec3 &localPos() const {
+        return pos_;
+    }
+
+    const glm::quat &localRot() const {
+        return rot_;
+    }
+
+    const glm::vec3 &localScale() const {
+        return scale_;
+    }
+
     void setLocalPos(const glm::vec3 &pos);
     void setLocalRot(const glm::quat &rot);
     // Convenience for scene files, animations and hand written scenes:
@@ -92,7 +101,7 @@ class Node : public std::enable_shared_from_this<Node> {
 
     // Overridable functions
     void update(float dt);
-    void draw(const std::shared_ptr<component::Camera> camera);
+    void draw(glm::mat4 projection, glm::mat4 invCameraTransform);
 
     // General functions
     static std::shared_ptr<Node> create(std::string name);
