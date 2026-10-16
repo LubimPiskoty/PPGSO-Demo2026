@@ -69,4 +69,10 @@ void Skybox::createCube() {
   glBindVertexArray(0);
 }
 
+  void Skybox::bindForReflections() {
+      glActiveTexture(GL_TEXTURE4);
+      glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+      glActiveTexture(GL_TEXTURE0);
+}
+
 } // namespace component

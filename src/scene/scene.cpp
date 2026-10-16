@@ -3,9 +3,12 @@
 #include "../components/camera.hpp"
 #include "../components/light.hpp"
 #include "../debug/profiler.hpp"
+#include "../components/skybox.hpp"
 #include <cstdio>
 #include <memory>
 #include <vector>
+
+#include "imgui_impl_opengl3_loader.h"
 
 namespace scn {
 
@@ -17,8 +20,10 @@ void Scene::draw() {
         return;
     }
     uploadLights(); // upload all lights before draw
-    if (auto sky = skybox.lock())
+    if (auto sky = skybox.lock()) {
         sky->draw(activeCamera.lock()); // skybox last
+        sky->bindForReflections();      // cubemapa on 4th slot for reflectz
+    }
     const auto camera_projection = activeCamera.lock()->projection;
     const auto inv_camera_transform =
         glm::inverse(activeCamera.lock()->node.lock()->globalTransform());

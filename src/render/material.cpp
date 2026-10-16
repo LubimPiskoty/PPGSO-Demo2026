@@ -32,6 +32,11 @@ static GLuint missingTexture() {
 Material::Material(const std::string &name, std::shared_ptr<Shader> shader)
     : name(name), shader(shader) {
     guid = util::Guid::generate();
+
+
+    // set values, so it doesnt use values from another mat
+    setFloat("uReflectivity", 0.f);
+    setFloat("uRoughness", 0.f);
 }
 
 void Material::bind() const {
@@ -51,6 +56,8 @@ void Material::bind() const {
         glBindTexture(GL_TEXTURE_2D, id);
         glUniform1i(uniLoc(samplerNames[i]), i);
     }
+
+
     glActiveTexture(GL_TEXTURE0);
     glUniform1i(uniLoc("uHasNormalMap"), hasTexture(TextureSlot::Normal));
     glUniform1i(uniLoc("uHasRoughnessMap"),

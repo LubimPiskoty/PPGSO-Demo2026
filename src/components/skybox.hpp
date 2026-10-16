@@ -21,6 +21,8 @@ namespace component {
 
         void draw(const std::shared_ptr<Camera> &camera);
 
+        void bindForReflections(); // bind texture for reflection
+
     private:
         std::string textureFile;
         unsigned int texture = 0;   // GLuint

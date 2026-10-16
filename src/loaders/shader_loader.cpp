@@ -63,6 +63,15 @@ GLuint createShaderProgram(const std::string &vertexPath,
         glUniformBlockBinding(program, blockIndex, 1);
     }
 
+    // read skybox texture from 4th slot
+    GLint skyLoc = glGetUniformLocation(program, "uSkybox");
+    if (skyLoc != -1) {
+        glUseProgram(program);
+        glUniform1i(skyLoc, 4);
+        glUseProgram(0);
+    }
+
+
     // Shaders are linked into the program now; the standalone objects aren't
     // needed
     glDeleteShader(vertexShader);

@@ -57,6 +57,7 @@ int main() {
     input::init(window);
 
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
     glDepthFunc(GL_LESS);
     glEnable(GL_MULTISAMPLE);
 

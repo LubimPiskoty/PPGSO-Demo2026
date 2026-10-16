@@ -44,6 +44,8 @@ scn::Scene lightTest() {
         std::make_shared<render::Material>("Lit material", litShader);
     auto testing_mesh = std::make_shared<render::Model>(
         loader::loadModel("chevrolet_impala_1967_low.glb"));
+    lit_material->setFloat("uReflectivity", 0.99f);   // reflect sky
+    lit_material->setFloat("uRoughness", 0.1f);
 
     // Lit shader multiplies light by the albedo, so the bulbs need a white one
     // (procedural meshes have no texture -> black)

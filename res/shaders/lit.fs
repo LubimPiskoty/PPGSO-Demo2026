@@ -33,6 +33,9 @@ uniform sampler2D uSpecularTex;
 uniform bool uHasNormalMap;
 uniform bool uHasRoughnessMap;
 uniform bool uHasSpecularMap;
+uniform samplerCube uSkybox;     // cubemap of skybox slot 4
+uniform float uReflectivity;     // 0 no reflect, 1 mirror
+uniform float uRoughness; // when mat doesnt have roughmap
 
 // ---------------------------------------------------------------------------
 // Lights (layout matches render::LightBlock)
@@ -92,6 +95,7 @@ struct Surface {
     vec3 albedo;
     vec3 specular;
     float shininess;
+    float roughness;
 };
 
 // Surface normal, perturbed by the normal map when there is one
@@ -120,6 +124,7 @@ Surface getSurface() {
     surf.albedo = texture(uAlbedoTex, FragTexCoord).rgb;
     surf.specular = uMaterial.specular;
     surf.shininess = uMaterial.shininess;
+    surf.roughness = uRoughness;
 
     if (uHasSpecularMap)
         surf.specular *= texture(uSpecularTex, FragTexCoord).rgb;
@@ -135,6 +140,7 @@ Surface getSurface() {
         // rough surfaces get a big bright smear
         surf.specular *= 1.0 - roughness;
     }
+
     return surf;
 }
 
@@ -193,6 +199,14 @@ void main() {
             result += pointLight(light, surf, viewDir);
         // TODO: LIGHT_SPOT
     }
+
+
+    // Sky reflection
+    vec3 reflectDir = reflect(-viewDir, surf.normal);             // reflection from camera view
+    float lod       = surf.roughness * 8.0;                       // 0 = sharp sky, 8 = very blurry
+    vec3 envColor   = textureLod(uSkybox, reflectDir, lod).rgb;   // read from blurred mip level
+    float amount    = uReflectivity * (1.0 - surf.roughness);     // rough surfaces reflect less
+    result = mix(result, envColor, amount);                       // mix color together
 
     FragColor = vec4(result, 1.0);
 }
