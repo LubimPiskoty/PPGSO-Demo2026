@@ -200,13 +200,19 @@ void main() {
         // TODO: LIGHT_SPOT
     }
 
+    // Sky reflection with Fresnel
+    if (uReflectivity > 0.0) {
+        vec3 reflectDir = reflect(-viewDir, surf.normal); // reflection from camera view
+        float lod       = surf.roughness * 8.0; // 0 = sharp sky, 8 = very blurry
+        vec3 envColor   = textureLod(uSkybox, reflectDir, lod).rgb; // read from blurred mip level
 
-    // Sky reflection
-    vec3 reflectDir = reflect(-viewDir, surf.normal);             // reflection from camera view
-    float lod       = surf.roughness * 8.0;                       // 0 = sharp sky, 8 = very blurry
-    vec3 envColor   = textureLod(uSkybox, reflectDir, lod).rgb;   // read from blurred mip level
-    float amount    = uReflectivity * (1.0 - surf.roughness);     // rough surfaces reflect less
-    result = mix(result, envColor, amount);                       // mix color together
+        // Schlick Fresnel
+        float NdotV   = max(dot(surf.normal, viewDir), 0.0); // if its 1 then its 90angles direction => fresnel weak
+        float fresnel = uReflectivity + (1.0 - uReflectivity) * pow(1.0 - NdotV, 5.0);
+        float amount = fresnel * (1.0 - surf.roughness);   // rough surfaces reflect less
+        result = mix(result, envColor, amount);
+    }
+
 
     FragColor = vec4(result, 1.0);
 }
