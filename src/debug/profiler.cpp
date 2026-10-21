@@ -21,8 +21,7 @@ namespace {
 using Clock = std::chrono::steady_clock;
 
 constexpr int kStages = static_cast<int>(Stage::Count);
-constexpr const char *kStageNames[kStages] = {"Update", "Physics", "Scene",
-                                              "UI"};
+constexpr const char *kStageNames[kStages] = {"Update", "Physics", "Scene"};
 
 constexpr int kPhases = static_cast<int>(PhysicsPhase::Count);
 constexpr const char *kPhaseNames[kPhases] = {"  Integrate", "  Cache",

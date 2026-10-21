@@ -8,7 +8,7 @@
 namespace component {
 
 Camera::Camera(float fovDegrees, float width, float height)
-    : Camera(fovDegrees, width, height, 0.1f, 500.f) {}
+    : Camera(fovDegrees, width, height, 0.1f, 50.f) {}
 
 Camera::Camera(float fovDegrees, float width, float height, float near,
                float far) {

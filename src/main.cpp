@@ -7,6 +7,7 @@
 #include "debug/profiler.hpp"
 #include "input/input.hpp"
 #include "loaders/scene_loader.hpp"
+#include "render/framebuffer.hpp"
 #include "scenes/ball_jar.hpp"
 #include "scenes/barrel_run.hpp"
 #include "scenes/light_test.hpp"
@@ -81,6 +82,9 @@ int main() {
     scenes.setViewport((float)fbWidth, (float)fbHeight);
     scenes.load(0);
 
+    render::Framebuffer fb(1024, 1024, true, false);
+    debug_ui::setDepthPreview(fb.getDepthTex(), fb.getWidth(), fb.getHeight());
+
     double time = glfwGetTime();
     double physicsAccumulator = 0.0;
     while (!glfwWindowShouldClose(window)) {
@@ -123,10 +127,11 @@ int main() {
             scene.draw();
         }
 
-        {
-            profiler::Scope _(profiler::Stage::UI);
-            debug_ui::draw(scenes);
-        }
+        fb.bind();
+        glClear(GL_DEPTH_BUFFER_BIT);
+        scene.draw();
+        fb.unbind(fbWidth, fbHeight);
+        debug_ui::draw(scenes);
 
         profiler::endFrame();
         glfwSwapBuffers(window);

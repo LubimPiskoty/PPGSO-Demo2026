@@ -8,7 +8,7 @@
 // frames late (ring of query sets) so the CPU never stalls waiting on them.
 namespace profiler {
 
-enum class Stage { Update, Physics, Scene, UI, Count };
+enum class Stage { Update, Physics, Scene, Count };
 
 // Call once after the GL context is current
 void init();
