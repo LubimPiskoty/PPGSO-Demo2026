@@ -30,7 +30,8 @@ GLuint compileShader(GLenum type, const std::string &source,
     if (!success) {
         char infoLog[1024];
         glGetShaderInfoLog(shader, 1024, nullptr, infoLog);
-        std::cerr << "[ERROR]Shader compile error (" << name << "):\n" << infoLog << std::endl;
+        std::cerr << "[ERROR]Shader compile error (" << name << "):\n"
+                  << infoLog << std::endl;
         glDeleteShader(shader);
         return 0;
     }
@@ -42,8 +43,10 @@ GLuint createShaderProgram(const std::string &vertexPath,
     std::string vertexSrc = loadShaderSource(vertexPath);
     std::string fragmentSrc = loadShaderSource(fragmentPath);
 
-    GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexSrc, vertexPath);
-    GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentSrc, fragmentPath);
+    GLuint vertexShader =
+        compileShader(GL_VERTEX_SHADER, vertexSrc, vertexPath);
+    GLuint fragmentShader =
+        compileShader(GL_FRAGMENT_SHADER, fragmentSrc, fragmentPath);
 
     GLuint program = glCreateProgram();
     glAttachShader(program, vertexShader);
@@ -58,10 +61,14 @@ GLuint createShaderProgram(const std::string &vertexPath,
         std::cerr << "Program link error:\n" << infoLog << std::endl;
     }
 
-    GLuint blockIndex = glGetUniformBlockIndex(program, "Lights");
-    if (blockIndex != GL_INVALID_INDEX) {
+    GLuint blockIndex;
+    blockIndex = glGetUniformBlockIndex(program, "Lights");
+    if (blockIndex != GL_INVALID_INDEX)
         glUniformBlockBinding(program, blockIndex, 1);
-    }
+
+    blockIndex = glGetUniformBlockIndex(program, "ShadowBlock");
+    if (blockIndex != GL_INVALID_INDEX)
+        glUniformBlockBinding(program, blockIndex, 2);
 
     // read skybox texture from 4th slot
     GLint skyLoc = glGetUniformLocation(program, "uSkybox");
@@ -71,6 +78,13 @@ GLuint createShaderProgram(const std::string &vertexPath,
         glUseProgram(0);
     }
 
+    // read shadow maps from the slot ShadowMaps binds them to
+    GLint shadowLoc = glGetUniformLocation(program, "uShadowMaps");
+    if (shadowLoc != -1) {
+        glUseProgram(program);
+        glUniform1i(shadowLoc, 5);
+        glUseProgram(0);
+    }
 
     // Shaders are linked into the program now; the standalone objects aren't
     // needed

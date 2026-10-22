@@ -40,6 +40,17 @@
   - [ ] Shadows (pick one)
     - [ ] (1b) Simple approach — shadow must be recomputed based on the relative position/distance of object and light, i.e. not "statically" glued to the object, or
     - [ ] (4b) Shadow maps [Timon]
+      - [x] Depth array (`GL_TEXTURE_2D_ARRAY`, layer per light) + one FBO, `render::ShadowMaps` owned by Scene
+      - [x] Shadow pass: only nodes with `Shadow` component, depth-only shaders (`depth.vs`, `depth_instanced.vs`), front-face culling
+      - [x] Directional box follows the camera (`shadowExtent` around it), spot uses its own perspective
+      - [x] Light -> map mapping: `GpuLight.shadow.x` = layer, matrices in `ShadowBlock` UBO (slot 2), array on texture unit 5 via comparison sampler
+      - [x] `lit.fs` samples the map for directional lights (ambient not shadowed)
+      - [x] Debug "Light preview" window (slider over the maps)
+      - [ ] Verify in the shadow test scene: shadows move with the sun, tune bias (acne / peter-panning)
+      - [ ] Spot light shadows in `lit.fs` (spot lighting itself is still skipped, needs the cone data packed in `direction.w` / `attenuation.w`)
+      - [ ] Point light shadows (6 faces / cubemap array)
+      - [ ] Fit the directional box to the camera frustum instead of fixed `shadowExtent`, snap to texels (stops shimmer)
+      - [ ] Cull casters per light, skip re-render for static lights
 - [ ] Post-processing [4b] (pick one) [David]
   - [ ] (1b) Basic per-pixel filter, e.g. grayscale, or via a framebuffer:
   - [ ] (2b) Convolution filter, or

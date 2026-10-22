@@ -48,11 +48,17 @@ glm::vec3 Light::position() const {
     return n ? n->globalPosition() : glm::vec3(0.f);
 }
 
-glm::mat4 Light::shadowView() const {
+glm::mat4 Light::shadowView(glm::vec3 focus) const {
     const glm::vec3 dir = direction();
     // lookAt breaks when looking straight along the up vector
     const glm::vec3 up = std::abs(dir.y) > 0.99f ? glm::vec3(1.f, 0.f, 0.f)
                                                  : glm::vec3(0.f, 1.f, 0.f);
+    if (type == LightType::Directional) {
+        // No real position: put the box around the focus, half the depth
+        // range behind it so casters between the sun and the focus are kept
+        const glm::vec3 eye = focus - dir * (shadowFar * 0.5f);
+        return glm::lookAt(eye, eye + dir, up);
+    }
     return glm::lookAt(position(), position() + dir, up);
 }
 
@@ -71,6 +77,7 @@ render::GpuLight Light::toGpu() const {
     g.direction = glm::vec4(direction(), 0.f);       // xyz dir
     g.color = glm::vec4(color * intensity, ambient); // rgb col, w ambient
     g.attenuation = glm::vec4(constant, linear, quadratic, 0.f); // point light
+    g.shadow = glm::vec4(-1.f, 0.f, 0.f, 0.f); // Scene::uploadLights sets it
     // TODO spot: pack cos(innerCone) / cos(outerCone) into the free
     // direction.w and attenuation.w
     return g;

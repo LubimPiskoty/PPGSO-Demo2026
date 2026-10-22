@@ -11,6 +11,7 @@ struct GpuLight {
     glm::vec4 direction;   // xyz = direciton
     glm::vec4 color;       // rgb = color, w = ambient
     glm::vec4 attenuation; // x = constant, y = linear, z = quadratic
+    glm::vec4 shadow;      // x = shadow map layer / ShadowBlock index, -1 = none
 };
 
 struct LightBlock {

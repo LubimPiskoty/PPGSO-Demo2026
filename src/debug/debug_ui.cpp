@@ -28,7 +28,8 @@ void init(GLFWwindow *window) {
     ImGui_ImplOpenGL3_Init("#version 330 core");
 }
 
-static unsigned int depthPreviewTex = 0;
+static unsigned int depthPreviewTex = 0; // GL_TEXTURE_2D_ARRAY
+static int depthPreviewLayer = 0;
 static int depthPreviewW = 0, depthPreviewH = 0;
 static bool depthPreviewPerspective = false;
 
@@ -49,13 +50,14 @@ void main() {
 static const char *kVizFrag = R"(#version 330 core
 in vec2 uv;
 out vec4 FragColor;
-uniform sampler2D uDepth;
+uniform sampler2DArray uDepth;
+uniform int uLayer;
 uniform bool uPerspective;
 uniform float uNear;
 uniform float uFar;
 uniform float uRange; // distance that maps to white
 void main() {
-    float d = texture(uDepth, uv).r;
+    float d = texture(uDepth, vec3(uv, float(uLayer))).r;
     float v = d;
     if (uPerspective) {
         // Back to view-space distance, then scale into the visible range
@@ -123,7 +125,7 @@ static void renderViz(float nearPlane, float farPlane, float range) {
     glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vao);
     glGetIntegerv(GL_ACTIVE_TEXTURE, &activeTex);
     glActiveTexture(GL_TEXTURE0);
-    glGetIntegerv(GL_TEXTURE_BINDING_2D, &tex);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D_ARRAY, &tex);
     const bool depthTest = glIsEnabled(GL_DEPTH_TEST);
     const bool cull = glIsEnabled(GL_CULL_FACE);
     const bool blend = glIsEnabled(GL_BLEND);
@@ -136,8 +138,9 @@ static void renderViz(float nearPlane, float farPlane, float range) {
     glDisable(GL_BLEND);
 
     glUseProgram(vizProgram);
-    glBindTexture(GL_TEXTURE_2D, depthPreviewTex);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, depthPreviewTex);
     glUniform1i(glGetUniformLocation(vizProgram, "uDepth"), 0);
+    glUniform1i(glGetUniformLocation(vizProgram, "uLayer"), depthPreviewLayer);
     glUniform1i(glGetUniformLocation(vizProgram, "uPerspective"),
                 depthPreviewPerspective);
     glUniform1f(glGetUniformLocation(vizProgram, "uNear"), nearPlane);
@@ -148,7 +151,7 @@ static void renderViz(float nearPlane, float farPlane, float range) {
 
     glBindVertexArray(vao);
     glUseProgram(program);
-    glBindTexture(GL_TEXTURE_2D, tex);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, tex);
     glActiveTexture(activeTex);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
@@ -186,10 +189,10 @@ static void lightPreviewWindow(scn::Scene &scene) {
                 ImGui::Text("%s", node->name.c_str());
         }
 
-    const auto &map = maps.at(index);
-    depthPreviewTex = map.getDepthTex();
-    depthPreviewW = map.getWidth();
-    depthPreviewH = map.getHeight();
+    depthPreviewTex = maps.getDepthArray();
+    depthPreviewLayer = index;
+    depthPreviewW = maps.resolution();
+    depthPreviewH = maps.resolution();
 
     // Distance (in world units) that shows as white
     static float range = 50.f;

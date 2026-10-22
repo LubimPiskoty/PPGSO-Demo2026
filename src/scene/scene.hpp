@@ -21,7 +21,8 @@ class Scene {
     std::weak_ptr<component::Camera> activeCamera;
     std::weak_ptr<component::Skybox> skybox;
     physics::Context physics_context;
-    render::ShadowMaps shadowMaps;
+    std::unique_ptr<render::ShadowMaps> shadowMaps =
+        std::make_unique<render::ShadowMaps>();
     std::vector<std::weak_ptr<component::Light>> shadowLights;
 
     Scene();
@@ -33,9 +34,10 @@ class Scene {
     void draw();
     // Renders the scene depth from every shadow casting light into shadowMaps
     void shadow_pass();
-    const render::ShadowMaps &getShadowMaps() const { return shadowMaps; }
+    const render::ShadowMaps &getShadowMaps() const { return *shadowMaps; }
     // Light that map i belongs to, as of the last shadow_pass
-    const std::vector<std::weak_ptr<component::Light>> &getShadowLights() const {
+    const std::vector<std::weak_ptr<component::Light>> &
+    getShadowLights() const {
         return shadowLights;
     }
 
@@ -73,7 +75,7 @@ class Scene {
 
     render::LightBuffer lightBuffer;
     // Recursively get all pbodies in scene (slow now, no caching)
-    void gatherPhysicsBodies(std::shared_ptr<Node> node);
+    void gatherPhysicsBodies(const std::shared_ptr<Node> &node);
     // Collects lights from the scene and uploads them to the UBO
     void uploadLights();
 };

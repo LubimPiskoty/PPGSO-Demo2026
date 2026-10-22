@@ -24,11 +24,14 @@ void Scene::draw() {
         std::puts("No camera is active!! Output will be blank");
         return;
     }
+
     uploadLights(); // upload all lights before draw
     if (auto sky = skybox.lock()) {
         sky->draw(activeCamera.lock()); // skybox last
         sky->bindForReflections();      // cubemapa on 4th slot for reflectz
     }
+    shadowMaps->bindForSampling(); // depth array on its own slot
+
     const auto camera_projection = activeCamera.lock()->projection;
     const auto inv_camera_transform =
         glm::inverse(activeCamera.lock()->node.lock()->globalTransform());
@@ -64,7 +67,7 @@ void Scene::physics_step() {
     physics::step(ctx, ctx.fixedDt * ctx.timeScale);
 }
 
-void Scene::gatherPhysicsBodies(std::shared_ptr<Node> node) {
+void Scene::gatherPhysicsBodies(const std::shared_ptr<Node> &node) {
     if (!node->enabled)
         return;
 
@@ -85,23 +88,22 @@ void Scene::uploadLights() {
         if (auto camNode = cam->node.lock())
             viewPos = camNode->globalPosition();
 
-    // go throught all nodes and take lioghts
-    std::vector<std::shared_ptr<Node>> stack{root};
-    while (!stack.empty()) {
-        auto node = stack.back();
-        stack.pop_back();
-        if (!node->enabled)
+    for (const auto &light : getAllComponents<component::Light>()) {
+        if (!light->enabled)
             continue;
+        auto gpu = light->toGpu();
 
-        auto light = node->get_component<component::Light>(); // get the light
-        if (light && light->enabled)
-            lights.push_back(light->toGpu());
-
-        for (auto &child : node->children) // look for child components
-            stack.push_back(child);
+        // Layer of this light's map: its position in the shadow_pass casters
+        for (size_t i = 0; i < shadowLights.size(); i++) {
+            if (shadowLights[i].lock() == light) {
+                gpu.shadow.x = (float)i;
+                break;
+            }
+        }
+        lights.push_back(gpu);
     }
 
-    lightBuffer.upload(lights, viewPos); // upload to UBOO
+    lightBuffer.upload(lights, viewPos); // upload to UBO
 }
 
 void Scene::shadow_pass() {
@@ -113,29 +115,39 @@ void Scene::shadow_pass() {
             casters.push_back(light);
     }
 
-    shadowMaps.sync(casters.size());
+    shadowMaps->sync(casters.size());
     shadowLights.assign(casters.begin(), casters.end());
 
     GLint viewport[4];
     glGetIntegerv(GL_VIEWPORT, viewport);
 
+    // Directional shadow boxes follow the camera
+    glm::vec3 focus{0.f};
+    if (auto cam = activeCamera.lock())
+        if (auto camNode = cam->node.lock())
+            focus = camNode->globalPosition();
+
     // Only nodes with a Shadow component are rendered into the maps
     const auto shadowCasters = getAllComponents<component::Shadow>();
-
+    glCullFace(GL_FRONT);
+    std::vector<glm::mat4> shadowMat;
     for (size_t i = 0; i < casters.size(); i++) {
-        shadowMaps.at(i).bind();
+        shadowMaps->bindLayer(i);
         glClear(GL_DEPTH_BUFFER_BIT);
         const auto proj = casters[i]->shadowProjection();
-        const auto view = casters[i]->shadowView();
+        const auto view = casters[i]->shadowView(focus);
+        shadowMat.push_back(proj * view);
+
         for (auto &shadow : shadowCasters)
             if (shadow->enabled)
                 shadow->drawShadow(proj, view, depthShader,
                                    depthShaderInstanced);
     }
+    glCullFace(GL_BACK);
 
     render::Framebuffer::unbind(viewport[2], viewport[3]);
     glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 
-    // TODO: bind the depth maps + light space matrices for lit.fs
+    shadowMaps->uploadGPU(shadowMat);
 }
 }; // namespace scn

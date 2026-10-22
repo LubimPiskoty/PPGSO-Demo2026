@@ -33,6 +33,7 @@ uniform sampler2D uSpecularTex;
 uniform bool uHasNormalMap;
 uniform bool uHasRoughnessMap;
 uniform bool uHasSpecularMap;
+uniform sampler2DArrayShadow uShadowMaps; // depth array, slot 5
 uniform samplerCube uSkybox;     // cubemap of skybox slot 4
 uniform float uReflectivity;     // 0 no reflect, 1 mirror
 uniform float uRoughness; // when mat doesnt have roughmap
@@ -55,6 +56,14 @@ struct GpuLight {
     vec4 direction; // xyz = direction
     vec4 color; // rgb = color, w = ambient strength
     vec4 attenuation; // x = constant, y = linear, z = quadratic
+    vec4 shadow; // x = shadow map layer / ShadowBlock index, -1 = none
+};
+
+// Must match ShadowMaps::MAX_SHADOW_LIGHTS
+#define MAX_SHADOW_LIGHTS 8
+
+layout(std140) uniform ShadowBlock {
+    mat4 uLightSpace[MAX_SHADOW_LIGHTS]; // world -> light clip space per layer
 };
 
 layout(std140) uniform Lights {
@@ -71,6 +80,7 @@ struct Light {
     vec3 color;
     float ambient;
     vec3 attenuation;
+    int shadowIndex; // layer in uShadowMaps, -1 = casts no shadow
 };
 
 Light getLight(int i) {
@@ -82,6 +92,7 @@ Light getLight(int i) {
     light.color = gpu.color.rgb;
     light.ambient = gpu.color.w;
     light.attenuation = gpu.attenuation.xyz;
+    light.shadowIndex = int(floor(gpu.shadow.x + 0.5)); // rounds -1 to -1
     return light;
 }
 
@@ -148,9 +159,25 @@ Surface getSurface() {
 // Lighting
 // ---------------------------------------------------------------------------
 
+// 1 = lit, 0 = in shadow (hardware filtered between the two at the edges)
+float shadowFactor(Light light, Surface surf, vec3 lightDir) {
+    if (light.shadowIndex < 0)
+        return 1.0;
+
+    vec4 p = uLightSpace[light.shadowIndex] * vec4(surf.position, 1.0);
+    vec3 c = p.xyz / p.w * 0.5 + 0.5; // clip space -> [0, 1] texture space
+    if (c.z > 1.0)
+        return 1.0; // behind the far plane
+
+    // Surfaces at a steep angle to the light need more bias
+    float bias = max(0.005 * (1.0 - dot(surf.normal, lightDir)), 0.0005);
+    return texture(uShadowMaps, vec4(c.xy, float(light.shadowIndex), c.z - bias));
+}
+
 // Phong ambient + diffuse + specular for light arriving from lightDir
-// (unit vector pointing from the surface towards the light)
-vec3 phong(Light light, Surface surf, vec3 lightDir, vec3 viewDir) {
+// (unit vector pointing from the surface towards the light). shadow scales
+// the direct light only, ambient is never shadowed.
+vec3 phong(Light light, Surface surf, vec3 lightDir, vec3 viewDir, float shadow) {
     float diff = max(dot(surf.normal, lightDir), 0.0);
 
     // No highlight on faces turned away from the light
@@ -163,12 +190,13 @@ vec3 phong(Light light, Surface surf, vec3 lightDir, vec3 viewDir) {
     vec3 ambient = light.ambient * surf.albedo;
     vec3 diffuse = diff * surf.albedo;
     vec3 specular = spec * surf.specular;
-    return light.color * (ambient + diffuse + specular);
+    return light.color * (ambient + shadow * (diffuse + specular));
 }
 
 vec3 directionalLight(Light light, Surface surf, vec3 viewDir) {
     vec3 lightDir = normalize(-light.direction);
-    return phong(light, surf, lightDir, viewDir);
+    float shadow = shadowFactor(light, surf, lightDir);
+    return phong(light, surf, lightDir, viewDir, shadow);
 }
 
 vec3 pointLight(Light light, Surface surf, vec3 viewDir) {
@@ -181,7 +209,7 @@ vec3 pointLight(Light light, Surface surf, vec3 viewDir) {
                 light.attenuation.y * d +
                 light.attenuation.z * d * d);
 
-    return phong(light, surf, lightDir, viewDir) * attenuation;
+    return phong(light, surf, lightDir, viewDir, 1.0) * attenuation;
 }
 
 // ---------------------------------------------------------------------------
