@@ -1,5 +1,7 @@
 #include "light.hpp"
 #include "../scene/scene.hpp"
+#include <cmath>
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace component {
 
@@ -44,6 +46,22 @@ glm::vec3 Light::direction() const {
 glm::vec3 Light::position() const {
     auto n = node.lock();
     return n ? n->globalPosition() : glm::vec3(0.f);
+}
+
+glm::mat4 Light::shadowView() const {
+    const glm::vec3 dir = direction();
+    // lookAt breaks when looking straight along the up vector
+    const glm::vec3 up = std::abs(dir.y) > 0.99f ? glm::vec3(1.f, 0.f, 0.f)
+                                                 : glm::vec3(0.f, 1.f, 0.f);
+    return glm::lookAt(position(), position() + dir, up);
+}
+
+glm::mat4 Light::shadowProjection() const {
+    if (type == LightType::Spot)
+        return glm::perspective(glm::radians(outerCone * 2.f), 1.f, shadowNear,
+                                shadowFar);
+    return glm::ortho(-shadowExtent, shadowExtent, -shadowExtent, shadowExtent,
+                      shadowNear, shadowFar);
 }
 
 // translate for buffer to gpu

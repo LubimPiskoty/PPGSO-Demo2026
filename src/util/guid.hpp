@@ -45,25 +45,15 @@ class Guid {
         return os.str();
     }
 
-    std::uint64_t raw() const {
-        return value;
-    }
+    std::uint64_t raw() const { return value; }
 
-    explicit operator bool() const {
-        return value != 0;
-    }
+    explicit operator bool() const { return value != 0; }
 
-    bool operator==(const Guid &other) const {
-        return value == other.value;
-    }
+    bool operator==(const Guid &other) const { return value == other.value; }
 
-    bool operator!=(const Guid &other) const {
-        return value != other.value;
-    }
+    bool operator!=(const Guid &other) const { return value != other.value; }
 
-    bool operator<(const Guid &other) const {
-        return value < other.value;
-    }
+    bool operator<(const Guid &other) const { return value < other.value; }
 
   private:
     std::uint64_t value = 0;

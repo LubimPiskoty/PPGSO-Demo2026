@@ -13,6 +13,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include <algorithm>
 #include <cstdio>
 #endif
 
@@ -29,7 +30,7 @@ void init(GLFWwindow *window) {
 
 static unsigned int depthPreviewTex = 0;
 static int depthPreviewW = 0, depthPreviewH = 0;
-static bool depthPreviewPerspective = true;
+static bool depthPreviewPerspective = false;
 
 // The depth texture is turned into a grayscale image by a small pass into
 // vizTex, which ImGui then shows. Created on first use.
@@ -159,22 +160,40 @@ static void renderViz(float nearPlane, float farPlane, float range) {
         glEnable(GL_BLEND);
 }
 
-// Depth of the scene (or the shadow map later), drawn as grayscale
-static void depthMapWindow(scn::Scene &scene) {
-    ImGui::Begin("Depth map");
-    if (depthPreviewTex == 0) {
-        ImGui::TextUnformatted("No depth texture set");
+// Shadow map of a chosen light, drawn as grayscale
+static void lightPreviewWindow(scn::Scene &scene) {
+    ImGui::Begin("Light preview");
+    const auto &maps = scene.getShadowMaps();
+    const auto &lights = scene.getShadowLights();
+    if (maps.size() == 0) {
+        ImGui::TextUnformatted("No light casts shadows");
         ImGui::End();
         return;
     }
 
+    // Which light's map to show (maps can shrink when lights are removed)
+    static int index = 0;
+    index = std::min(index, (int)maps.size() - 1);
+    if (maps.size() > 1)
+        ImGui::SliderInt("Light", &index, 0, (int)maps.size() - 1);
+
+    float nearPlane = 0.1f, farPlane = 100.f;
+    if (index < (int)lights.size())
+        if (auto light = lights[index].lock()) {
+            nearPlane = light->shadowNear;
+            farPlane = light->shadowFar;
+            if (auto node = light->node.lock())
+                ImGui::Text("%s", node->name.c_str());
+        }
+
+    const auto &map = maps.at(index);
+    depthPreviewTex = map.getDepthTex();
+    depthPreviewW = map.getWidth();
+    depthPreviewH = map.getHeight();
+
     // Distance (in world units) that shows as white
     static float range = 50.f;
-    float nearPlane = 0.1f, farPlane = 100.f;
-    if (auto camera = scene.activeCamera.lock()) {
-        nearPlane = camera->getNear();
-        farPlane = camera->getFar();
-    }
+    ImGui::Checkbox("Perspective", &depthPreviewPerspective);
     if (depthPreviewPerspective) {
         ImGui::SliderFloat("Range", &range, nearPlane * 2.f, farPlane, "%.1f",
                            ImGuiSliderFlags_Logarithmic);
@@ -252,18 +271,10 @@ void draw(scenes::SceneManager &scenes) {
     sceneWindow(scenes.scene());
     physicsWindow(scenes);
     profiler::drawWindow();
-    depthMapWindow(scenes.scene());
+    lightPreviewWindow(scenes.scene());
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-}
-
-void setDepthPreview(unsigned int texture, int width, int height,
-                     bool perspective) {
-    depthPreviewTex = texture;
-    depthPreviewW = width;
-    depthPreviewH = height;
-    depthPreviewPerspective = perspective;
 }
 
 void shutdown() {
@@ -276,7 +287,6 @@ void shutdown() {
 
 void init(GLFWwindow *) {}
 void draw(scenes::SceneManager &) {}
-void setDepthPreview(unsigned int, int, int, bool) {}
 void shutdown() {}
 
 #endif

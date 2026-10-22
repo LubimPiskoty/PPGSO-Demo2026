@@ -28,6 +28,13 @@ class Light : public ComponentBase<Light> {
     float innerCone = 12.5f;
     float outerCone = 17.5f;
 
+    // Renders a shadow map for this light (point lights not supported yet)
+    bool castsShadow = false;
+    // directional: half-size of the orthographic box around the light
+    float shadowExtent = 20.f;
+    float shadowNear = 0.1f;
+    float shadowFar = 100.f;
+
     static Light directional(glm::vec3 color = glm::vec3(1.f),
                              float intensity = 0.8f, float ambient = 0.1f);
 
@@ -44,6 +51,10 @@ class Light : public ComponentBase<Light> {
     glm::vec3 position() const;     // get light pos
     glm::vec3 direction() const;    // get light dir
     render::GpuLight toGpu() const; // put lights to gpu
+
+    // Matrices for rendering the scene from the light (shadow pass)
+    glm::mat4 shadowView() const;
+    glm::mat4 shadowProjection() const;
 
   private:
     // Private so every light comes from a factory with matching settings

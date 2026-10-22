@@ -64,7 +64,7 @@ void Node::draw(glm::mat4 projection, glm::mat4 invCameraTransform) {
         child->draw(projection, invCameraTransform);
 }
 
-void Node::add_child(std::shared_ptr<Node> child) {
+void Node::add_child(const std::shared_ptr<Node> &child) {
     this->children.push_back(child);
     child->parent = shared_from_this();
     child->markGlobalDirty();
@@ -177,9 +177,7 @@ void Node::print_subtree(std::ostream &os, int depth) const {
         child->print_subtree(os, depth + 1);
 }
 
-void Node::print(std::ostream &os) const {
-    print_subtree(os, 0);
-}
+void Node::print(std::ostream &os) const { print_subtree(os, 0); }
 
 std::string Node::to_string() const {
     std::ostringstream os;

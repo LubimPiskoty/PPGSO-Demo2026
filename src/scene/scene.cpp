@@ -2,17 +2,22 @@
 
 #include "../components/camera.hpp"
 #include "../components/light.hpp"
-#include "../debug/profiler.hpp"
+#include "../components/shadow.hpp"
 #include "../components/skybox.hpp"
+#include "../debug/profiler.hpp"
+#include "../render/framebuffer.hpp"
+#include <cstdint>
 #include <cstdio>
 #include <memory>
 #include <vector>
 
-#include "imgui_impl_opengl3_loader.h"
-
 namespace scn {
 
-Scene::Scene() { this->root = Node::create("root"); }
+Scene::Scene()
+    : depthShader("depth.vs", "depth.fs"),
+      depthShaderInstanced("depth_instanced.vs", "depth.fs", true) {
+    this->root = Node::create("root");
+}
 
 void Scene::draw() {
     if (activeCamera.expired()) {
@@ -99,4 +104,38 @@ void Scene::uploadLights() {
     lightBuffer.upload(lights, viewPos); // upload to UBOO
 }
 
+void Scene::shadow_pass() {
+    std::vector<std::shared_ptr<component::Light>> casters;
+    for (auto &light : getAllComponents<component::Light>()) {
+        if (light->enabled && light->castsShadow &&
+            light->type != component::LightType::Point &&
+            casters.size() < render::ShadowMaps::MAX_SHADOW_LIGHTS)
+            casters.push_back(light);
+    }
+
+    shadowMaps.sync(casters.size());
+    shadowLights.assign(casters.begin(), casters.end());
+
+    GLint viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport);
+
+    // Only nodes with a Shadow component are rendered into the maps
+    const auto shadowCasters = getAllComponents<component::Shadow>();
+
+    for (size_t i = 0; i < casters.size(); i++) {
+        shadowMaps.at(i).bind();
+        glClear(GL_DEPTH_BUFFER_BIT);
+        const auto proj = casters[i]->shadowProjection();
+        const auto view = casters[i]->shadowView();
+        for (auto &shadow : shadowCasters)
+            if (shadow->enabled)
+                shadow->drawShadow(proj, view, depthShader,
+                                   depthShaderInstanced);
+    }
+
+    render::Framebuffer::unbind(viewport[2], viewport[3]);
+    glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+
+    // TODO: bind the depth maps + light space matrices for lit.fs
+}
 }; // namespace scn

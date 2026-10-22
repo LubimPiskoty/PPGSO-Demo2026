@@ -15,8 +15,8 @@ using ComponentTypeId = std::size_t;
 
 namespace detail {
 inline ComponentTypeId next_component_type_id() {
-  static ComponentTypeId counter = 0;
-  return counter++;
+    static ComponentTypeId counter = 0;
+    return counter++;
 }
 } // namespace detail
 
@@ -24,41 +24,41 @@ inline ComponentTypeId next_component_type_id() {
 // use). Lets us cast a shared_ptr<Component> back to its concrete type
 // without dynamic_cast/RTTI.
 template <typename T> ComponentTypeId component_type_id() {
-  static const ComponentTypeId id = detail::next_component_type_id();
-  return id;
+    static const ComponentTypeId id = detail::next_component_type_id();
+    return id;
 }
 
 class Component {
-public:
-  bool enabled = true;
+  public:
+    bool enabled = true;
 
-  Component() = default;
-  virtual ~Component() = default;
+    Component() = default;
+    virtual ~Component() = default;
 
-  virtual void update(float dt) {}
-  virtual void draw(glm::mat4 projection, glm::mat4 invCameraTransform) {}
+    virtual void update(float dt) {}
+    virtual void draw(glm::mat4 projection, glm::mat4 invCameraTransform) {}
 
-  virtual ComponentTypeId type_id() const = 0;
-  virtual const char *type_name() const = 0;
+    virtual ComponentTypeId type_id() const = 0;
+    virtual const char *type_name() const = 0;
 
-  // Optional extra detail shown next to type_name() in the inspector
-  virtual std::string info() const { return ""; }
+    // Optional extra detail shown next to type_name() in the inspector
+    virtual std::string info() const { return ""; }
 
-  // The node this component is attached to.
-  // weak_ptr: the node owns the component, not the other way round.
-  std::weak_ptr<scn::Node> node;
+    // The node this component is attached to.
+    // weak_ptr: the node owns the component, not the other way round.
+    std::weak_ptr<scn::Node> node;
 };
 
 // Concrete components derive from ComponentBase<Self> instead of Component
 // directly so they don't have to hand-write type_id().
 template <typename Derived> class ComponentBase : public Component {
-public:
-  ComponentTypeId type_id() const override {
-    return component_type_id<Derived>();
-  }
+  public:
+    ComponentTypeId type_id() const override {
+        return component_type_id<Derived>();
+    }
 
-  // type_name() is left for Derived to override with a clean, human-picked
-  // name (e.g. "Camera") instead of a mangled typeid name.
+    // type_name() is left for Derived to override with a clean, human-picked
+    // name (e.g. "Camera") instead of a mangled typeid name.
 };
 
 } // namespace component

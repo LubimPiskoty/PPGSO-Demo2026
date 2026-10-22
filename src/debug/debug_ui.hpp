@@ -19,15 +19,6 @@ void init(GLFWwindow *window);
 // the next frame.
 void draw(scenes::SceneManager &scenes);
 
-// Texture shown in the "Depth map" window (e.g. the shadow map's depth
-// attachment). Pass 0 to show a placeholder instead. The texture is not
-// owned, so clear it before it is deleted. perspective = true linearizes
-// the depth using the active camera's near/far (a perspective depth buffer
-// is almost all white otherwise); pass false for an ortho projection, whose
-// depth is already linear.
-void setDepthPreview(unsigned int texture, int width, int height,
-                     bool perspective = true);
-
 void shutdown();
 
 } // namespace debug_ui

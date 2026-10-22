@@ -43,17 +43,11 @@ class Node : public std::enable_shared_from_this<Node> {
     // Local transform, stored decomposed so it can be edited (e.g. by an
     // inspector) without matrix decomposition. Only changeable through the
     // setters, so the cached matrices below know when to rebuild.
-    const glm::vec3 &localPos() const {
-        return pos_;
-    }
+    const glm::vec3 &localPos() const { return pos_; }
 
-    const glm::quat &localRot() const {
-        return rot_;
-    }
+    const glm::quat &localRot() const { return rot_; }
 
-    const glm::vec3 &localScale() const {
-        return scale_;
-    }
+    const glm::vec3 &localScale() const { return scale_; }
 
     void setLocalPos(const glm::vec3 &pos);
     void setLocalRot(const glm::quat &rot);
@@ -108,7 +102,7 @@ class Node : public std::enable_shared_from_this<Node> {
     static std::shared_ptr<Node> create(std::string name, glm::vec3 localPos);
     static std::shared_ptr<Node> create(std::string name,
                                         glm::mat4 localTransform);
-    void add_child(std::shared_ptr<Node> child);
+    void add_child(const std::shared_ptr<Node> &child);
     void destroy();
 
     // Pretty-print this node and its subtree as a tree

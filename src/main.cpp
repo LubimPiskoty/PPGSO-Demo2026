@@ -14,6 +14,7 @@
 #include "scenes/particle_test.hpp"
 #include "scenes/physics_test.hpp"
 #include "scenes/scene_manager.hpp"
+#include "scenes/shadow_test.hpp"
 
 int main() {
     if (!glfwInit()) {
@@ -66,12 +67,8 @@ int main() {
     profiler::init();
 
     scenes::SceneManager scenes;
+    scenes.add("Shadow test", scenes::shadowTest);
     scenes.add("Light test", scenes::lightTest);
-    // scenes.add("Physics: bounce", scenes::physicsBounce);
-    // scenes.add("Physics: slide", scenes::physicsSlide);
-    // scenes.add("Physics: impact", scenes::physicsImpact);
-    // scenes.add("Physics: break", scenes::physicsBreak);
-    // scenes.add("Ball jar", scenes::ballJar);
     scenes.add("Particle test", scenes::particle_test);
     scenes.add("Barrel run", scenes::barrelRun);
     scenes.add("scene.json", [] { return loader::loadScene("scene.json"); });
@@ -81,9 +78,6 @@ int main() {
     //            [] { return loader::loadScene("village_scene.json"); });
     scenes.setViewport((float)fbWidth, (float)fbHeight);
     scenes.load(0);
-
-    render::Framebuffer fb(1024, 1024, true, false);
-    debug_ui::setDepthPreview(fb.getDepthTex(), fb.getWidth(), fb.getHeight());
 
     double time = glfwGetTime();
     double physicsAccumulator = 0.0;
@@ -124,13 +118,10 @@ int main() {
         }
         {
             profiler::Scope _(profiler::Stage::Scene);
+            scene.shadow_pass();
             scene.draw();
         }
 
-        fb.bind();
-        glClear(GL_DEPTH_BUFFER_BIT);
-        scene.draw();
-        fb.unbind(fbWidth, fbHeight);
         debug_ui::draw(scenes);
 
         profiler::endFrame();

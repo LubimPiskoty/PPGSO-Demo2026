@@ -6,6 +6,7 @@
 #include "camera.hpp"
 #include "ecs.hpp"
 #include <cstdio>
+#include <glm/gtc/type_ptr.hpp>
 #include <glm/matrix.hpp>
 #include <memory>
 #include <string>
@@ -21,9 +22,7 @@ class Mesh : public component::ComponentBase<Mesh> {
          std::shared_ptr<render::Material> material)
         : material(material), model(model) {}
 
-    const char *type_name() const override {
-        return "Mesh";
-    }
+    const char *type_name() const override { return "Mesh"; }
 
     std::string info() const override {
         std::string s = model->filename;
@@ -33,6 +32,7 @@ class Mesh : public component::ComponentBase<Mesh> {
         return s;
     }
 
+    // Normal pass: sets the camera on the material, binds it and draws
     void draw(glm::mat4 projection, glm::mat4 invCameraTransform) override {
         if (checkInstancedCompatibility())
             return;
@@ -45,7 +45,23 @@ class Mesh : public component::ComponentBase<Mesh> {
         model->draw();
     };
 
+    // Shadow pass: no material, just positions through the given depth shader
+    void drawDepth(glm::mat4 projection, glm::mat4 lightView,
+                   const render::Shader &depthShader) {
+        glUseProgram(depthShader.program);
+        setMat4(depthShader.program, "uProjection", projection);
+        setMat4(depthShader.program, "uView", lightView);
+        setMat4(depthShader.program, "uModel",
+                this->node.lock()->globalTransform());
+        model->draw();
+    }
+
   private:
+    static void setMat4(GLuint program, const char *name, const glm::mat4 &m) {
+        glUniformMatrix4fv(glGetUniformLocation(program, name), 1, GL_FALSE,
+                           glm::value_ptr(m));
+    }
+
     bool checkInstancedCompatibility() {
         if (material->getShader()->isInstanced() != model->isInstanced()) {
             std::puts("[Error] Incompatible shader and model instance mode!");
