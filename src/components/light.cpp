@@ -21,13 +21,11 @@ Light Light::point(glm::vec3 color, float intensity, float linear,
     return light;
 }
 
-Light Light::spot(glm::vec3 color, float intensity, float innerCone,
-                  float outerCone, float linear, float quadratic) {
+Light Light::spot(glm::vec3 color, float intensity, float cutOff, float linear, float quadratic) {
     Light light(LightType::Spot);
     light.color = color;
     light.intensity = intensity;
-    light.innerCone = innerCone;
-    light.outerCone = outerCone;
+    light.cutOff = cutOff;
     light.linear = linear;
     light.quadratic = quadratic;
     return light;
@@ -50,9 +48,11 @@ glm::vec3 Light::position() const {
 render::GpuLight Light::toGpu() const {
     render::GpuLight g;
     g.position = glm::vec4(position(), (float)type); // xyz pos, w typ
-    g.direction = glm::vec4(direction(), 0.f);       // xyz dir
+    g.direction = glm::vec4(direction(), glm::cos(glm::radians(cutOff)));       // xyz dir
     g.color = glm::vec4(color * intensity, ambient); // rgb col, w ambient
     g.attenuation = glm::vec4(constant, linear, quadratic, 0.f); // point light
+
+
     // TODO spot: pack cos(innerCone) / cos(outerCone) into the free
     // direction.w and attenuation.w
     return g;

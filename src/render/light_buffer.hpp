@@ -8,9 +8,10 @@ namespace render {
 // one lioght def
 struct GpuLight {
     glm::vec4 position;    // xyz = position, w = type -> 0 sun/1 lightbulb
-    glm::vec4 direction;   // xyz = direciton
+    glm::vec4 direction;   // xyz = direciton, w = cutOff
     glm::vec4 color;       // rgb = color, w = ambient
     glm::vec4 attenuation; // x = constant, y = linear, z = quadratic
+
 };
 
 struct LightBlock {

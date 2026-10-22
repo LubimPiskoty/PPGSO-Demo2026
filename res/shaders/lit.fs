@@ -52,7 +52,7 @@ uniform float uRoughness; // when mat doesnt have roughmap
 // One light as uploaded, matches render::GpuLight
 struct GpuLight {
     vec4 position; // xyz = position, w = type
-    vec4 direction; // xyz = direction
+    vec4 direction; // xyz = direction, w = cutoff for spotlight
     vec4 color; // rgb = color, w = ambient strength
     vec4 attenuation; // x = constant, y = linear, z = quadratic
 };
@@ -71,6 +71,7 @@ struct Light {
     vec3 color;
     float ambient;
     vec3 attenuation;
+    float cutOff;
 };
 
 Light getLight(int i) {
@@ -82,6 +83,7 @@ Light getLight(int i) {
     light.color = gpu.color.rgb;
     light.ambient = gpu.color.w;
     light.attenuation = gpu.attenuation.xyz;
+    light.cutOff = gpu.direction.w;   // cos(uhlla
     return light;
 }
 
@@ -184,6 +186,29 @@ vec3 pointLight(Light light, Surface surf, vec3 viewDir) {
     return phong(light, surf, lightDir, viewDir) * attenuation;
 }
 
+vec3 spotLight(Light light, Surface surf, vec3 viewDir) {
+    vec3 toLight = light.position - surf.position;
+    vec3 lightDir = normalize(toLight);
+
+    // Attenuation rovnako ako pri point light
+    float d = length(toLight);
+    float attenuation = 1.0 / (light.attenuation.x +
+                light.attenuation.y * d +
+                light.attenuation.z * d * d);
+
+    // angle calc
+    float theta = dot(lightDir, normalize(-light.direction));
+    //float epsilon   = light.cutOff - light.outerCutOff;
+    //float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
+
+    // inside full phong
+    if (theta > light.cutOff)
+        return phong(light, surf, lightDir, viewDir) * attenuation;
+
+    // outside dark ambient
+    return light.color * light.ambient * surf.albedo * attenuation;
+}
+
 // ---------------------------------------------------------------------------
 
 void main() {
@@ -197,7 +222,9 @@ void main() {
             result += directionalLight(light, surf, viewDir);
         else if (light.type == LIGHT_POINT)
             result += pointLight(light, surf, viewDir);
-        // TODO: LIGHT_SPOT
+        else if (light.type == LIGHT_SPOT) {
+             result += spotLight(light, surf, viewDir);
+        }
     }
 
     // Sky reflection with Fresnel
