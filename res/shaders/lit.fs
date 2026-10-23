@@ -241,8 +241,10 @@ vec3 spotLight(Light light, Surface surf, vec3 viewDir) {
     //float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
 
     // inside full phong
-    if (theta > light.cutOff)
-        return phong(light, surf, lightDir, viewDir, 1.0) * attenuation;
+    if (theta > light.cutOff) {
+        float shadow = shadowFactor(light, surf, lightDir);
+        return phong(light, surf, lightDir, viewDir, shadow) * attenuation;
+    }
 
     // outside dark ambient
     return light.color * light.ambient * surf.albedo * attenuation;
