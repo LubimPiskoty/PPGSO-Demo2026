@@ -61,6 +61,9 @@ struct GpuLight {
 
 // Must match ShadowMaps::MAX_SHADOW_LIGHTS
 #define MAX_SHADOW_LIGHTS 12
+// Must match 1 / ShadowMaps::POINT_RESOLUTION_DIV: point faces only fill the
+// lower left part of their layer
+#define POINT_SHADOW_SCALE 0.5
 
 layout(std140) uniform ShadowBlock {
     mat4 uLightSpace[MAX_SHADOW_LIGHTS]; // world -> light clip space per layer
@@ -183,7 +186,15 @@ float shadowFactor(Light light, Surface surf, vec3 lightDir) {
 
     // Surfaces at a steep angle to the light need more bias
     float bias = max(0.005 * (1.0 - dot(surf.normal, lightDir)), 0.0005);
-    return texture(uShadowMaps, vec4(c.xy, float(layer), c.z - bias));
+
+    vec2 uv = c.xy;
+    if (light.type == 1) {
+        // Into the used square, kept half a texel inside so the filter never
+        // reads the unused part of the layer
+        float res = float(textureSize(uShadowMaps, 0).x) * POINT_SHADOW_SCALE;
+        uv = clamp(uv, 0.5 / res, 1.0 - 0.5 / res) * POINT_SHADOW_SCALE;
+    }
+    return texture(uShadowMaps, vec4(uv, float(layer), c.z - bias));
 }
 
 // Phong ambient + diffuse + specular for light arriving from lightDir

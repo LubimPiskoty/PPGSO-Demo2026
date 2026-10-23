@@ -148,7 +148,7 @@ void Scene::shadow_pass() {
     glCullFace(GL_FRONT);
     std::vector<glm::mat4> shadowMat;
     for (size_t i = 0; i < casters.size(); i++) {
-        shadowMaps->bindLayer(i);
+        shadowMaps->bindLayer(i, casters[i]->type == component::LightType::Point);
         glClear(GL_DEPTH_BUFFER_BIT);
         const auto proj = casters[i]->shadowProjection();
         const glm::vec3 focus =
@@ -163,6 +163,7 @@ void Scene::shadow_pass() {
                                    depthShaderInstanced);
     }
     glCullFace(GL_BACK);
+    shadowMaps->endLayers();
 
     render::Framebuffer::unbind(viewport[2], viewport[3]);
     glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);

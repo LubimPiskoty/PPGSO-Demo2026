@@ -18,6 +18,12 @@ class ShadowMaps {
     // Max layers: a point light takes 6, every other light 1
     static constexpr size_t MAX_SHADOW_LIGHTS = 12;
     static constexpr uint16_t RESOLUTION = 1 << 12; // 4096
+    // Point light faces only use the lower left POINT_RESOLUTION square of
+    // their layer (half the width and height = quarter of the pixels). Must
+    // match POINT_SHADOW_SCALE in lit.fs (1 / POINT_RESOLUTION_DIV).
+    static constexpr int POINT_RESOLUTION_DIV = 2;
+    static constexpr uint16_t POINT_RESOLUTION =
+        RESOLUTION / POINT_RESOLUTION_DIV;
     // Frames the light count has to stay lower before layers are freed, so
     // toggling a light on/off doesn't reallocate the array every time
     static constexpr int SHRINK_DELAY = 120;
@@ -56,13 +62,20 @@ class ShadowMaps {
     }
 
     // Renders into layer i: binds the framebuffer, attaches the layer as its
-    // depth buffer and sets the viewport. Undo with Framebuffer::unbind.
-    void bindLayer(size_t i) {
+    // depth buffer and sets the viewport (and scissor, so a clear only touches
+    // the used square). Undo with endLayers + Framebuffer::unbind.
+    void bindLayer(size_t i, bool point = false) {
+        const GLsizei res = point ? POINT_RESOLUTION : RESOLUTION;
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
         glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthTex,
                                   0, (GLint)i);
-        glViewport(0, 0, RESOLUTION, RESOLUTION);
+        glViewport(0, 0, res, res);
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(0, 0, res, res);
     }
+
+    // Call after the last bindLayer
+    void endLayers() { glDisable(GL_SCISSOR_TEST); }
 
     // Binds the array to TEXTURE_UNIT for the lit shader. Goes through a
     // sampler object with depth comparison on (hardware PCF), so the raw
