@@ -24,13 +24,11 @@ Light Light::point(glm::vec3 color, float intensity, float linear,
     return light;
 }
 
-Light Light::spot(glm::vec3 color, float intensity, float innerCone,
-                  float outerCone, float linear, float quadratic) {
+Light Light::spot(glm::vec3 color, float intensity, float cutOff, float linear, float quadratic) {
     Light light(LightType::Spot);
     light.color = color;
     light.intensity = intensity;
-    light.innerCone = innerCone;
-    light.outerCone = outerCone;
+    light.cutOff = cutOff;
     light.linear = linear;
     light.quadratic = quadratic;
     return light;
@@ -74,7 +72,7 @@ glm::mat4 Light::shadowView(glm::vec3 focus, int face) const {
 
 glm::mat4 Light::shadowProjection() const {
     if (type == LightType::Spot)
-        return glm::perspective(glm::radians(outerCone * 2.f), 1.f, shadowNear,
+        return glm::perspective(glm::radians(cutOff * 2.f), 1.f, shadowNear,
                                 shadowFar);
     else if (type == LightType::Point)
         return glm::perspective(glm::half_pi<float>(), 1.f, shadowNear,
@@ -87,12 +85,10 @@ glm::mat4 Light::shadowProjection() const {
 render::GpuLight Light::toGpu() const {
     render::GpuLight g;
     g.position = glm::vec4(position(), (float)type); // xyz pos, w typ
-    g.direction = glm::vec4(direction(), 0.f);       // xyz dir
+    g.direction = glm::vec4(direction(), glm::cos(glm::radians(cutOff)));       // xyz dir
     g.color = glm::vec4(color * intensity, ambient); // rgb col, w ambient
     g.attenuation = glm::vec4(constant, linear, quadratic, 0.f); // point light
     g.shadow = glm::vec4(-1.f, 0.f, 0.f, 0.f); // Scene::uploadLights sets it
-    // TODO spot: pack cos(innerCone) / cos(outerCone) into the free
-    // direction.w and attenuation.w
     return g;
 }
 

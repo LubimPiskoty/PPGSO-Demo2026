@@ -150,6 +150,24 @@ scn::Scene lightTest() {
         scene.root->add_child(node);
     }
 
+    // spotlight: child of a pivot, shines down at an angle
+    {
+        auto pivot = scn::Node::create("Spotlight pivot");
+        scene.root->add_child(pivot);
+
+        auto node = scn::Node::create("Spot lamp", glm::vec3(2.f, 4.f, 2.f));
+
+        node->setLocalRot(glm::quat(glm::radians(glm::vec3(-70.f, 0.f, 0.f))));
+
+        node->add_component<component::Light>(
+    component::Light::spot(glm::vec3(1.f, 0.95f, 0.85f), // farba
+                           1.5f,                         // intenzita
+                           20.f,                         // cutoff v stupňoch
+                           0.09f,                        // linear
+                           0.032f));                     // quadratic
+        pivot->add_child(node);
+    }
+
     // skybox
     {
         auto node = scn::Node::create("Skybox");

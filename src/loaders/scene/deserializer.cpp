@@ -291,8 +291,7 @@ static void deserializeLightComponent(const cJSON *json,
     light.constant = readNumber(json, "constant", light.constant);
     light.linear = readNumber(json, "linear", light.linear);
     light.quadratic = readNumber(json, "quadratic", light.quadratic);
-    light.innerCone = readNumber(json, "innerCone", light.innerCone);
-    light.outerCone = readNumber(json, "outerCone", light.outerCone);
+    light.cutOff = readNumber(json, "cutOff", light.cutOff);
     light.castsShadow = readBool(json, "castsShadow", light.castsShadow);
     light.shadowExtent = readNumber(json, "shadowExtent", light.shadowExtent);
     light.shadowFocusAhead =

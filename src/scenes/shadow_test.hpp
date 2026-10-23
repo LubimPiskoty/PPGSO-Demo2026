@@ -100,7 +100,7 @@ scn::Scene shadowTest() {
             glm::quat(glm::radians(glm::vec3(-30.f, -55.f, 0.f))));
         auto spot =
             node->add_component<component::Light>(component::Light::spot(
-                glm::vec3(0.4f, 0.6f, 1.f), 2.f, 20.f, 30.f));
+                glm::vec3(0.4f, 0.6f, 1.f), 2.f, 30.f));
         spot->castsShadow = true;
         pivot->add_child(node);
     }
