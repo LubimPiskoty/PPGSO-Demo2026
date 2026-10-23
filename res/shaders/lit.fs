@@ -60,7 +60,7 @@ struct GpuLight {
 };
 
 // Must match ShadowMaps::MAX_SHADOW_LIGHTS
-#define MAX_SHADOW_LIGHTS 8
+#define MAX_SHADOW_LIGHTS 12
 
 layout(std140) uniform ShadowBlock {
     mat4 uLightSpace[MAX_SHADOW_LIGHTS]; // world -> light clip space per layer
@@ -164,14 +164,24 @@ float shadowFactor(Light light, Surface surf, vec3 lightDir) {
     if (light.shadowIndex < 0)
         return 1.0;
 
-    vec4 p = uLightSpace[light.shadowIndex] * vec4(surf.position, 1.0);
+    int layer = light.shadowIndex;
+    if (light.type == 1) { // point: layer + cube face (+X -X +Y -Y +Z -Z)
+        vec3 d = surf.position - light.position;
+        vec3 a = abs(d);
+        int face = (a.x >= a.y && a.x >= a.z) ? (d.x > 0.0 ? 0 : 1)
+                 : (a.y >= a.z)               ? (d.y > 0.0 ? 2 : 3)
+                 :                              (d.z > 0.0 ? 4 : 5);
+        layer += face;
+    }
+
+    vec4 p = uLightSpace[layer] * vec4(surf.position, 1.0);
     vec3 c = p.xyz / p.w * 0.5 + 0.5; // clip space -> [0, 1] texture space
     if (c.z > 1.0)
         return 1.0; // behind the far plane
 
     // Surfaces at a steep angle to the light need more bias
     float bias = max(0.005 * (1.0 - dot(surf.normal, lightDir)), 0.0005);
-    return texture(uShadowMaps, vec4(c.xy, float(light.shadowIndex), c.z - bias));
+    return texture(uShadowMaps, vec4(c.xy, float(layer), c.z - bias));
 }
 
 // Phong ambient + diffuse + specular for light arriving from lightDir
@@ -209,7 +219,8 @@ vec3 pointLight(Light light, Surface surf, vec3 viewDir) {
                 light.attenuation.y * d +
                 light.attenuation.z * d * d);
 
-    return phong(light, surf, lightDir, viewDir, 1.0) * attenuation;
+    float shadow = shadowFactor(light, surf, lightDir);
+    return phong(light, surf, lightDir, viewDir, shadow) * attenuation;
 }
 
 // ---------------------------------------------------------------------------

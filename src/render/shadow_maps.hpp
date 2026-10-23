@@ -15,7 +15,8 @@ namespace render {
 // pass. Owned by the Scene, so the GL objects die with it.
 class ShadowMaps {
   public:
-    static constexpr size_t MAX_SHADOW_LIGHTS = 8;
+    // Max layers: a point light takes 6, every other light 1
+    static constexpr size_t MAX_SHADOW_LIGHTS = 12;
     static constexpr uint16_t RESOLUTION = 1 << 12; // 4096
     // Frames the light count has to stay lower before layers are freed, so
     // toggling a light on/off doesn't reallocate the array every time

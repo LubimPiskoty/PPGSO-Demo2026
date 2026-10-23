@@ -105,11 +105,13 @@ scn::Scene shadowTest() {
         pivot->add_child(node);
     }
 
-    // A point light just for contrast (no shadows yet)
+    // Point light (shadow casting, 6 cube faces)
     {
         auto node = scn::Node::create("Point light", glm::vec3(3.f, 1.5f, 3.f));
-        node->add_component<component::Light>(
+        auto point = node->add_component<component::Light>(
             component::Light::point(glm::vec3(1.f, 0.4f, 0.2f), 2.f));
+        point->castsShadow = true;
+        point->shadowFar = 30.f;
         scene.root->add_child(node);
     }
 

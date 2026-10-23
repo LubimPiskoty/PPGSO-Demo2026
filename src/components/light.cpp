@@ -1,5 +1,6 @@
 #include "light.hpp"
 #include "../scene/scene.hpp"
+#include "glm/gtc/constants.hpp"
 #include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -48,7 +49,16 @@ glm::vec3 Light::position() const {
     return n ? n->globalPosition() : glm::vec3(0.f);
 }
 
-glm::mat4 Light::shadowView(glm::vec3 focus) const {
+glm::mat4 Light::shadowView(glm::vec3 focus, int face) const {
+    if (type == LightType::Point) {
+        // Cube faces, same order the lit shader picks them in
+        static const glm::vec3 dirs[6] = {{1, 0, 0},  {-1, 0, 0}, {0, 1, 0},
+                                          {0, -1, 0}, {0, 0, 1},  {0, 0, -1}};
+        static const glm::vec3 ups[6] = {{0, -1, 0}, {0, -1, 0}, {0, 0, 1},
+                                         {0, 0, -1}, {0, -1, 0}, {0, -1, 0}};
+        face = glm::clamp(face, 0, 5);
+        return glm::lookAt(position(), position() + dirs[face], ups[face]);
+    }
     const glm::vec3 dir = direction();
     // lookAt breaks when looking straight along the up vector
     const glm::vec3 up = std::abs(dir.y) > 0.99f ? glm::vec3(1.f, 0.f, 0.f)
@@ -65,6 +75,9 @@ glm::mat4 Light::shadowView(glm::vec3 focus) const {
 glm::mat4 Light::shadowProjection() const {
     if (type == LightType::Spot)
         return glm::perspective(glm::radians(outerCone * 2.f), 1.f, shadowNear,
+                                shadowFar);
+    else if (type == LightType::Point)
+        return glm::perspective(glm::half_pi<float>(), 1.f, shadowNear,
                                 shadowFar);
     return glm::ortho(-shadowExtent, shadowExtent, -shadowExtent, shadowExtent,
                       shadowNear, shadowFar);

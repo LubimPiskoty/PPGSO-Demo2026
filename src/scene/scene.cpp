@@ -93,7 +93,7 @@ void Scene::uploadLights() {
             continue;
         auto gpu = light->toGpu();
 
-        // Layer of this light's map: its position in the shadow_pass casters
+        // First layer of this light's map(s) in the shadow_pass casters
         for (size_t i = 0; i < shadowLights.size(); i++) {
             if (shadowLights[i].lock() == light) {
                 gpu.shadow.x = (float)i;
@@ -107,12 +107,19 @@ void Scene::uploadLights() {
 }
 
 void Scene::shadow_pass() {
+    // One entry per layer: a point light appears 6 times (once per face)
     std::vector<std::shared_ptr<component::Light>> casters;
+    std::vector<int> faces;
     for (auto &light : getAllComponents<component::Light>()) {
-        if (light->enabled && light->castsShadow &&
-            light->type != component::LightType::Point &&
-            casters.size() < render::ShadowMaps::MAX_SHADOW_LIGHTS)
+        if (!light->enabled || !light->castsShadow)
+            continue;
+        if (casters.size() + light->shadowLayers() >
+            render::ShadowMaps::MAX_SHADOW_LIGHTS)
+            continue;
+        for (int f = 0; f < light->shadowLayers(); f++) {
             casters.push_back(light);
+            faces.push_back(f);
+        }
     }
 
     shadowMaps->sync(casters.size());
@@ -122,10 +129,19 @@ void Scene::shadow_pass() {
     glGetIntegerv(GL_VIEWPORT, viewport);
 
     // Directional shadow boxes follow the camera
-    glm::vec3 focus{0.f};
+    // Camera position and its horizontal look direction, so the box can be
+    // pushed ahead of the camera (per light, shadowFocusAhead)
+    glm::vec3 camPos{0.f}, camForward{0.f};
     if (auto cam = activeCamera.lock())
-        if (auto camNode = cam->node.lock())
-            focus = camNode->globalPosition();
+        if (auto camNode = cam->node.lock()) {
+            camPos = camNode->globalPosition();
+            camForward = camNode->globalRotation() * glm::vec3(0.f, 0.f, -1.f);
+            camForward.y = 0.f; // looking up/down shouldn't move it
+            if (glm::dot(camForward, camForward) > 1e-6f)
+                camForward = glm::normalize(camForward);
+            else
+                camForward = glm::vec3(0.f);
+        }
 
     // Only nodes with a Shadow component are rendered into the maps
     const auto shadowCasters = getAllComponents<component::Shadow>();
@@ -135,7 +151,10 @@ void Scene::shadow_pass() {
         shadowMaps->bindLayer(i);
         glClear(GL_DEPTH_BUFFER_BIT);
         const auto proj = casters[i]->shadowProjection();
-        const auto view = casters[i]->shadowView(focus);
+        const glm::vec3 focus =
+            camPos + camForward * (casters[i]->shadowFocusAhead *
+                                   casters[i]->shadowExtent);
+        const auto view = casters[i]->shadowView(focus, faces[i]);
         shadowMat.push_back(proj * view);
 
         for (auto &shadow : shadowCasters)

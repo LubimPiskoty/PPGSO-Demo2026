@@ -16,7 +16,8 @@
 // fields fall back to defaults.
 // V3.1: Instances can be a generator recipe instead of transforms
 // V3.2: PhysicsBody components and scene physics settings
-#define SCENE_FORMAT_VERSION 3.2
+// V3.3: Light, Shadow, Skybox and Spin components
+#define SCENE_FORMAT_VERSION 3.3
 
 namespace loader {
 
@@ -29,6 +30,8 @@ inline const char *textureSlotNames[(int)render::TextureSlot::Count] = {
 // Indexed by PlayMode / AnimTarget
 inline const char *playModeNames[] = {"single", "loop", "pingpong"};
 inline const char *animTargetNames[] = {"position", "rotation", "scale"};
+// Indexed by LightType
+inline const char *lightTypeNames[] = {"directional", "point", "spot"};
 
 // Read helpers: return the fallback when the key is missing or has the wrong
 // type, so older files and hand-edited ones still load

@@ -6,8 +6,12 @@
 #include "../../components/animator.hpp"
 #include "../../components/instance_generators.hpp"
 #include "../../components/instances.hpp"
+#include "../../components/light.hpp"
 #include "../../components/mesh.hpp"
 #include "../../components/physicsbody.hpp"
+#include "../../components/shadow.hpp"
+#include "../../components/skybox.hpp"
+#include "../../components/spin.hpp"
 #include "../curve_loader.hpp"
 #include "../model_loader.hpp"
 #include "../texture_loader.hpp"
@@ -35,12 +39,22 @@ struct LoadContext {
 
     // Instanced meshes get their own copy: the instance buffer is attached
     // to the model, so it can't be shared with other meshes
+    // "<box>" (side 1) and "<sphere>" (radius 1) are the procedural models,
+    // anything else is a file
+    static render::Model load(const std::string &name) {
+        if (name == "<box>")
+            return createBox(glm::vec3(0.5f));
+        if (name == "<sphere>")
+            return createSphere(1.f, 1.f, 32, 16);
+        return loadModel(name);
+    }
+
     std::shared_ptr<render::Model> model(const std::string &name, bool unique) {
         if (unique)
-            return std::make_shared<render::Model>(loadModel(name));
+            return std::make_shared<render::Model>(load(name));
         auto &model = models[name];
         if (!model)
-            model = std::make_shared<render::Model>(loadModel(name));
+            model = std::make_shared<render::Model>(load(name));
         return model;
     }
 
@@ -261,6 +275,48 @@ static void deserializeAnimatorComponent(const cJSON *json,
     }
 }
 
+static void deserializeLightComponent(const cJSON *json,
+                                      std::shared_ptr<scn::Node> node) {
+    using component::Light;
+    using component::LightType;
+    auto type = (LightType)readEnum(json, "light", lightTypeNames,
+                                    (int)LightType::Directional);
+    // Lights only come from the factories, the fields are overwritten below
+    Light light = type == LightType::Point  ? Light::point()
+                  : type == LightType::Spot ? Light::spot()
+                                            : Light::directional();
+    light.color = readVec3(json, "color", light.color);
+    light.intensity = readNumber(json, "intensity", light.intensity);
+    light.ambient = readNumber(json, "ambient", light.ambient);
+    light.constant = readNumber(json, "constant", light.constant);
+    light.linear = readNumber(json, "linear", light.linear);
+    light.quadratic = readNumber(json, "quadratic", light.quadratic);
+    light.innerCone = readNumber(json, "innerCone", light.innerCone);
+    light.outerCone = readNumber(json, "outerCone", light.outerCone);
+    light.castsShadow = readBool(json, "castsShadow", light.castsShadow);
+    light.shadowExtent = readNumber(json, "shadowExtent", light.shadowExtent);
+    light.shadowFocusAhead =
+        readNumber(json, "shadowFocusAhead", light.shadowFocusAhead);
+    light.shadowNear = readNumber(json, "shadowNear", light.shadowNear);
+    light.shadowFar = readNumber(json, "shadowFar", light.shadowFar);
+    node->add_component<Light>(light);
+}
+
+static void deserializeSkyboxComponent(const cJSON *json,
+                                       std::shared_ptr<scn::Node> node,
+                                       scn::Scene &scene) {
+    scene.skybox = node->add_component<component::Skybox>(
+        readString(json, "texture", "skybox.png"));
+}
+
+static void deserializeSpinComponent(const cJSON *json,
+                                     std::shared_ptr<scn::Node> node) {
+    glm::vec3 axis = readVec3(json, "axis", glm::vec3(0.f, 1.f, 0.f));
+    if (glm::dot(axis, axis) < 1e-8f)
+        axis = glm::vec3(0.f, 1.f, 0.f);
+    node->add_component<component::Spin>(readNumber(json, "speed", 10.f), axis);
+}
+
 // Mass 0 (or missing) makes the body static. Inertia is computed from the
 // collider, so it isn't stored
 static void deserializePhysicsBodyComponent(const cJSON *json,
@@ -318,7 +374,8 @@ static void deserializePhysicsContext(const cJSON *json,
 //
 
 static std::shared_ptr<scn::Node> deserializeNode(const cJSON *json,
-                                                  LoadContext &ctx) {
+                                                  LoadContext &ctx,
+                                                  scn::Scene &scene) {
     auto node = scn::Node::create(readString(json, "name", "Node"));
     if (auto guid = readGuid(json, "guid"))
         node->guid = guid;
@@ -355,6 +412,14 @@ static std::shared_ptr<scn::Node> deserializeNode(const cJSON *json,
             deserializeAnimatorComponent(c, node);
         else if (type == "PhysicsBody")
             deserializePhysicsBodyComponent(c, node);
+        else if (type == "Light")
+            deserializeLightComponent(c, node);
+        else if (type == "Shadow")
+            node->add_component<component::Shadow>();
+        else if (type == "Skybox")
+            deserializeSkyboxComponent(c, node, scene);
+        else if (type == "Spin")
+            deserializeSpinComponent(c, node);
         else
             std::cerr << "[Warning] Can't load component '" << type << "' on '"
                       << node->name << "', skipped" << std::endl;
@@ -366,7 +431,7 @@ static std::shared_ptr<scn::Node> deserializeNode(const cJSON *json,
     const cJSON *child;
     cJSON_ArrayForEach(child,
                        cJSON_GetObjectItemCaseSensitive(json, "children"))
-        node->add_child(deserializeNode(child, ctx));
+        node->add_child(deserializeNode(child, ctx, scene));
 
     return node;
 }
@@ -408,7 +473,7 @@ scn::Scene loadScene(std::string path) {
     auto sceneJson = cJSON_GetObjectItemCaseSensitive(json, "scene");
     auto graph = cJSON_GetObjectItemCaseSensitive(sceneJson, "graph");
     if (cJSON_IsObject(graph))
-        scene.root = deserializeNode(graph, ctx);
+        scene.root = deserializeNode(graph, ctx, scene);
     deserializePhysicsContext(
         cJSON_GetObjectItemCaseSensitive(sceneJson, "physics"),
         scene.physics_context);

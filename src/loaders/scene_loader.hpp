@@ -9,6 +9,8 @@ namespace loader {
 // components reference them by name + guid
 // V3: + instanced shaders, UserMovement, Instances and Animator components
 // V3.1: Instances can be a generator recipe instead of transforms
+// V3.2: PhysicsBody components and scene physics settings
+// V3.3: Light, Shadow, Skybox and Spin components
 
 // Loads V2 and V3 files. Needs a current GL context (models, textures and
 // shaders are uploaded while loading). Cameras are created with a 1x1 size,

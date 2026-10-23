@@ -28,11 +28,14 @@ class Light : public ComponentBase<Light> {
     float innerCone = 12.5f;
     float outerCone = 17.5f;
 
-    // Renders a shadow map for this light TODO: (point lights not supported
-    // yet)
+    // Renders a shadow map for this light (point lights use 6 layers, one per
+    // cube face)
     bool castsShadow = false;
     // directional: half-size of the orthographic box around the camera
     float shadowExtent = 20.f;
+    // directional: box center is moved this fraction of shadowExtent ahead of
+    // the camera (0 = centered on the camera, 1 = box starts at the camera)
+    float shadowFocusAhead = 0.6f;
     float shadowNear = 0.1f;
     float shadowFar = 100.f;
 
@@ -55,8 +58,11 @@ class Light : public ComponentBase<Light> {
 
     // Matrices for rendering the scene from the light (shadow pass)
     // focus: where a directional light's shadow box is centered (the camera)
-    glm::mat4 shadowView(glm::vec3 focus = glm::vec3(0.f)) const;
+    // face: only point lights, 0..5 = +X -X +Y -Y +Z -Z
+    glm::mat4 shadowView(glm::vec3 focus = glm::vec3(0.f), int face = 0) const;
     glm::mat4 shadowProjection() const;
+    // Layers of the shadow array this light needs: 6 for point, 1 otherwise
+    int shadowLayers() const { return type == LightType::Point ? 6 : 1; }
 
   private:
     // Private so every light comes from a factory with matching settings

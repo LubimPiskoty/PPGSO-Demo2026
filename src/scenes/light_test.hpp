@@ -3,6 +3,8 @@
 
 #include "../components/light.hpp"
 #include "../components/mesh.hpp"
+#include "../components/shadow.hpp"
+#include "../components/spin.hpp"
 #include "../loaders/model_loader.hpp"
 #include "../loaders/shader_loader.hpp"
 #include "../loaders/texture_loader.hpp"
@@ -14,21 +16,7 @@
 
 namespace scenes {
 
-// Spins its node around the Y axis; children (the camera) orbit with it
-class Spin : public component::ComponentBase<Spin> {
-  public:
-    explicit Spin(float degPerSec) : speed(glm::radians(degPerSec)) {}
-    const char *type_name() const override { return "Spin"; }
-    void update(float dt) override {
-        if (auto owner = node.lock()) {
-            angle += speed * dt;
-            owner->setLocalRot(glm::angleAxis(angle, glm::vec3(0.f, 1.f, 0.f)));
-        }
-    }
-
-  private:
-    float speed, angle = 0.f;
-};
+using component::Spin;
 
 scn::Scene lightTest() {
     scn::Scene scene;
@@ -75,6 +63,7 @@ scn::Scene lightTest() {
     { // Test mesh
         auto test_node = scn::Node::create("Test mesh");
         test_node->add_component<component::Mesh>(testing_mesh, lit_material);
+        test_node->add_component<component::Shadow>(); // casts into the maps
         test_node->setLocalScale(glm::vec3(10.f));
         test_node->setLocalPos(
             glm::vec3(0.f, 0.4f, 0.f)); // wheels on the floor
@@ -144,6 +133,21 @@ scn::Scene lightTest() {
             node->setLocalScale(glm::vec3(0.1f));
             pivot->add_child(node);
         }
+    }
+
+    // shadow casting point light: static, off to the side of the car so the
+    // shadow falls across the floor
+    {
+        auto node =
+            scn::Node::create("Shadow point light", glm::vec3(3.f, 3.f, -2.f));
+        auto light = node->add_component<component::Light>(
+            component::Light::point(glm::vec3(1.f, 0.9f, 0.7f), 4.f, 0.09f,
+                                    0.032f));
+        light->castsShadow = true;
+        light->shadowFar = 30.f;
+        node->add_component<component::Mesh>(sphere_model, bulb_material);
+        node->setLocalScale(glm::vec3(0.15f));
+        scene.root->add_child(node);
     }
 
     // skybox
