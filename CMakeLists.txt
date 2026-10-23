@@ -18,18 +18,23 @@ find_package(OpenMP)
 # GLFW, GLM, ASSIMP and cJSON are fetched and built from source instead
 include(FetchContent)
 
+# Show git clone progress instead of hiding it until the download finishes
+set(FETCHCONTENT_QUIET OFF)
+
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(glfw
         GIT_REPOSITORY https://github.com/glfw/glfw.git
         GIT_TAG 3.4
-        GIT_SHALLOW TRUE)
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS TRUE)
 
 FetchContent_Declare(glm
         GIT_REPOSITORY https://github.com/g-truc/glm.git
         GIT_TAG 1.0.1
-        GIT_SHALLOW TRUE)
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS TRUE)
 
 set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "" FORCE)
@@ -43,12 +48,14 @@ set(ASSIMP_NO_EXPORT ON CACHE BOOL "" FORCE)
 FetchContent_Declare(assimp
         GIT_REPOSITORY https://github.com/assimp/assimp.git
         GIT_TAG v5.4.3
-        GIT_SHALLOW TRUE)
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS TRUE)
 
 FetchContent_Declare(cmrc
         GIT_REPOSITORY https://github.com/vector-of-bool/cmrc.git
         GIT_TAG 2.0.1
-        GIT_SHALLOW TRUE)
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS TRUE)
 
 set(ENABLE_CJSON_TEST OFF CACHE BOOL "" FORCE)
 set(ENABLE_CJSON_UNINSTALL OFF CACHE BOOL "" FORCE)
@@ -56,7 +63,8 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(cjson
         GIT_REPOSITORY https://github.com/DaveGamble/cJSON.git
         GIT_TAG v1.7.18
-        GIT_SHALLOW TRUE)
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS TRUE)
 
 # cmrc 2.0.1 predates CMake 4.0's removal of cmake_minimum_required(VERSION < 3.5)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
@@ -76,7 +84,8 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     FetchContent_Declare(imgui
             GIT_REPOSITORY https://github.com/ocornut/imgui.git
             GIT_TAG v1.91.5
-            GIT_SHALLOW TRUE)
+            GIT_SHALLOW TRUE
+            GIT_PROGRESS TRUE)
     FetchContent_MakeAvailable(imgui)
 
     add_library(imgui STATIC
@@ -99,6 +108,7 @@ if(NOT EXISTS ${STB_IMAGE_HEADER})
     file(DOWNLOAD
             https://raw.githubusercontent.com/nothings/stb/master/stb_image.h
             ${STB_IMAGE_HEADER}
+            SHOW_PROGRESS
             STATUS STB_IMAGE_DOWNLOAD_STATUS)
     list(GET STB_IMAGE_DOWNLOAD_STATUS 0 STB_IMAGE_DOWNLOAD_CODE)
     if(NOT STB_IMAGE_DOWNLOAD_CODE EQUAL 0)
