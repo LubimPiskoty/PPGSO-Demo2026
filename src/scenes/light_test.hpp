@@ -60,7 +60,11 @@ scn::Scene lightTest() {
         scene.root->add_child(floor_node);
     }
 
-    { // Test mesh
+    { // Test mesh on a turntable, so the fixed studio lights sweep over it
+        auto turntable = scn::Node::create("Turntable");
+        turntable->add_component<Spin>(20.f);
+        scene.root->add_child(turntable);
+
         auto test_node = scn::Node::create("Test mesh");
         test_node->add_component<component::Mesh>(testing_mesh, lit_material);
         test_node->add_component<component::Shadow>(); // casts into the maps
@@ -69,13 +73,12 @@ scn::Scene lightTest() {
             glm::vec3(0.f, 0.4f, 0.f)); // wheels on the floor
         test_node->setLocalRotEuler(glm::radians(
             glm::vec3(0.f, -30.f, 0.f))); // front turned to the left
-        scene.root->add_child(test_node);
+        turntable->add_child(test_node);
     }
 
     // camera
     {
         auto pivot = scn::Node::create("Camera pivot");
-        pivot->add_component<Spin>(5.f);
         scene.root->add_child(pivot);
 
         auto camNode = scn::Node::create("Camera", glm::vec3{0.f, 2.f, 7.f});
@@ -94,78 +97,44 @@ scn::Scene lightTest() {
         sphereNode->add_component<component::Mesh>(test_sphere, bulb_material);
         camNode->add_child(sphereNode);
     }
-    // sun: tilted child of a spinning pivot, so its direction sweeps around Y
+    // Studio three point setup around the turntable: key (shadow casting
+    // spot), fill (soft, cool, opposite side) and rim (from behind)
     {
-        auto pivot = scn::Node::create("Sun pivot");
-        scene.root->add_child(pivot);
-
-        auto node = scn::Node::create("Sun", glm::vec3(0, 1.8, 0));
-        node->setLocalRot(glm::quat(glm::radians(glm::vec3(-40.f, 30.f, 0.f))));
-
-        node->add_component<component::Light>(
-            component::Light::directional(glm::vec3(1), 1.2f)); // slightly warm
-        pivot->add_child(node);
-    }
-
-    // point lights orbiting the car: children of a spinning pivot, spread
-    // evenly around it
-    {
-        auto pivot = scn::Node::create("Light pivot");
-        pivot->add_component<Spin>(10.f);
-        scene.root->add_child(pivot);
-
-        const glm::vec3 colors[] = {
-            {1.f, 0.2f, 0.2f}, // red
-            {0.2f, 1.f, 0.3f}, // green
-            {0.2f, 0.4f, 1.f}, // blue
-        };
-        const float radius = 3.f, height = 1.5f;
-        for (int i = 0; i < 3; i++) {
-            float angle = glm::radians(120.f * i + 60.f);
-            glm::vec3 pos{radius * glm::cos(angle), height,
-                          radius * glm::sin(angle)};
-
-            auto node =
-                scn::Node::create("Point light " + std::to_string(i), pos);
-            node->add_component<component::Light>(
-                component::Light::point(colors[i], 3.f, 0.35f, 0.44f));
+        // Small emissive-looking bulb so the lamps are visible
+        auto addLamp = [&](const std::string &name, glm::vec3 pos,
+                           glm::vec3 target) {
+            auto node = scn::Node::create(name, pos);
+            // face the target: lights shine along their node's -Z
+            node->setLocalRot(glm::quatLookAt(glm::normalize(target - pos),
+                                              glm::vec3(0.f, 1.f, 0.f)));
             node->add_component<component::Mesh>(sphere_model, bulb_material);
-            node->setLocalScale(glm::vec3(0.1f));
-            pivot->add_child(node);
-        }
-    }
+            node->setLocalScale(glm::vec3(0.12f));
+            scene.root->add_child(node);
+            return node;
+        };
+        const glm::vec3 center{0.f, 0.8f, 0.f};
 
-    // shadow casting point light: static, off to the side of the car so the
-    // shadow falls across the floor
-    {
-        auto node =
-            scn::Node::create("Shadow point light", glm::vec3(3.f, 3.f, -2.f));
-        auto light = node->add_component<component::Light>(
-            component::Light::point(glm::vec3(1.f, 0.9f, 0.7f), 4.f, 0.09f,
+        // Key: strongest, front left and high, casts the shadow
+        auto key = addLamp("Key light", {-3.5f, 4.f, 4.f}, center);
+        auto keyLight = key->add_component<component::Light>(
+            component::Light::spot(glm::vec3(1.f, 0.95f, 0.85f), 4.f, 35.f,
+                                   0.09f, 0.032f));
+        keyLight->castsShadow = true;
+        keyLight->shadowFar = 30.f;
+
+        // Fill: dimmer and cooler from the opposite side, lifts the shadows
+        auto fill = addLamp("Fill light", {4.f, 1.5f, 3.f}, center);
+        auto fillLight = fill->add_component<component::Light>(
+            component::Light::point(glm::vec3(0.6f, 0.7f, 1.f), 2.f, 0.09f,
                                     0.032f));
-        light->castsShadow = true;
-        light->shadowFar = 30.f;
-        node->add_component<component::Mesh>(sphere_model, bulb_material);
-        node->setLocalScale(glm::vec3(0.15f));
-        scene.root->add_child(node);
-    }
+        fillLight->ambient = 0.05f; // only light with ambient: keeps the dark
+                                    // side from going pitch black
 
-    // spotlight: child of a pivot, shines down at an angle
-    {
-        auto pivot = scn::Node::create("Spotlight pivot");
-        scene.root->add_child(pivot);
-
-        auto node = scn::Node::create("Spot lamp", glm::vec3(2.f, 4.f, 2.f));
-
-        node->setLocalRot(glm::quat(glm::radians(glm::vec3(-70.f, 0.f, 0.f))));
-
-        node->add_component<component::Light>(
-    component::Light::spot(glm::vec3(1.f, 0.95f, 0.85f), // farba
-                           1.5f,                         // intenzita
-                           20.f,                         // cutoff v stupňoch
-                           0.09f,                        // linear
-                           0.032f));                     // quadratic
-        pivot->add_child(node);
+        // Rim: behind the car, outlines its edges against the background
+        auto rim = addLamp("Rim light", {0.5f, 2.5f, -4.5f}, center);
+        rim->add_component<component::Light>(
+            component::Light::point(glm::vec3(1.f, 0.9f, 0.8f), 3.f, 0.09f,
+                                    0.032f));
     }
 
     // skybox
