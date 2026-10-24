@@ -35,7 +35,7 @@ layout(std140, binding = 0) uniform EmitterSettings {
     vec3 minAccel, maxAccel;
     mat4 modelMatrix;
     mat4 rotationMatrix;
-    float minLife, maxLife;
+    float minLife, maxLife, size;
 } u_emitter;
 
 uniform uint u_particlesToSpawn;
@@ -66,7 +66,7 @@ void MakeParticle(uint i) {
 
     vec3 offset = randomVec3(u_emitter.minOffset, u_emitter.maxOffset);
     p.pos = u_emitter.modelMatrix[3].xyz + mat3(u_emitter.rotationMatrix) * offset;
-    p.scale = vec2(0.1);
+    p.scale = vec2(u_emitter.size);
 
     // w = 0: directions must not pick up translation
     p.velocity = mat3(u_emitter.rotationMatrix) *

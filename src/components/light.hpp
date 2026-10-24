@@ -33,6 +33,12 @@ class Light : public ComponentBase<Light> {
     float shadowExtent = 20.f;
     // directional: box center is moved this fraction of shadowExtent ahead of
     // the camera (0 = centered on the camera, 1 = box starts at the camera)
+    // directional: a second, small and sharp shadow box (layer 1) around the
+    // camera, blended over the big one near its middle. 0 = off.
+    float localShadowExtent = 0.f;
+    float localShadowFar = 60.f;
+    // Like shadowFocusAhead, for the local box
+    float localShadowFocusAhead = 1.f;
     float shadowFocusAhead = 0.6f;
     float shadowNear = 0.1f;
     float shadowFar = 100.f;
@@ -58,9 +64,15 @@ class Light : public ComponentBase<Light> {
     // focus: where a directional light's shadow box is centered (the camera)
     // face: only point lights, 0..5 = +X -X +Y -Y +Z -Z
     glm::mat4 shadowView(glm::vec3 focus = glm::vec3(0.f), int face = 0) const;
-    glm::mat4 shadowProjection() const;
+    // layer: directional lights with a local box, 0 = big, 1 = local
+    glm::mat4 shadowProjection(int layer = 0) const;
     // Layers of the shadow array this light needs: 6 for point, 1 otherwise
-    int shadowLayers() const { return type == LightType::Point ? 6 : 1; }
+    int shadowLayers() const {
+        if (type == LightType::Point)
+            return 6;
+        return type == LightType::Directional && localShadowExtent > 0.f ? 2
+                                                                           : 1;
+    }
 
   private:
     // Private so every light comes from a factory with matching settings

@@ -95,6 +95,11 @@ class Instances : public ComponentBase<Instances> {
         return instances;
     }
 
+    // Instead of a fixed list, draw one instance per child node at the child's
+    // local transform, refreshed every frame. The children can carry physics
+    // bodies and no mesh, so a pile of bodies is a single draw call.
+    bool followChildren = false;
+
     void update(float dt) override;
 
     const char *type_name() const override {

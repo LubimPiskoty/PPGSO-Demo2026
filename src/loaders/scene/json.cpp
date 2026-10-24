@@ -43,6 +43,16 @@ glm::vec2 readVec2(const cJSON *json, const char *key, glm::vec2 fallback) {
     return v;
 }
 
+glm::vec4 readVec4(const cJSON *json, const char *key, glm::vec4 fallback) {
+    auto array = cJSON_GetObjectItemCaseSensitive(json, key);
+    if (!cJSON_IsArray(array) || cJSON_GetArraySize(array) != 4)
+        return fallback;
+    glm::vec4 v;
+    for (int i = 0; i < 4; i++)
+        v[i] = (float)cJSON_GetNumberValue(cJSON_GetArrayItem(array, i));
+    return v;
+}
+
 util::Guid readGuid(const cJSON *json, const char *key) {
     try {
         return util::Guid::fromString(readString(json, key));

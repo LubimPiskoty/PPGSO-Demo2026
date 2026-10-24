@@ -9,7 +9,8 @@
 namespace component {
 
 // Which part of the node's local transform a track drives
-enum class AnimTarget { Position, Rotation, Scale };
+// Color drives the colour of the node's Light
+enum class AnimTarget { Position, Rotation, Scale, Color };
 
 struct AnimatorTrack {
     AnimTarget target = AnimTarget::Position;
@@ -18,13 +19,17 @@ struct AnimatorTrack {
 };
 
 // Animates the owner node's local position / rotation (Euler radians) /
-// scale along Bezier curves. Unlike Animation<T> it only targets the node
+// scale, or its light's colour, along Bezier curves. Unlike Animation<T> it only targets the node
 // transform, so it can be loaded with the scene.
 class Animator : public ComponentBase<Animator> {
   public:
     std::vector<AnimatorTrack> tracks;
 
     void update(float dt) override;
+
+    // Writes the track's value at its current time to the node, also used to
+    // scrub a paused track
+    void apply(const AnimatorTrack &track);
 
     AnimatorTrack &addTrack(AnimTarget target, Bezier<glm::vec3> curve,
                             float duration, PlayMode mode = PlayMode::Loop);

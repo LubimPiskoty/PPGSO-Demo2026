@@ -8,10 +8,12 @@
 #include "../../components/instances.hpp"
 #include "../../components/light.hpp"
 #include "../../components/mesh.hpp"
+#include "../../components/particle.hpp"
 #include "../../components/physicsbody.hpp"
 #include "../../components/shadow.hpp"
 #include "../../components/skybox.hpp"
 #include "../../components/spin.hpp"
+#include "../../components/zone_switch.hpp"
 #include "../curve_loader.hpp"
 #include "../model_loader.hpp"
 #include "../texture_loader.hpp"
@@ -208,6 +210,11 @@ static bool deserializeInstanceStep(const cJSON *json,
 
 static void deserializeInstancesComponent(const cJSON *json,
                                           std::shared_ptr<scn::Node> node) {
+    if (readBool(json, "followChildren", false)) {
+        node->add_component<component::Instances>()->followChildren = true;
+        return;
+    }
+
     // A recipe takes priority over saved transforms
     auto generate = cJSON_GetObjectItemCaseSensitive(json, "generate");
     if (cJSON_IsArray(generate)) {
@@ -294,11 +301,53 @@ static void deserializeLightComponent(const cJSON *json,
     light.cutOff = readNumber(json, "cutOff", light.cutOff);
     light.castsShadow = readBool(json, "castsShadow", light.castsShadow);
     light.shadowExtent = readNumber(json, "shadowExtent", light.shadowExtent);
+    light.localShadowExtent =
+        readNumber(json, "localShadowExtent", light.localShadowExtent);
+    light.localShadowFocusAhead =
+        readNumber(json, "localShadowFocusAhead", light.localShadowFocusAhead);
+    light.localShadowFar =
+        readNumber(json, "localShadowFar", light.localShadowFar);
     light.shadowFocusAhead =
         readNumber(json, "shadowFocusAhead", light.shadowFocusAhead);
     light.shadowNear = readNumber(json, "shadowNear", light.shadowNear);
     light.shadowFar = readNumber(json, "shadowFar", light.shadowFar);
     node->add_component<Light>(light);
+}
+
+static void deserializeParticleSystemComponent(
+    const cJSON *json, std::shared_ptr<scn::Node> node, LoadContext &ctx) {
+    using component::ParticleSystem;
+    auto material = std::make_shared<render::Material>(
+        "Particles", ctx.shader("particle.vs", "particle.fs", false));
+    auto p = node->add_component<ParticleSystem>(
+        material, std::make_shared<render::ComputeShader>("spawnParticle.comp"),
+        std::make_shared<render::ComputeShader>("updateParticle.comp"));
+    p->minColor = readVec4(json, "minColor", p->minColor);
+    p->maxColor = readVec4(json, "maxColor", p->maxColor);
+    p->minPosition = readVec3(json, "minPosition", p->minPosition);
+    p->maxPosition = readVec3(json, "maxPosition", p->maxPosition);
+    p->minVelocity = readVec3(json, "minVelocity", p->minVelocity);
+    p->maxVelocity = readVec3(json, "maxVelocity", p->maxVelocity);
+    p->minAccel = readVec3(json, "minAccel", p->minAccel);
+    p->maxAccel = readVec3(json, "maxAccel", p->maxAccel);
+    p->minLife = readNumber(json, "minLife", p->minLife);
+    p->maxLife = readNumber(json, "maxLife", p->maxLife);
+    p->size = readNumber(json, "size", p->size);
+    p->spawnInterval = readNumber(json, "spawnInterval", p->spawnInterval);
+    p->stretch = readNumber(json, "stretch", p->stretch);
+    p->maxParticles =
+        (uint32_t)readNumber(json, "maxParticles", (float)p->maxParticles);
+}
+
+static void deserializeZoneSwitchComponent(const cJSON *json,
+                                           std::shared_ptr<scn::Node> node) {
+    auto z = node->add_component<component::ZoneSwitch>();
+    z->boxMin = readVec3(json, "min", z->boxMin);
+    z->boxMax = readVec3(json, "max", z->boxMax);
+    z->insideGuid = readGuid(json, "inside");
+    z->outsideGuid = readGuid(json, "outside");
+    z->blend = readNumber(json, "blend", z->blend);
+    z->blendInside = readNumber(json, "blendInside", z->blendInside);
 }
 
 static void deserializeSkyboxComponent(const cJSON *json,
@@ -359,6 +408,10 @@ static void deserializePhysicsContext(const cJSON *json,
                                       physics::Context &ctx) {
     ctx.gravity = readVec3(json, "gravity", ctx.gravity);
     ctx.windVel = readVec3(json, "wind", ctx.windVel);
+    // windPulse: seconds between bellows pushes, 0 = steady wind
+    ctx.windPulsePeriod = readNumber(json, "windPulse", ctx.windPulsePeriod);
+    ctx.windReturn = readNumber(json, "windReturn", ctx.windReturn);
+    ctx.windPeak = ctx.windVel;
     ctx.drag = readNumber(json, "drag", ctx.drag);
     ctx.angularDrag = readNumber(json, "angularDrag", ctx.angularDrag);
     ctx.timeScale = readNumber(json, "timeScale", ctx.timeScale);
@@ -417,6 +470,10 @@ static std::shared_ptr<scn::Node> deserializeNode(const cJSON *json,
             node->add_component<component::Shadow>();
         else if (type == "Skybox")
             deserializeSkyboxComponent(c, node, scene);
+        else if (type == "ZoneSwitch")
+            deserializeZoneSwitchComponent(c, node);
+        else if (type == "ParticleSystem")
+            deserializeParticleSystemComponent(c, node, ctx);
         else if (type == "Spin")
             deserializeSpinComponent(c, node);
         else

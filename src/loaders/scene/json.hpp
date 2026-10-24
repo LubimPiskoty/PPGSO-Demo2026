@@ -29,7 +29,8 @@ inline const char *textureSlotNames[(int)render::TextureSlot::Count] = {
 
 // Indexed by PlayMode / AnimTarget
 inline const char *playModeNames[] = {"single", "loop", "pingpong"};
-inline const char *animTargetNames[] = {"position", "rotation", "scale"};
+inline const char *animTargetNames[] = {"position", "rotation", "scale",
+                                          "color"};
 // Indexed by LightType
 inline const char *lightTypeNames[] = {"directional", "point", "spot"};
 
@@ -41,6 +42,7 @@ std::string readString(const cJSON *json, const char *key,
                        const std::string &fallback = "");
 glm::vec3 toVec3(const cJSON *array, glm::vec3 fallback);
 glm::vec3 readVec3(const cJSON *json, const char *key, glm::vec3 fallback);
+glm::vec4 readVec4(const cJSON *json, const char *key, glm::vec4 fallback);
 glm::vec2 readVec2(const cJSON *json, const char *key, glm::vec2 fallback);
 
 // Null guid when missing or malformed

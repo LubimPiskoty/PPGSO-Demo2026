@@ -84,6 +84,7 @@ struct Light {
     float ambient;
     vec3 attenuation;
     int shadowIndex; // layer in uShadowMaps, -1 = casts no shadow
+    int shadowLocal; // directional: layer of the small box around the camera, -1 = none
     float cutOff;
 };
 
@@ -97,6 +98,7 @@ Light getLight(int i) {
     light.ambient = gpu.color.w;
     light.attenuation = gpu.attenuation.xyz;
     light.shadowIndex = int(floor(gpu.shadow.x + 0.5)); // rounds -1 to -1
+    light.shadowLocal = int(floor(gpu.shadow.y + 0.5));
     light.cutOff = gpu.direction.w;   // cos(uhlla
     return light;
 }
@@ -137,7 +139,11 @@ Surface getSurface() {
     Surface surf;
     surf.position = FragPos;
     surf.normal = getNormal();
-    surf.albedo = texture(uAlbedoTex, FragTexCoord).rgb;
+    vec4 albedo = texture(uAlbedoTex, FragTexCoord);
+    // Alpha-masked cards (tree leaves)
+    if (albedo.a < 0.5)
+        discard;
+    surf.albedo = albedo.rgb;
     surf.specular = uMaterial.specular;
     surf.shininess = uMaterial.shininess;
     surf.roughness = uRoughness;
@@ -194,7 +200,21 @@ float shadowFactor(Light light, Surface surf, vec3 lightDir) {
         float res = float(textureSize(uShadowMaps, 0).x) * POINT_SHADOW_SCALE;
         uv = clamp(uv, 0.5 / res, 1.0 - 0.5 / res) * POINT_SHADOW_SCALE;
     }
-    return texture(uShadowMaps, vec4(uv, float(layer), c.z - bias));
+    float shadow = texture(uShadowMaps, vec4(uv, float(layer), c.z - bias));
+
+    // The small box takes over near its middle and fades out at its edges
+    if (light.type == 0 && light.shadowLocal >= 0) {
+        vec4 lp = uLightSpace[light.shadowLocal] * vec4(surf.position, 1.0);
+        vec3 lc = lp.xyz / lp.w * 0.5 + 0.5;
+        vec2 edge = min(lc.xy, 1.0 - lc.xy);
+        float mask = smoothstep(0.0, 0.45, min(edge.x, edge.y));
+        if (mask > 0.0 && lc.z <= 1.0) {
+            float local = texture(uShadowMaps,
+                                  vec4(lc.xy, float(light.shadowLocal), lc.z - bias));
+            shadow = mix(shadow, local, mask);
+        }
+    }
+    return shadow;
 }
 
 // Phong ambient + diffuse + specular for light arriving from lightDir

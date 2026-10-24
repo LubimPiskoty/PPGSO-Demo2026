@@ -1,31 +1,39 @@
 #include "animator.hpp"
 
 #include "../scene/scene.hpp"
+#include "light.hpp"
 
 namespace component {
 
 void Animator::update(float dt) {
+    for (auto &track : tracks) {
+        if (!track.playback.playing)
+            continue;
+        track.playback.advance(dt);
+        apply(track);
+    }
+}
+
+void Animator::apply(const AnimatorTrack &track) {
     auto owner = node.lock();
-    if (!owner)
+    if (!owner || track.curve.getSegmentCount() == 0)
         return;
 
-    for (auto &track : tracks) {
-        if (!track.playback.playing || track.curve.getSegmentCount() == 0)
-            continue;
-
-        track.playback.advance(dt);
-        glm::vec3 value = track.curve.sample(track.playback.progress());
-        switch (track.target) {
-        case AnimTarget::Position:
-            owner->setLocalPos(value);
-            break;
-        case AnimTarget::Rotation:
-            owner->setLocalRotEuler(value);
-            break;
-        case AnimTarget::Scale:
-            owner->setLocalScale(value);
-            break;
-        }
+    glm::vec3 value = track.curve.sample(track.playback.progress());
+    switch (track.target) {
+    case AnimTarget::Position:
+        owner->setLocalPos(value);
+        break;
+    case AnimTarget::Rotation:
+        owner->setLocalRotEuler(value);
+        break;
+    case AnimTarget::Scale:
+        owner->setLocalScale(value);
+        break;
+    case AnimTarget::Color:
+        if (auto light = owner->get_component<Light>())
+            light->color = value;
+        break;
     }
 }
 

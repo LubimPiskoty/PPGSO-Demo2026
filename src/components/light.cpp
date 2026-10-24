@@ -64,19 +64,24 @@ glm::mat4 Light::shadowView(glm::vec3 focus, int face) const {
     if (type == LightType::Directional) {
         // No real position: put the box around the focus, half the depth
         // range behind it so casters between the sun and the focus are kept
-        const glm::vec3 eye = focus - dir * (shadowFar * 0.5f);
+        const float far = face == 1 ? localShadowFar : shadowFar;
+        const glm::vec3 eye = focus - dir * (far * 0.5f);
         return glm::lookAt(eye, eye + dir, up);
     }
     return glm::lookAt(position(), position() + dir, up);
 }
 
-glm::mat4 Light::shadowProjection() const {
+glm::mat4 Light::shadowProjection(int layer) const {
     if (type == LightType::Spot)
         return glm::perspective(glm::radians(cutOff * 2.f), 1.f, shadowNear,
                                 shadowFar);
     else if (type == LightType::Point)
         return glm::perspective(glm::half_pi<float>(), 1.f, shadowNear,
                                 shadowFar);
+    if (layer == 1)
+        return glm::ortho(-localShadowExtent, localShadowExtent,
+                          -localShadowExtent, localShadowExtent, shadowNear,
+                          localShadowFar);
     return glm::ortho(-shadowExtent, shadowExtent, -shadowExtent, shadowExtent,
                       shadowNear, shadowFar);
 }
@@ -88,7 +93,7 @@ render::GpuLight Light::toGpu() const {
     g.direction = glm::vec4(direction(), glm::cos(glm::radians(cutOff)));       // xyz dir
     g.color = glm::vec4(color * intensity, ambient); // rgb col, w ambient
     g.attenuation = glm::vec4(constant, linear, quadratic, 0.f); // point light
-    g.shadow = glm::vec4(-1.f, 0.f, 0.f, 0.f); // Scene::uploadLights sets it
+    g.shadow = glm::vec4(-1.f, -1.f, 0.f, 0.f); // Scene::uploadLights sets it
     return g;
 }
 

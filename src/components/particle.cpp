@@ -32,8 +32,8 @@ struct EmitterSettingsGPU {
     float pad5;
     glm::mat4 modelMatrix;
     glm::mat4 rotationMatrix;
-    float minLife, maxLife;
-    float pad6[2];
+    float minLife, maxLife, size;
+    float pad6;
 };
 static_assert(offsetof(EmitterSettingsGPU, modelMatrix) == 128);
 static_assert(offsetof(EmitterSettingsGPU, minLife) == 256);
@@ -126,6 +126,7 @@ void ParticleSystem::uploadEmitterSettings() {
     s.rotationMatrix = rotation;
     s.minLife = minLife;
     s.maxLife = maxLife;
+    s.size = size;
 
     glBindBuffer(GL_UNIFORM_BUFFER, emitterSettings.bufferID);
     glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(s), &s);

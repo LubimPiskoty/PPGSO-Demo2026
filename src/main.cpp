@@ -10,6 +10,7 @@
 #include "render/framebuffer.hpp"
 #include "scenes/ball_jar.hpp"
 #include "scenes/barrel_run.hpp"
+#include "scenes/ironheart_forge.hpp"
 #include "scenes/light_test.hpp"
 #include "scenes/particle_test.hpp"
 #include "scenes/physics_test.hpp"
@@ -67,6 +68,7 @@ int main() {
     profiler::init();
 
     scenes::SceneManager scenes;
+    scenes.add("Ironheart forge", scenes::ironheartForge);
     scenes.add("Shadow test", scenes::shadowTest);
     scenes.add("Light test", scenes::lightTest);
     scenes.add("Particle test", scenes::particle_test);
@@ -74,8 +76,6 @@ int main() {
     scenes.add("scene.json", [] { return loader::loadScene("scene.json"); });
     scenes.add("diorama.json",
                [] { return loader::loadScene("diorama.json"); });
-    // scenes.add("village_scene.json",
-    //            [] { return loader::loadScene("village_scene.json"); });
     scenes.setViewport((float)fbWidth, (float)fbHeight);
     scenes.load(0);
 

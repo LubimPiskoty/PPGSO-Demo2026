@@ -6,6 +6,7 @@
 
 #ifdef WITH_IMGUI
 #include "../components/UserMovement.hpp"
+#include "../components/animator.hpp"
 #include "../components/camera.hpp"
 #include "../scene/scene.hpp"
 #include "../scenes/scene_manager.hpp"
@@ -240,6 +241,44 @@ static void sceneWindow(scn::Scene &scene) {
     ImGui::End();
 }
 
+// Scrub bar for every Animator track in the scene
+static void animationWindow(scn::Scene &scene) {
+    ImGui::Begin("Animation");
+    const auto animators = scene.getAllComponents<component::Animator>();
+    if (ImGui::Button("Play all"))
+        for (auto &animator : animators)
+            animator->play();
+    ImGui::SameLine();
+    if (ImGui::Button("Pause all"))
+        for (auto &animator : animators)
+            animator->stop();
+    int id = 0;
+    for (auto &animator : animators) {
+        auto owner = animator->node.lock();
+        if (!owner)
+            continue;
+        for (auto &track : animator->tracks) {
+            ImGui::PushID(id++);
+            static const char *targets[] = {"position", "rotation", "scale"};
+            ImGui::SeparatorText(
+                (owner->name + " " + targets[(int)track.target]).c_str());
+            auto &pb = track.playback;
+            ImGui::Checkbox("Playing", &pb.playing);
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(80);
+            ImGui::DragFloat("Speed", &pb.speed, 0.05f, -4.f, 4.f);
+            // Dragging the slider moves the node even while paused
+            if (ImGui::SliderFloat("Time", &pb.time, 0.f, pb.duration,
+                                   "%.2f s"))
+                animator->apply(track);
+            ImGui::PopID();
+        }
+    }
+    if (id == 0)
+        ImGui::TextUnformatted("No animators in this scene");
+    ImGui::End();
+}
+
 // Scene picker/reload and physics controls
 static void physicsWindow(scenes::SceneManager &scenes) {
     scn::Scene &scene = scenes.scene();
@@ -273,6 +312,7 @@ void draw(scenes::SceneManager &scenes) {
 
     sceneWindow(scenes.scene());
     physicsWindow(scenes);
+    animationWindow(scenes.scene());
     profiler::drawWindow();
     lightPreviewWindow(scenes.scene());
 

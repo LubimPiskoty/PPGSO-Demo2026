@@ -20,7 +20,7 @@ void Instances::setInstances(std::vector<Instance> instances) {
 }
 
 void Instances::update(float dt) {
-    if (!dirty)
+    if (!dirty && !followChildren)
         return;
     auto owner = node.lock();
     if (!owner)
@@ -28,6 +28,16 @@ void Instances::update(float dt) {
     auto mesh = owner->get_component<Mesh>();
     if (!mesh || !mesh->model)
         return;
+
+    if (followChildren) {
+        std::vector<glm::mat4> transforms;
+        transforms.reserve(owner->children.size());
+        for (const auto &child : owner->children)
+            transforms.push_back(child->localTransform());
+        if (!transforms.empty())
+            mesh->model->makeInstanced(transforms);
+        return;
+    }
 
     std::vector<glm::mat4> transforms;
     transforms.reserve(instances.size());

@@ -24,6 +24,8 @@ class ParticleSystem : public ComponentBase<ParticleSystem> {
     glm::vec3 minVelocity = glm::vec3(-1), maxVelocity = glm::vec3(1);
     glm::vec3 minAccel = glm::vec3(0), maxAccel = glm::vec3(0, 0, -0.5f);
     float minLife = 1, maxLife = 10;
+    // Sprite size in world units
+    float size = 0.1f;
     float spawnInterval = 0.00001f, timer = 0;
     // Motion smear: seconds of movement stretched behind each particle, 0 = off
     float stretch = 0.05f;

@@ -50,6 +50,14 @@ struct Contact {
 struct Context {
     glm::vec3 gravity{0, -9.8f, 0};
     glm::vec3 windVel{0}; // TODO: make into vec field
+    // Bellows style gusts: with a period > 0, windVel follows windPeak scaled
+    // by a pulse (a push over the first part of each period, then calm)
+    glm::vec3 windPeak{0};
+    float windPulsePeriod = 0.f;
+    // Fraction of windPeak blowing the other way while the bellows refill,
+    // 0.5 or so makes the pushes cancel out so nothing drifts to one side
+    float windReturn = 0.f;
+    float windPulseTime = 0.f;
     float drag = 0.1f;
     // Angular velocity lost per second, independent of mass and size, so
     // small spins left over from contacts die out instead of lingering

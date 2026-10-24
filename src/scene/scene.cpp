@@ -64,7 +64,22 @@ void Scene::physics_step() {
     if (ctx.timeScale <= 0.f)
         return; // Paused
 
-    physics::step(ctx, ctx.fixedDt * ctx.timeScale);
+    const float dt = ctx.fixedDt * ctx.timeScale;
+    if (ctx.windPulsePeriod > 0.f) {
+        // Squeeze (smooth hump) over the first 45 % of the period, then the
+        // bellows refill and the air is still
+        constexpr float squeeze = 0.45f;
+        ctx.windPulseTime += dt;
+        const float phase =
+            std::fmod(ctx.windPulseTime / ctx.windPulsePeriod, 1.f);
+        const float pulse =
+            phase < squeeze
+                ? std::sin(glm::pi<float>() * phase / squeeze)
+                : -ctx.windReturn * std::sin(glm::pi<float>() * (phase - squeeze) /
+                                             (1.f - squeeze));
+        ctx.windVel = ctx.windPeak * pulse;
+    }
+    physics::step(ctx, dt);
 }
 
 void Scene::gatherPhysicsBodies(const std::shared_ptr<Node> &node) {
@@ -97,6 +112,10 @@ void Scene::uploadLights() {
         for (size_t i = 0; i < shadowLights.size(); i++) {
             if (shadowLights[i].lock() == light) {
                 gpu.shadow.x = (float)i;
+                // y = the local box's layer
+                if (light->shadowLayers() == 2 &&
+                    light->type == component::LightType::Directional)
+                    gpu.shadow.y = (float)i + 1;
                 break;
             }
         }
@@ -150,10 +169,14 @@ void Scene::shadow_pass() {
     for (size_t i = 0; i < casters.size(); i++) {
         shadowMaps->bindLayer(i, casters[i]->type == component::LightType::Point);
         glClear(GL_DEPTH_BUFFER_BIT);
-        const auto proj = casters[i]->shadowProjection();
-        const glm::vec3 focus =
-            camPos + camForward * (casters[i]->shadowFocusAhead *
-                                   casters[i]->shadowExtent);
+        const bool local = casters[i]->type == component::LightType::Directional &&
+                           faces[i] == 1;
+        const auto proj = casters[i]->shadowProjection(local ? 1 : 0);
+        const float extent = local ? casters[i]->localShadowExtent
+                                   : casters[i]->shadowExtent;
+        const float ahead = local ? casters[i]->localShadowFocusAhead
+                                  : casters[i]->shadowFocusAhead;
+        const glm::vec3 focus = camPos + camForward * (ahead * extent);
         const auto view = casters[i]->shadowView(focus, faces[i]);
         shadowMat.push_back(proj * view);
 

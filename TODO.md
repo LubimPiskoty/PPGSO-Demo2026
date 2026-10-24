@@ -51,6 +51,7 @@
       - [ ] Point light shadows (6 faces / cubemap array)
       - [ ] Fit the directional box to the camera frustum instead of fixed `shadowExtent`, snap to texels (stops shimmer)
       - [ ] Cull casters per light, skip re-render for static lights
+      - [ ] Distance fog in `lit.fs` to hide the far end of the directional shadow box (shadow quality drops with distance, so the big sun box can stay small instead of growing to cover every tree)
 - [ ] Post-processing [4b] (pick one) [David]
   - [ ] (1b) Basic per-pixel filter, e.g. grayscale, or via a framebuffer:
   - [ ] (2b) Convolution filter, or
