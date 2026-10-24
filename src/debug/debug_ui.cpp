@@ -259,7 +259,7 @@ static void animationWindow(scn::Scene &scene) {
             continue;
         for (auto &track : animator->tracks) {
             ImGui::PushID(id++);
-            static const char *targets[] = {"position", "rotation", "scale"};
+            static const char *targets[] = {"position", "rotation", "scale", "color"};
             ImGui::SeparatorText(
                 (owner->name + " " + targets[(int)track.target]).c_str());
             auto &pb = track.playback;
