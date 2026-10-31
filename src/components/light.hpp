@@ -26,6 +26,8 @@ class Light : public ComponentBase<Light> {
     // spot: half-angle of the cone in degrees (also the shadow map's FOV / 2)
     float cutOff = 12.5f;
 
+    float outerCutOff = 17.5f;
+
     // Renders a shadow map for this light (point lights use 6 layers, one per
     // cube face)
     bool castsShadow = false;
@@ -51,7 +53,7 @@ class Light : public ComponentBase<Light> {
 
     // TODO: not rendered yet, lit.fs skips spot lights
     static Light spot(glm::vec3 color = glm::vec3(1.f), float intensity = 1.f,
-                      float cutOff = 12.5f,
+                      float cutOff = 12.5f, float outerCutOff = 17.5f,
                       float linear = 0.09f, float quadratic = 0.032f);
 
     const char *type_name() const override { return "Light"; }

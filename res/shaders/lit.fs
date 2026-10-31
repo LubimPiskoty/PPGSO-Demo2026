@@ -48,7 +48,6 @@ uniform float uRoughness; // when mat doesnt have roughmap
 #define LIGHT_DIRECTIONAL 0
 #define LIGHT_POINT       1
 #define LIGHT_SPOT        2
-#define LIGHT_SPOT        2
 
 // One light as uploaded, matches render::GpuLight
 struct GpuLight {
@@ -57,6 +56,7 @@ struct GpuLight {
     vec4 color; // rgb = color, w = ambient strength
     vec4 attenuation; // x = constant, y = linear, z = quadratic
     vec4 shadow; // x = shadow map layer / ShadowBlock index, -1 = none
+    vec4 cutOff; // x = inner cutoff, y = outer cutoff
 };
 
 // Must match ShadowMaps::MAX_SHADOW_LIGHTS
@@ -86,6 +86,7 @@ struct Light {
     int shadowIndex; // layer in uShadowMaps, -1 = casts no shadow
     int shadowLocal; // directional: layer of the small box around the camera, -1 = none
     float cutOff;
+    float outerCutOff;
 };
 
 Light getLight(int i) {
@@ -99,7 +100,8 @@ Light getLight(int i) {
     light.attenuation = gpu.attenuation.xyz;
     light.shadowIndex = int(floor(gpu.shadow.x + 0.5)); // rounds -1 to -1
     light.shadowLocal = int(floor(gpu.shadow.y + 0.5));
-    light.cutOff = gpu.direction.w;   // cos(uhlla
+    light.cutOff = gpu.cutOff.x;   // cos(uhlla
+    light.outerCutOff = gpu.cutOff.y; // outer cutoff cos
     return light;
 }
 
@@ -268,17 +270,22 @@ vec3 spotLight(Light light, Surface surf, vec3 viewDir) {
 
     // angle calc
     float theta = dot(lightDir, normalize(-light.direction));
-    //float epsilon   = light.cutOff - light.outerCutOff;
-    //float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
-
-    // inside full phong
-    if (theta > light.cutOff) {
-        float shadow = shadowFactor(light, surf, lightDir);
-        return phong(light, surf, lightDir, viewDir, shadow) * attenuation;
-    }
+    float epsilon   = light.cutOff - light.outerCutOff;
+    float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
 
     // outside dark ambient
-    return light.color * light.ambient * surf.albedo * attenuation;
+    vec3 ambient = light.color * light.ambient * surf.albedo;
+
+    // inside full phong
+    vec3 lit = vec3(0.0);
+    if (intensity > 0.0) {
+        float shadow = shadowFactor(light, surf, lightDir);
+        Light direct = light;
+        direct.ambient = 0.0; // ambient uz je hore, nech sa neratá dvakrát
+        lit = phong(direct, surf, lightDir, viewDir, shadow);
+    }
+
+    return (ambient + lit * intensity) * attenuation;
 }
 
 // ---------------------------------------------------------------------------

@@ -24,11 +24,12 @@ Light Light::point(glm::vec3 color, float intensity, float linear,
     return light;
 }
 
-Light Light::spot(glm::vec3 color, float intensity, float cutOff, float linear, float quadratic) {
+Light Light::spot(glm::vec3 color, float intensity, float cutOff, float outerCutOff, float linear, float quadratic) {
     Light light(LightType::Spot);
     light.color = color;
     light.intensity = intensity;
     light.cutOff = cutOff;
+    light.outerCutOff = outerCutOff;
     light.linear = linear;
     light.quadratic = quadratic;
     return light;
@@ -90,7 +91,8 @@ glm::mat4 Light::shadowProjection(int layer) const {
 render::GpuLight Light::toGpu() const {
     render::GpuLight g;
     g.position = glm::vec4(position(), (float)type); // xyz pos, w typ
-    g.direction = glm::vec4(direction(), glm::cos(glm::radians(cutOff)));       // xyz dir
+    g.direction = glm::vec4(direction(), 0.f);       // xyz dir, w cutoff
+    g.cutOff = glm::vec4(glm::cos(glm::radians(cutOff)), glm::cos(glm::radians(outerCutOff)), 0.f, 0.f);
     g.color = glm::vec4(color * intensity, ambient); // rgb col, w ambient
     g.attenuation = glm::vec4(constant, linear, quadratic, 0.f); // point light
     g.shadow = glm::vec4(-1.f, -1.f, 0.f, 0.f); // Scene::uploadLights sets it

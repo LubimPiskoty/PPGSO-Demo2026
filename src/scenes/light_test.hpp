@@ -117,8 +117,9 @@ scn::Scene lightTest() {
         // Key: strongest, front left and high, casts the shadow
         auto key = addLamp("Key light", {-3.5f, 4.f, 4.f}, center);
         auto keyLight = key->add_component<component::Light>(
-            component::Light::spot(glm::vec3(1.f, 0.95f, 0.85f), 4.f, 35.f,
-                                   0.09f, 0.032f));
+            component::Light::spot(glm::vec3(1.f, 0.95f, 0.85f), 4.f,
+                                   25.f, 35.f,      // inner, outer
+                                   0.09f, 0.032f)); // linear, quadratic
         keyLight->castsShadow = true;
         keyLight->shadowFar = 30.f;
 
