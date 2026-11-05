@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdio>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace component {
@@ -15,39 +16,108 @@ enum class PlayMode {
     PingPong // Play forward then backward
 };
 
-template <typename T> struct Bezier {
-  public:
-    std::vector<T> control;
+// One keyframe: the value at a time, and how fast it changes (per second)
+// arriving at and leaving the key. in != out makes a sharp corner.
+template <typename T> struct Key {
+    float time = 0.f;
+    T value{};
+    T in{};
+    T out{};
+};
 
-    // Non-overlapping segments: control.size() = numSegments * 3 + 1
-    int getSegmentCount() const {
-        if (control.size() < 4)
-            return 0;
-        return ((int)control.size() - 1) / 3;
+// Keyframes sorted by time, cubic between neighbours
+template <typename T> struct Curve {
+    using Point = std::pair<float, T>; // (time, value)
+
+    std::vector<Key<T>> keys;
+
+    bool empty() const { return keys.empty(); }
+
+    float getDuration() const { return keys.empty() ? 0.f : keys.back().time; }
+
+    // Value at an absolute time, holds the first / last key outside the
+    // curve. Needs at least one key.
+    T sample(float time) const {
+        if (time <= keys.front().time)
+            return keys.front().value;
+        if (time >= keys.back().time)
+            return keys.back().value;
+
+        // First key after time. There is a key at or before time, so a and b
+        // always differ in time, even with two keys on the same time (a step).
+        auto next = std::upper_bound(
+            keys.begin(), keys.end(), time,
+            [](float t, const Key<T> &key) { return t < key.time; });
+        const Key<T> &a = *(next - 1), &b = *next;
+        const float dt = b.time - a.time;
+        const float t = (time - a.time) / dt;
+
+        // A speed times a third of the segment gives the Bezier handle
+        const T p1 = a.value + a.out * (dt / 3.f);
+        const T p2 = b.value - b.in * (dt / 3.f);
+
+        const float u = 1.f - t;
+        return (u * u * u) * a.value + (3.f * u * u * t) * p1 +
+               (3.f * u * t * t) * p2 + (t * t * t) * b.value;
     }
 
-    T eval(int segmentIndex, const float t) const {
-        // For non-overlapping: segment i starts at control[i*3]
-        int i = segmentIndex * 3;
-        if (i + 3 >= (int)control.size())
-            return control.back();
-
-        const float a = std::pow(1 - t, 3);
-        const float b = 3 * std::pow(1 - t, 2) * t;
-        const float c = 3 * std::pow(1 - t, 1) * t * t;
-        const float d = std::pow(t, 3);
-
-        return a * control[i] + b * control[i + 1] + c * control[i + 2] +
-               d * control[i + 3];
+    // Keys with zero speed: eases in and out of every key and never overshoots
+    static Curve flat(const std::vector<Point> &points) {
+        Curve curve;
+        for (const auto &[time, value] : points)
+            curve.keys.push_back({time, value, T{}, T{}});
+        return curve;
     }
 
-    // Evaluate the whole curve at u in [0, 1], every segment takes the same
-    // share of u. Needs getSegmentCount() > 0.
-    T sample(float u) const {
-        const int segmentCount = getSegmentCount();
-        float position = std::clamp(u, 0.f, 1.f) * segmentCount;
-        int segmentIndex = std::min((int)position, segmentCount - 1);
-        return eval(segmentIndex, position - segmentIndex);
+    // Catmull-Rom: passes through the points without stopping, the speed at a
+    // key is the slope between its neighbours. Overshoots into a hold, use
+    // flat() there.
+    static Curve smooth(const std::vector<Point> &points) {
+        Curve curve = flat(points);
+        const int n = (int)points.size();
+        for (int i = 0; i < n && n > 1; i++) {
+            const Point &prev = points[std::max(i - 1, 0)];
+            const Point &next = points[std::min(i + 1, n - 1)];
+            const T speed =
+                (next.second - prev.second) / (next.first - prev.first);
+            curve.keys[i].in = curve.keys[i].out = speed;
+        }
+        return curve;
+    }
+
+    // smooth() with the values evenly spaced over the duration
+    static Curve smoothEven(const std::vector<T> &values, float duration) {
+        std::vector<Point> points;
+        const int n = (int)values.size();
+        for (int i = 0; i < n; i++)
+            points.push_back({n > 1 ? duration * i / (n - 1) : 0.f, values[i]});
+        return smooth(points);
+    }
+
+    // From Bezier control points, every segment gets the same share of the
+    // duration: P0, P0 right handle, P1 left handle, P1, ... (3 * segments + 1
+    // points, the layout of tools/export_curves.py). Empty if there are too
+    // few.
+    static Curve fromBezier(const std::vector<T> &control, float duration) {
+        Curve curve;
+        const int segments = ((int)control.size() - 1) / 3;
+        if (segments < 1 || duration <= 0.f)
+            return curve;
+
+        const float dt = duration / segments;
+        curve.keys.resize(segments + 1);
+        for (int i = 0; i <= segments; i++) {
+            Key<T> &key = curve.keys[i];
+            key.time = dt * i;
+            key.value = control[i * 3];
+            if (i < segments)
+                key.out = (control[i * 3 + 1] - key.value) * (3.f / dt);
+            if (i > 0)
+                key.in = (key.value - control[i * 3 - 1]) * (3.f / dt);
+        }
+        curve.keys.front().in = curve.keys.front().out;
+        curve.keys.back().out = curve.keys.back().in;
+        return curve;
     }
 };
 
@@ -55,8 +125,8 @@ template <typename T> struct Bezier {
 // according to the play mode
 struct Playback {
     float time = 0.f;
-    float duration = 5.f;
     float speed = 1.f;
+    float duration = 1.f;
     PlayMode mode = PlayMode::Loop;
     bool playing = false;
     bool forward = true;
@@ -65,7 +135,7 @@ struct Playback {
         if (!playing)
             return;
 
-        time += dt * speed * (forward ? 1.f : -1.f);
+        time += (float)dt * speed * (forward ? 1.f : -1.f);
 
         if (mode == PlayMode::Single) {
             if (time >= duration) {
@@ -92,58 +162,39 @@ struct Playback {
             }
         }
     }
-
-    // Time mapped to [0, 1]
-    float progress() const {
-        return duration > 0.f ? std::clamp(time / duration, 0.f, 1.f) : 0.f;
-    }
 };
 
 template <typename T>
 class Animation : public component::ComponentBase<Animation<T>> {
-    const Bezier<T> curve;
+    const Curve<T> curve;
     T &property;
     Playback playback;
 
   public:
-    Animation(const Bezier<T> &curve, T &property)
-        : curve(curve), property(property) {}
+    Animation(const Curve<T> &curve, T &property)
+        : curve(curve), property(property) {
+        playback.duration = curve.getDuration();
+    }
 
     void update(float dt) override {
         if (!this->enabled || !playback.playing)
             return;
 
         playback.advance(dt);
-        if (curve.getSegmentCount() > 0)
-            property = curve.sample(playback.progress());
+        if (!curve.empty())
+            property = curve.sample(playback.time);
     }
 
-    void play() {
-        playback.playing = true;
-    }
+    void play() { playback.playing = true; }
 
-    void stop() {
-        playback.playing = false;
-    }
+    void stop() { playback.playing = false; }
 
-    bool isPlaying() const {
-        return playback.playing;
-    }
+    bool isPlaying() const { return playback.playing; }
 
-    void setMaxTime(float t) {
-        playback.duration = t;
-    }
+    void setPlayMode(PlayMode mode) { playback.mode = mode; }
 
-    void setPlayMode(PlayMode mode) {
-        playback.mode = mode;
-    }
+    void setPlaySpeed(float s) { playback.speed = s; }
 
-    void setPlaySpeed(float s) {
-        playback.speed = s;
-    }
-
-    const char *type_name() const override {
-        return "Animation";
-    }
+    const char *type_name() const override { return "Animation"; }
 };
 } // namespace component

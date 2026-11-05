@@ -2,6 +2,7 @@
 
 #include "animation.hpp"
 #include "ecs.hpp"
+#include <functional>
 #include <glm/glm.hpp>
 #include <string>
 #include <vector>
@@ -9,18 +10,19 @@
 namespace component {
 
 // Which part of the node's local transform a track drives
-// Color drives the colour of the node's Light
-enum class AnimTarget { Position, Rotation, Scale, Color };
+// Color drives the colour of the node's Light, Property any value in the scene
+enum class AnimTarget { Position, Rotation, Scale, Color, Property };
 
 struct AnimatorTrack {
     AnimTarget target = AnimTarget::Position;
-    Bezier<glm::vec3> curve;
+    Curve<glm::vec3> curve;
     Playback playback;
+    std::function<void(const glm::vec3 &)> setProperty; // Property only
 };
 
 // Animates the owner node's local position / rotation (Euler radians) /
-// scale, or its light's colour, along Bezier curves. Unlike Animation<T> it only targets the node
-// transform, so it can be loaded with the scene.
+// scale, its light's colour, or any float / vec3 by reference, along keyframe
+// curves. Everything it drives shows up in the Animation window.
 class Animator : public ComponentBase<Animator> {
   public:
     std::vector<AnimatorTrack> tracks;
@@ -31,16 +33,22 @@ class Animator : public ComponentBase<Animator> {
     // scrub a paused track
     void apply(const AnimatorTrack &track);
 
-    AnimatorTrack &addTrack(AnimTarget target, Bezier<glm::vec3> curve,
-                            float duration, PlayMode mode = PlayMode::Loop);
+    // A track lasts until the last key of its curve
+    AnimatorTrack &addTrack(AnimTarget target, const Curve<glm::vec3> &curve,
+                            PlayMode mode = PlayMode::Loop);
+    // Animates a value directly. It must outlive this Animator.
+    AnimatorTrack &addTrack(float &property, const Curve<float> &curve,
+                            PlayMode mode = PlayMode::Loop);
+    AnimatorTrack &addTrack(glm::vec3 &property, const Curve<glm::vec3> &curve,
+                            PlayMode mode = PlayMode::Loop);
 
     // Start or stop every track
     void play();
     void stop();
+    // Moves every track to the given time on the shared timeline
+    void seek(float time);
 
-    const char *type_name() const override {
-        return "Animator";
-    }
+    const char *type_name() const override { return "Animator"; }
 
     std::string info() const override {
         return std::to_string(tracks.size()) + " tracks";

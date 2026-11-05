@@ -252,6 +252,20 @@ static void animationWindow(scn::Scene &scene) {
     if (ImGui::Button("Pause all"))
         for (auto &animator : animators)
             animator->stop();
+
+    // One timeline for everything: the camera, doors, sun box, ... stay in sync
+    float timeline = 0.f, timelineEnd = 0.f;
+    for (auto &animator : animators)
+        for (auto &track : animator->tracks)
+            if (track.playback.mode == component::PlayMode::Single) {
+                timeline = std::max(timeline, track.playback.time);
+                timelineEnd = std::max(timelineEnd, track.playback.duration);
+            }
+    if (timelineEnd > 0.f &&
+        ImGui::SliderFloat("Timeline", &timeline, 0.f, timelineEnd, "%.2f s"))
+        for (auto &animator : animators)
+            animator->seek(timeline);
+
     int id = 0;
     for (auto &animator : animators) {
         auto owner = animator->node.lock();
@@ -259,7 +273,8 @@ static void animationWindow(scn::Scene &scene) {
             continue;
         for (auto &track : animator->tracks) {
             ImGui::PushID(id++);
-            static const char *targets[] = {"position", "rotation", "scale", "color"};
+            static const char *targets[] = {"position", "rotation", "scale", "color",
+                                            "property"};
             ImGui::SeparatorText(
                 (owner->name + " " + targets[(int)track.target]).c_str());
             auto &pb = track.playback;

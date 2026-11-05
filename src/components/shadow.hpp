@@ -12,6 +12,10 @@ namespace component {
 // pass, the Mesh does that.
 class Shadow : public component::ComponentBase<Shadow> {
   public:
+    // Drawn only into baked maps, for far static scenery that lights updated
+    // every frame don't need
+    bool bakedOnly = false;
+
     // Called by Scene::shadow_pass with the light's matrices and depth shaders
     void drawShadow(glm::mat4 projection, glm::mat4 lightView,
                     const render::Shader &depthShader,

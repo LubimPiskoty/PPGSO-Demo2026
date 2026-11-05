@@ -48,7 +48,7 @@ glm::vec3 Light::position() const {
     return n ? n->globalPosition() : glm::vec3(0.f);
 }
 
-glm::mat4 Light::shadowView(glm::vec3 focus, int face) const {
+glm::mat4 Light::shadowView(int face) const {
     if (type == LightType::Point) {
         // Cube faces, same order the lit shader picks them in
         static const glm::vec3 dirs[6] = {{1, 0, 0},  {-1, 0, 0}, {0, 1, 0},
@@ -63,26 +63,20 @@ glm::mat4 Light::shadowView(glm::vec3 focus, int face) const {
     const glm::vec3 up = std::abs(dir.y) > 0.99f ? glm::vec3(1.f, 0.f, 0.f)
                                                  : glm::vec3(0.f, 1.f, 0.f);
     if (type == LightType::Directional) {
-        // No real position: put the box around the focus, half the depth
-        // range behind it so casters between the sun and the focus are kept
-        const float far = face == 1 ? localShadowFar : shadowFar;
-        const glm::vec3 eye = focus - dir * (far * 0.5f);
+        // Box centered on the node: the eye sits half the depth range back
+        const glm::vec3 eye = position() - dir * (shadowFar * 0.5f);
         return glm::lookAt(eye, eye + dir, up);
     }
     return glm::lookAt(position(), position() + dir, up);
 }
 
-glm::mat4 Light::shadowProjection(int layer) const {
+glm::mat4 Light::shadowProjection() const {
     if (type == LightType::Spot)
         return glm::perspective(glm::radians(cutOff * 2.f), 1.f, shadowNear,
                                 shadowFar);
     else if (type == LightType::Point)
         return glm::perspective(glm::half_pi<float>(), 1.f, shadowNear,
                                 shadowFar);
-    if (layer == 1)
-        return glm::ortho(-localShadowExtent, localShadowExtent,
-                          -localShadowExtent, localShadowExtent, shadowNear,
-                          localShadowFar);
     return glm::ortho(-shadowExtent, shadowExtent, -shadowExtent, shadowExtent,
                       shadowNear, shadowFar);
 }
@@ -95,7 +89,11 @@ render::GpuLight Light::toGpu() const {
     g.cutOff = glm::vec4(glm::cos(glm::radians(cutOff)), glm::cos(glm::radians(outerCutOff)), 0.f, 0.f);
     g.color = glm::vec4(color * intensity, ambient); // rgb col, w ambient
     g.attenuation = glm::vec4(constant, linear, quadratic, 0.f); // point light
-    g.shadow = glm::vec4(-1.f, -1.f, 0.f, 0.f); // Scene::uploadLights sets it
+    g.shadow = glm::vec4(-1.f, 0.f, 0.f, 0.f); // Scene::uploadLights sets x
+    // directional: size of a shadow map texel in depth units, for the bias
+    if (type == LightType::Directional)
+        g.shadow.y = 2.f * shadowExtent / render::ShadowMaps::RESOLUTION /
+                     (shadowFar - shadowNear);
     return g;
 }
 

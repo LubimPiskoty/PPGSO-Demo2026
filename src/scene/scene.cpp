@@ -112,10 +112,6 @@ void Scene::uploadLights() {
         for (size_t i = 0; i < shadowLights.size(); i++) {
             if (shadowLights[i].lock() == light) {
                 gpu.shadow.x = (float)i;
-                // y = the local box's layer
-                if (light->shadowLayers() == 2 &&
-                    light->type == component::LightType::Directional)
-                    gpu.shadow.y = (float)i + 1;
                 break;
             }
         }
@@ -141,56 +137,40 @@ void Scene::shadow_pass() {
         }
     }
 
-    shadowMaps->sync(casters.size());
+    const bool wiped = shadowMaps->sync(casters.size());
     shadowLights.assign(casters.begin(), casters.end());
+    shadowMatrices.resize(casters.size());
 
     GLint viewport[4];
     glGetIntegerv(GL_VIEWPORT, viewport);
 
-    // Directional shadow boxes follow the camera
-    // Camera position and its horizontal look direction, so the box can be
-    // pushed ahead of the camera (per light, shadowFocusAhead)
-    glm::vec3 camPos{0.f}, camForward{0.f};
-    if (auto cam = activeCamera.lock())
-        if (auto camNode = cam->node.lock()) {
-            camPos = camNode->globalPosition();
-            camForward = camNode->globalRotation() * glm::vec3(0.f, 0.f, -1.f);
-            camForward.y = 0.f; // looking up/down shouldn't move it
-            if (glm::dot(camForward, camForward) > 1e-6f)
-                camForward = glm::normalize(camForward);
-            else
-                camForward = glm::vec3(0.f);
-        }
-
     // Only nodes with a Shadow component are rendered into the maps
     const auto shadowCasters = getAllComponents<component::Shadow>();
     glCullFace(GL_FRONT);
-    std::vector<glm::mat4> shadowMat;
     for (size_t i = 0; i < casters.size(); i++) {
+        if (casters[i]->bakedShadow && !casters[i]->shadowDirty && !wiped)
+            continue;
+        const auto proj = casters[i]->shadowProjection();
+        const auto view = casters[i]->shadowView(faces[i]);
+        shadowMatrices[i] = proj * view;
+
         shadowMaps->bindLayer(i, casters[i]->type == component::LightType::Point);
         glClear(GL_DEPTH_BUFFER_BIT);
-        const bool local = casters[i]->type == component::LightType::Directional &&
-                           faces[i] == 1;
-        const auto proj = casters[i]->shadowProjection(local ? 1 : 0);
-        const float extent = local ? casters[i]->localShadowExtent
-                                   : casters[i]->shadowExtent;
-        const float ahead = local ? casters[i]->localShadowFocusAhead
-                                  : casters[i]->shadowFocusAhead;
-        const glm::vec3 focus = camPos + camForward * (ahead * extent);
-        const auto view = casters[i]->shadowView(focus, faces[i]);
-        shadowMat.push_back(proj * view);
-
         for (auto &shadow : shadowCasters)
-            if (shadow->enabled)
+            if (shadow->enabled &&
+                (casters[i]->bakedShadow || !shadow->bakedOnly))
                 shadow->drawShadow(proj, view, depthShader,
                                    depthShaderInstanced);
     }
     glCullFace(GL_BACK);
     shadowMaps->endLayers();
+    // After the loop, a point light has 6 faces to render
+    for (auto &light : casters)
+        light->shadowDirty = false;
 
     render::Framebuffer::unbind(viewport[2], viewport[3]);
     glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 
-    shadowMaps->uploadGPU(shadowMat);
+    shadowMaps->uploadGPU(shadowMatrices);
 }
 }; // namespace scn

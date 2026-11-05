@@ -56,6 +56,7 @@ struct GpuLight {
     vec4 color; // rgb = color, w = ambient strength
     vec4 attenuation; // x = constant, y = linear, z = quadratic
     vec4 shadow; // x = shadow map layer / ShadowBlock index, -1 = none
+                  // y = directional: texel size in depth units
     vec4 cutOff; // x = inner cutoff, y = outer cutoff
 };
 
@@ -84,7 +85,7 @@ struct Light {
     float ambient;
     vec3 attenuation;
     int shadowIndex; // layer in uShadowMaps, -1 = casts no shadow
-    int shadowLocal; // directional: layer of the small box around the camera, -1 = none
+    float shadowTexel; // directional: map texel size in depth units
     float cutOff;
     float outerCutOff;
 };
@@ -99,8 +100,8 @@ Light getLight(int i) {
     light.ambient = gpu.color.w;
     light.attenuation = gpu.attenuation.xyz;
     light.shadowIndex = int(floor(gpu.shadow.x + 0.5)); // rounds -1 to -1
-    light.shadowLocal = int(floor(gpu.shadow.y + 0.5));
-    light.cutOff = gpu.cutOff.x;   // cos(uhlla
+    light.shadowTexel = gpu.shadow.y;
+    light.cutOff = gpu.cutOff.x;      // inner cutoff cos
     light.outerCutOff = gpu.cutOff.y; // outer cutoff cos
     return light;
 }
@@ -172,10 +173,37 @@ Surface getSurface() {
 // Lighting
 // ---------------------------------------------------------------------------
 
+// clip space -> [0, 1] texture space of a layer
+vec3 shadowCoords(int layer, vec3 position) {
+    vec4 p = uLightSpace[layer] * vec4(position, 1.0);
+    return p.xyz / p.w * 0.5 + 0.5;
+}
+
+// 1 = lit, 0 = in shadow. Texels can be large, so average around them to soften
+// the stair steps on shadow edges. Depth is linear over the whole range, so the
+// bias scales with the texel size, not with shadowFar.
+float directionalShadow(Light light, Surface surf, vec3 lightDir) {
+    vec3 c = shadowCoords(light.shadowIndex, surf.position);
+    if (c.z > 1.0)
+        return 1.0; // behind the far plane
+
+    float slope = 1.0 - dot(surf.normal, lightDir);
+    float bias = light.shadowTexel * (2.0 + 2.0 * slope);
+    vec2 texel = 1.0 / vec2(textureSize(uShadowMaps, 0).xy);
+    float lit = 0.0;
+    for (int x = -1; x <= 1; x++)
+        for (int y = -1; y <= 1; y++)
+            lit += texture(uShadowMaps, vec4(c.xy + vec2(x, y) * texel,
+                                             float(light.shadowIndex), c.z - bias));
+    return lit / 9.0;
+}
+
 // 1 = lit, 0 = in shadow (hardware filtered between the two at the edges)
 float shadowFactor(Light light, Surface surf, vec3 lightDir) {
     if (light.shadowIndex < 0)
         return 1.0;
+    if (light.type == LIGHT_DIRECTIONAL)
+        return directionalShadow(light, surf, lightDir);
 
     int layer = light.shadowIndex;
     if (light.type == 1) { // point: layer + cube face (+X -X +Y -Y +Z -Z)
@@ -187,8 +215,7 @@ float shadowFactor(Light light, Surface surf, vec3 lightDir) {
         layer += face;
     }
 
-    vec4 p = uLightSpace[layer] * vec4(surf.position, 1.0);
-    vec3 c = p.xyz / p.w * 0.5 + 0.5; // clip space -> [0, 1] texture space
+    vec3 c = shadowCoords(layer, surf.position);
     if (c.z > 1.0)
         return 1.0; // behind the far plane
 
@@ -202,21 +229,7 @@ float shadowFactor(Light light, Surface surf, vec3 lightDir) {
         float res = float(textureSize(uShadowMaps, 0).x) * POINT_SHADOW_SCALE;
         uv = clamp(uv, 0.5 / res, 1.0 - 0.5 / res) * POINT_SHADOW_SCALE;
     }
-    float shadow = texture(uShadowMaps, vec4(uv, float(layer), c.z - bias));
-
-    // The small box takes over near its middle and fades out at its edges
-    if (light.type == 0 && light.shadowLocal >= 0) {
-        vec4 lp = uLightSpace[light.shadowLocal] * vec4(surf.position, 1.0);
-        vec3 lc = lp.xyz / lp.w * 0.5 + 0.5;
-        vec2 edge = min(lc.xy, 1.0 - lc.xy);
-        float mask = smoothstep(0.0, 0.45, min(edge.x, edge.y));
-        if (mask > 0.0 && lc.z <= 1.0) {
-            float local = texture(uShadowMaps,
-                                  vec4(lc.xy, float(light.shadowLocal), lc.z - bias));
-            shadow = mix(shadow, local, mask);
-        }
-    }
-    return shadow;
+    return texture(uShadowMaps, vec4(uv, float(layer), c.z - bias));
 }
 
 // Phong ambient + diffuse + specular for light arriving from lightDir

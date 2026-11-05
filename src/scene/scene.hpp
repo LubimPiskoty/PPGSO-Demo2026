@@ -74,6 +74,8 @@ class Scene {
     render::Shader depthShader, depthShaderInstanced;
 
     render::LightBuffer lightBuffer;
+    // Matrix each shadow layer was last rendered with
+    std::vector<glm::mat4> shadowMatrices;
     // Recursively get all pbodies in scene (slow now, no caching)
     void gatherPhysicsBodies(const std::shared_ptr<Node> &node);
     // Collects lights from the scene and uploads them to the UBO

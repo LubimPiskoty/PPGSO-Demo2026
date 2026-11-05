@@ -13,7 +13,6 @@
 #include "../../components/shadow.hpp"
 #include "../../components/skybox.hpp"
 #include "../../components/spin.hpp"
-#include "../../components/zone_switch.hpp"
 #include "../curve_loader.hpp"
 #include "../model_loader.hpp"
 #include "../texture_loader.hpp"
@@ -261,8 +260,7 @@ static void deserializeAnimatorComponent(const cJSON *json,
         component::AnimatorTrack track;
         track.target = (component::AnimTarget)readEnum(
             t, "target", animTargetNames, (int)track.target);
-        track.playback.duration =
-            readNumber(t, "duration", track.playback.duration);
+        const float duration = readNumber(t, "duration", 5.f);
         track.playback.speed = readNumber(t, "speed", track.playback.speed);
         track.playback.mode = (component::PlayMode)readEnum(
             t, "mode", playModeNames, (int)track.playback.mode);
@@ -271,13 +269,17 @@ static void deserializeAnimatorComponent(const cJSON *json,
         // Either a curve file from res/curves or inline control points
         std::string curveFile = readString(t, "curve");
         if (!curveFile.empty()) {
-            track.curve = loadCurve(curveFile);
+            track.curve = loadCurve(curveFile, duration);
         } else {
+            std::vector<glm::vec3> control;
             const cJSON *point;
             cJSON_ArrayForEach(point,
                                cJSON_GetObjectItemCaseSensitive(t, "control"))
-                track.curve.control.push_back(toVec3(point, glm::vec3(0.f)));
+                control.push_back(toVec3(point, glm::vec3(0.f)));
+            track.curve =
+                component::Curve<glm::vec3>::fromBezier(control, duration);
         }
+        track.playback.duration = track.curve.getDuration();
         animator->tracks.push_back(track);
     }
 }
@@ -300,15 +302,8 @@ static void deserializeLightComponent(const cJSON *json,
     light.quadratic = readNumber(json, "quadratic", light.quadratic);
     light.cutOff = readNumber(json, "cutOff", light.cutOff);
     light.castsShadow = readBool(json, "castsShadow", light.castsShadow);
+    light.bakedShadow = readBool(json, "bakedShadow", light.bakedShadow);
     light.shadowExtent = readNumber(json, "shadowExtent", light.shadowExtent);
-    light.localShadowExtent =
-        readNumber(json, "localShadowExtent", light.localShadowExtent);
-    light.localShadowFocusAhead =
-        readNumber(json, "localShadowFocusAhead", light.localShadowFocusAhead);
-    light.localShadowFar =
-        readNumber(json, "localShadowFar", light.localShadowFar);
-    light.shadowFocusAhead =
-        readNumber(json, "shadowFocusAhead", light.shadowFocusAhead);
     light.shadowNear = readNumber(json, "shadowNear", light.shadowNear);
     light.shadowFar = readNumber(json, "shadowFar", light.shadowFar);
     node->add_component<Light>(light);
@@ -337,17 +332,6 @@ static void deserializeParticleSystemComponent(
     p->stretch = readNumber(json, "stretch", p->stretch);
     p->maxParticles =
         (uint32_t)readNumber(json, "maxParticles", (float)p->maxParticles);
-}
-
-static void deserializeZoneSwitchComponent(const cJSON *json,
-                                           std::shared_ptr<scn::Node> node) {
-    auto z = node->add_component<component::ZoneSwitch>();
-    z->boxMin = readVec3(json, "min", z->boxMin);
-    z->boxMax = readVec3(json, "max", z->boxMax);
-    z->insideGuid = readGuid(json, "inside");
-    z->outsideGuid = readGuid(json, "outside");
-    z->blend = readNumber(json, "blend", z->blend);
-    z->blendInside = readNumber(json, "blendInside", z->blendInside);
 }
 
 static void deserializeSkyboxComponent(const cJSON *json,
@@ -470,8 +454,6 @@ static std::shared_ptr<scn::Node> deserializeNode(const cJSON *json,
             node->add_component<component::Shadow>();
         else if (type == "Skybox")
             deserializeSkyboxComponent(c, node, scene);
-        else if (type == "ZoneSwitch")
-            deserializeZoneSwitchComponent(c, node);
         else if (type == "ParticleSystem")
             deserializeParticleSystemComponent(c, node, ctx);
         else if (type == "Spin")

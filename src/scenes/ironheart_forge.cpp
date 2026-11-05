@@ -1,7 +1,7 @@
 #include "ironheart_forge.hpp"
 
-#include "../components/animator.hpp"
 #include "../components/UserMovement.hpp"
+#include "../components/animator.hpp"
 #include "../components/camera.hpp"
 #include "../components/instances.hpp"
 #include "../components/light.hpp"
@@ -10,7 +10,6 @@
 #include "../components/physicsbody.hpp"
 #include "../components/shadow.hpp"
 #include "../components/skybox.hpp"
-#include "../components/zone_switch.hpp"
 #include "../loaders/model_loader.hpp"
 #include "../render/compute_shader.hpp"
 #include "../render/material.hpp"
@@ -81,21 +80,6 @@ std::vector<Instance> instanceList(const cJSON *list) {
 glm::vec3 lookEuler(glm::vec3 d) {
     d = glm::normalize(d);
     return {std::asin(d.y), std::atan2(-d.x, -d.z), 0.f};
-}
-
-// Catmull-Rom through the points as cubic Bezier control points
-component::Bezier<glm::vec3> catmullRom(const std::vector<glm::vec3> &p) {
-    component::Bezier<glm::vec3> curve;
-    const int n = (int)p.size();
-    curve.control.push_back(p[0]);
-    for (int i = 0; i < n - 1; i++) {
-        const glm::vec3 &p0 = p[std::max(i - 1, 0)], &p1 = p[i], &p2 = p[i + 1],
-                        &p3 = p[std::min(i + 2, n - 1)];
-        curve.control.push_back(p1 + (p2 - p0) / 6.f);
-        curve.control.push_back(p2 - (p3 - p1) / 6.f);
-        curve.control.push_back(p2);
-    }
-    return curve;
 }
 
 void makeStatic(component::PhysicsBody &pb) {
@@ -188,9 +172,9 @@ scn::Scene ironheartForge() {
     // The shell is seen from inside and outside, so it stays at the top level.
     // Everything else in the layout is inside the forge.
     const std::set<std::string> shell = {
-        "SM_Forge_Building", "SM_Forge_Roof", "SM_Forge_Hood",
-        "SM_Window_Shutters", "SM_Door_L", "SM_Door_R", "SM_Terrain",
-        "SM_River_Water"};
+        "SM_Forge_Building",  "SM_Forge_Roof", "SM_Forge_Hood",
+        "SM_Window_Shutters", "SM_Door_L",     "SM_Door_R",
+        "SM_Terrain",         "SM_River_Water"};
     // Water and the huge terrain would be drawn into every shadow layer
     const std::set<std::string> noShadow = {"SM_River_Water", "SM_QuenchWater",
                                             "SM_Terrain"};
@@ -265,15 +249,17 @@ scn::Scene ironheartForge() {
                 get(get(get(assets, asset.c_str()), "collider"), "radius"));
             const cJSON *t;
             cJSON_ArrayForEach(t, list) {
-                Piece p{asset, radius, num(t, 6),
+                Piece p{asset,
+                        radius,
+                        num(t, 6),
                         {num(t, 3), num(t, 4), num(t, 5)}};
                 if (copy) {
                     p.scale *= uniform(0.85f, 1.1f);
                     p.rot = {uniform(0, 6.28f), uniform(0, 6.28f),
                              uniform(0, 6.28f)};
                 }
-                maxDiameter = std::max(maxDiameter,
-                                       2 * radius * p.scale * colliderScale);
+                maxDiameter =
+                    std::max(maxDiameter, 2 * radius * p.scale * colliderScale);
                 pieces.push_back(p);
             }
         }
@@ -296,10 +282,11 @@ scn::Scene ironheartForge() {
             coal->add_child(type);
         }
         const int layer = (int)i / (cols * rows), k = (int)i % (cols * rows);
-        const glm::vec3 pos(
-            cx - hx + spacing * (k % cols + 0.5f) - (cols * spacing - 2 * hx) / 2,
-            potFloor + spacing * (layer + 0.6f),
-            cz - hz + spacing * (k / cols + 0.5f) - (rows * spacing - 2 * hz) / 2);
+        const glm::vec3 pos(cx - hx + spacing * (k % cols + 0.5f) -
+                                (cols * spacing - 2 * hx) / 2,
+                            potFloor + spacing * (layer + 0.6f),
+                            cz - hz + spacing * (k / cols + 0.5f) -
+                                (rows * spacing - 2 * hz) / 2);
 
         auto piece = scn::Node::create(p.asset + " " + std::to_string(i), pos);
         piece->setLocalRotEuler(p.rot);
@@ -354,25 +341,40 @@ scn::Scene ironheartForge() {
     // ---- Outside: the sun, the houses and the trees ----
     auto outside = scn::Node::create("Outside");
 
-    // The sun first, so it gets the first shadow layer. A big box for the
-    // trees and a small sharp one around the camera, blended in the shader.
+    // The sun first, so it gets the first shadow layer. Everything it shines
+    // on is static, so its map is only redrawn when its extent changes.
     {
         auto node = scn::Node::create("Sun");
         // Higher than the pack's golden hour sun so the shadows are visible
         node->setLocalRotEuler(lookEuler({0.5f, -0.65f, -0.6f}));
-        auto sun = component::Light::directional({1.0f, 0.82f, 0.6f}, 1.5f, 0.3f);
+        auto sun =
+            component::Light::directional({1.0f, 0.82f, 0.6f}, 1.5f, 0.3f);
         sun.castsShadow = true;
-        sun.shadowExtent = 150.f;
-        sun.shadowNear = 0.1f;
-        sun.shadowFar = 700.f;
-        sun.shadowFocusAhead = 0.9f;
-        sun.localShadowExtent = 14.f;
-        sun.localShadowFar = 180.f;
-        sun.localShadowFocusAhead = 1.f;
-        node->add_component<component::Light>(sun);
+        sun.bakedShadow = true;
+        sun.shadowExtent = 350.f;
+        sun.shadowNear = 200.f;
+        sun.shadowFar = 800.f;
+        auto light = node->add_component<component::Light>(sun);
         outside->add_child(node);
-    }
 
+        // Holds for a second, then shrinks at a steady 10 units per second
+        component::Curve<float> extent;
+        extent.keys = {{0.f, 350.f, 0.f, 0.f},
+                       {1.f, 350.f, 0.f, -10.f},
+                       {27.f, 90.f, -10.f, -10.f}};
+        // show extent animation
+        auto &track = node->add_component<component::Animator>()->addTrack(
+            light->shadowExtent, extent, component::PlayMode::Single);
+        track.setProperty = [light](const glm::vec3 &v) {
+            light->shadowExtent = v.x;
+            light->shadowDirty = true;
+        };
+#ifndef DEBUG
+        track.playback.playing = true;
+#else
+        track.playback.playing = false;
+#endif // !DEBUG
+    }
     {
         constexpr int farTreeCopies = 5;
         auto trees = scn::Node::create("Trees");
@@ -396,8 +398,8 @@ scn::Scene ironheartForge() {
                 const size_t original = trees.size();
                 std::mt19937 treeRng(11);
                 auto jitter = [&](float lo, float hi) {
-                    return std::uniform_real_distribution<float>(lo, hi)(
-                        treeRng);
+                    return std::uniform_real_distribution<float>(lo,
+                                                                 hi)(treeRng);
                 };
                 for (size_t i = 0; i < original; i++)
                     for (int copy = 0; copy < farTreeCopies - 1; copy++) {
@@ -424,7 +426,21 @@ scn::Scene ironheartForge() {
                                            instanceList(list), true));
     }
 
-    // ---- Forge lights, on only while the camera is inside ----
+    // Trees and houses only shadow the baked sun, the forge lights would
+    // redraw them all every frame
+    {
+        std::vector<std::shared_ptr<scn::Node>> stack{outside};
+        while (!stack.empty()) {
+            auto n = stack.back();
+            stack.pop_back();
+            if (auto shadow = n->get_component<component::Shadow>())
+                shadow->bakedOnly = true;
+            for (auto &c : n->children)
+                stack.push_back(c);
+        }
+    }
+
+    // ---- Forge lights ----
     std::shared_ptr<scn::Node> forgeLight;
     {
         const cJSON *l;
@@ -440,7 +456,8 @@ scn::Scene ironheartForge() {
             auto node = scn::Node::create(name, vec3Of(l, "position"));
             std::shared_ptr<component::Light> light;
             if (type == "point") {
-                auto pl = component::Light::point(color, intensity, 0.22f, 0.2f);
+                auto pl =
+                    component::Light::point(color, intensity, 0.22f, 0.2f);
                 pl.ambient = 0.05f;
                 pl.castsShadow = name == "ForgeCoals";
                 pl.shadowFar = 15.f;
@@ -475,9 +492,9 @@ scn::Scene ironheartForge() {
         auto smooth = [](float t) { return t * t * (3.f - 2.f * t); };
         // 0 open ... 1 closed, over one cycle
         auto closed = [&](float phase) {
-            return phase < squeeze ? smooth(phase / squeeze)
-                                   : 1.f - smooth((phase - squeeze) /
-                                                  (1.f - squeeze));
+            return phase < squeeze
+                       ? smooth(phase / squeeze)
+                       : 1.f - smooth((phase - squeeze) / (1.f - squeeze));
         };
         // 0 .. 1 at the peak of the wind push
         auto push = [&](float phase) {
@@ -493,8 +510,9 @@ scn::Scene ironheartForge() {
             auto animator = node->get_component<component::Animator>();
             if (!animator)
                 animator = node->add_component<component::Animator>();
-            auto &track = animator->addTrack(target, catmullRom(keys), period,
-                                             component::PlayMode::Loop);
+            auto &track = animator->addTrack(
+                target, component::Curve<glm::vec3>::smoothEven(keys, period),
+                component::PlayMode::Loop);
             track.playback.playing = true;
         };
         auto find = [&](const char *name) -> std::shared_ptr<scn::Node> {
@@ -548,33 +566,61 @@ scn::Scene ironheartForge() {
 
     auto camNode = scn::Node::create("Camera", positions[0]);
     camNode->setLocalRotEuler(rotations[0]);
-    scene.activeCamera = camNode->add_component<component::Camera>(
-        50.f, 1.f, 1.f, 0.1f, 1000.f);
+    scene.activeCamera =
+        camNode->add_component<component::Camera>(50.f, 1.f, 1.f, 0.1f, 1000.f);
+
+#ifdef DEBUG
     camNode->add_component<component::UserMovement>(5.f, 0.1f);
+#endif // DEBUG
+
     {
-        // Paused, the Animation window scrubs it (the camera enters the forge
-        // at about 33 s)
         constexpr float duration = 80.f;
         auto animator = camNode->add_component<component::Animator>();
         for (auto [target, points] :
              {std::pair{component::AnimTarget::Position, &positions},
               std::pair{component::AnimTarget::Rotation, &rotations}}) {
-            auto &track = animator->addTrack(
-                target, catmullRom(*points), duration,
-                component::PlayMode::Single);
+            auto &track =
+                animator->addTrack(target,
+                                   component::Curve<glm::vec3>::smoothEven(
+                                       *points, duration),
+                                   component::PlayMode::Single);
+#ifndef DEBUG
+            track.playback.playing = true;
+#else
             track.playback.playing = false;
+#endif // !DEBUG
         }
     }
-    // Inside while the camera is in the forge, outside otherwise. Lights fade
-    // across the doorway, meshes and instances switch off once their side is
-    // faded out.
-    auto zones = camNode->add_component<component::ZoneSwitch>();
-    zones->boxMin = {-3.9f, -1.f, -3.4f};
-    zones->boxMax = {3.9f, 3.f, 3.f};
-    zones->insideGuid = inside->guid;
-    zones->outsideGuid = outside->guid;
-    zones->blend = 1.5f;
-    zones->blendInside = 0.6f;
+
+    // ---- Animate Doors -----
+    // Same 80 s clock as the camera: open from 27 to 31 s, close from 36 to 40 s
+    {
+        constexpr float duration = 80.f;
+        auto animateDoor = [&](const char *name, float openAngle) {
+            for (auto &c : forge->children) {
+                if (c->name != name)
+                    continue;
+                const glm::vec3 shut(0.f), open(0.f, openAngle, 0.f);
+                auto animator = c->add_component<component::Animator>();
+                auto &track = animator->addTrack(
+                    component::AnimTarget::Rotation,
+                    component::Curve<glm::vec3>::flat({{0.f, shut},
+                                                       {27.f, shut},
+                                                       {31.f, open},
+                                                       {36.f, open},
+                                                       {40.f, shut},
+                                                       {duration, shut}}),
+                    component::PlayMode::Single);
+#ifndef DEBUG
+                track.playback.playing = true;
+#else
+                track.playback.playing = false;
+#endif
+            }
+        };
+        animateDoor("Door_L", glm::radians(90.f));
+        animateDoor("Door_R", glm::radians(-90.f));
+    }
 
     // ---- Assemble ----
     scene.root->add_child(camNode);

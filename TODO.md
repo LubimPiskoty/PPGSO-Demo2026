@@ -26,9 +26,9 @@
   - [x] (2b) Rigid body simulation with correct force computation, combining linear and angular motion, and applying torque [Timon]
 - [ ] Camera work [3b]
   - [ ] (2b) Perspective-projection camera; correct handling of window/viewport resizing; adjustable camera parameters (Chyba resizable funkcia) [David]
-  - [ ] (1b) Animated camera using keyframes storing position and look-at direction over time, using interpolation other than linear [David]
-- [ ] Lighting with multiple light sources [13b] [David]
-  - [ ] (3b) All light source types with appropriate parameters: directional, point, spot
+  - [x] (1b) Animated camera using keyframes storing position and look-at direction over time, using interpolation other than linear [David]
+- [x] Lighting with multiple light sources [13b] [David]
+  - [x] (3b) All light source types with appropriate parameters: directional, point, spot
   - [x] (1b) Changeable position/orientation of light sources and light color tint
   - [x] (1b) Correctly combine diffuse light from 2 light sources with diffuse materials
   - [x] (2b) Correct Phong lighting model with multiple (at least 3) light sources
@@ -42,7 +42,7 @@
     - [ ] (4b) Shadow maps [Timon]
       - [x] Depth array (`GL_TEXTURE_2D_ARRAY`, layer per light) + one FBO, `render::ShadowMaps` owned by Scene
       - [x] Shadow pass: only nodes with `Shadow` component, depth-only shaders (`depth.vs`, `depth_instanced.vs`), front-face culling
-      - [x] Directional box follows the camera (`shadowExtent` around it), spot uses its own perspective
+      - [x] Directional box centered on the light's node (`shadowExtent` around it), spot uses its own perspective
       - [x] Light -> map mapping: `GpuLight.shadow.x` = layer, matrices in `ShadowBlock` UBO (slot 2), array on texture unit 5 via comparison sampler
       - [x] `lit.fs` samples the map for directional lights (ambient not shadowed)
       - [x] Debug "Light preview" window (slider over the maps)
@@ -50,7 +50,8 @@
       - [ ] Spot light shadows in `lit.fs` (spot lighting itself is still skipped, needs the cone data packed in `direction.w` / `attenuation.w`)
       - [ ] Point light shadows (6 faces / cubemap array)
       - [ ] Fit the directional box to the camera frustum instead of fixed `shadowExtent`, snap to texels (stops shimmer)
-      - [ ] Cull casters per light, skip re-render for static lights
+      - [x] Baked lights (`Light::bakedShadow`): map rendered once, again only when the light or its box changes
+      - [ ] Cull casters per light
       - [ ] Distance fog in `lit.fs` to hide the far end of the directional shadow box (shadow quality drops with distance, so the big sun box can stay small instead of growing to cover every tree)
 - [ ] Post-processing [4b] (pick one) [David]
   - [ ] (1b) Basic per-pixel filter, e.g. grayscale, or via a framebuffer:

@@ -107,7 +107,7 @@ int main() {
         {
             profiler::Scope _(profiler::Stage::Physics);
             // Fixed timestep, capped so slow frames don't spiral
-            constexpr int kMaxPhysicsSteps = 12;
+            constexpr int kMaxPhysicsSteps = 6;
             const double fixedDt = scene.physics_context.fixedDt;
             physicsAccumulator =
                 std::min(physicsAccumulator + dt, kMaxPhysicsSteps * fixedDt);

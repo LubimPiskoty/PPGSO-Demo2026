@@ -45,20 +45,25 @@ class ShadowMaps {
 
     // Call once per frame before rendering. Only touches GL when the number
     // of layers has to grow/shrink (an array can't be resized in place).
-    void sync(size_t count) {
+    // Returns true when it did, which wipes every layer.
+    bool sync(size_t count) {
         count = std::min(count, MAX_SHADOW_LIGHTS);
 
         if (count > layers) {
             allocate(count);
             framesBelow = 0;
-        } else if (count < layers) {
+            return true;
+        }
+        if (count < layers) {
             if (++framesBelow >= SHRINK_DELAY) {
                 allocate(count);
                 framesBelow = 0;
+                return true;
             }
-        } else {
-            framesBelow = 0;
+            return false;
         }
+        framesBelow = 0;
+        return false;
     }
 
     // Renders into layer i: binds the framebuffer, attaches the layer as its
@@ -107,7 +112,7 @@ class ShadowMaps {
     uint16_t resolution() const { return RESOLUTION; }
 
     // Uploads one light space matrix per layer and binds the block to slot 2.
-    // Call every frame after the shadow pass, the sun's matrix moves.
+    // Call every frame after the shadow pass.
     void uploadGPU(const std::vector<glm::mat4> &shadowMat) {
         if (ubo == 0) { // Generate UBO
             glGenBuffers(1, &ubo);
