@@ -27,7 +27,12 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_DEPTH_BITS, 24);
+#ifdef NDEBUG
     glfwWindowHint(GLFW_SAMPLES, 8);
+#else
+    // No MSAA in Debug, it costs a lot of GPU time
+    glfwWindowHint(GLFW_SAMPLES, 0);
+#endif
 
     GLFWwindow *window =
         glfwCreateWindow(1600, 900, "Hello Triangle", nullptr, nullptr);

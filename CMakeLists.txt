@@ -177,6 +177,12 @@ if(OpenMP_CXX_FOUND)
     target_link_libraries(semestralka PUBLIC OpenMP::OpenMP_CXX)
 endif()
 
+# Texture decoding (loading) and physics (every frame) are too slow at -O0,
+# keep them optimized in Debug too
+file(GLOB PHYSICS_SOURCES CONFIGURE_DEPENDS "src/physics/*.cpp")
+set_source_files_properties(src/loaders/stb_image_impl.cpp ${PHYSICS_SOURCES}
+        PROPERTIES COMPILE_OPTIONS "-O2")
+
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_definitions(semestralka PUBLIC WITH_IMGUI)
     target_link_libraries(semestralka PUBLIC imgui)

@@ -103,18 +103,28 @@ void Scene::uploadLights() {
         if (auto camNode = cam->node.lock())
             viewPos = camNode->globalPosition();
 
-    for (const auto &light : getAllComponents<component::Light>()) {
-        if (!light->enabled)
-            continue;
-        auto gpu = light->toGpu();
+    // First layer of a light's map(s) in the shadow_pass casters, -1 = none
+    auto layerOf = [&](const std::shared_ptr<component::Light> &light) {
+        for (size_t i = 0; i < shadowLights.size(); i++)
+            if (shadowLights[i].lock() == light)
+                return (float)i;
+        return -1.f;
+    };
 
-        // First layer of this light's map(s) in the shadow_pass casters
-        for (size_t i = 0; i < shadowLights.size(); i++) {
-            if (shadowLights[i].lock() == light) {
-                gpu.shadow.x = (float)i;
-                break;
-            }
-        }
+    // A shadow-only directional light is the sun's close-up map
+    float closeUp = -1.f;
+    for (const auto &light : getAllComponents<component::Light>())
+        if (light->enabled && light->shadowOnly &&
+            light->type == component::LightType::Directional)
+            closeUp = layerOf(light);
+
+    for (const auto &light : getAllComponents<component::Light>()) {
+        if (!light->enabled || light->shadowOnly)
+            continue; // shadow-only lights add no light
+        auto gpu = light->toGpu();
+        gpu.shadow.x = layerOf(light);
+        if (light->type == component::LightType::Directional)
+            gpu.shadow.y = closeUp;
         lights.push_back(gpu);
     }
 

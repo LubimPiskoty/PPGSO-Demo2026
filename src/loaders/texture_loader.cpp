@@ -3,7 +3,7 @@
 #include <cmrc/cmrc.hpp>
 #include <iostream>
 
-// Implementation lives in model_loader.cpp (STB_IMAGE_IMPLEMENTATION)
+// Implementation lives in stb_image_impl.cpp (STB_IMAGE_IMPLEMENTATION)
 #include <stb_image.h>
 
 CMRC_DECLARE(textures);

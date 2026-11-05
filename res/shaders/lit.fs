@@ -56,7 +56,7 @@ struct GpuLight {
     vec4 color; // rgb = color, w = ambient strength
     vec4 attenuation; // x = constant, y = linear, z = quadratic
     vec4 shadow; // x = shadow map layer / ShadowBlock index, -1 = none
-                  // y = directional: texel size in depth units
+                  // y = directional: close-up map layer, -1 = none
     vec4 cutOff; // x = inner cutoff, y = outer cutoff
 };
 
@@ -85,7 +85,7 @@ struct Light {
     float ambient;
     vec3 attenuation;
     int shadowIndex; // layer in uShadowMaps, -1 = casts no shadow
-    float shadowTexel; // directional: map texel size in depth units
+    int closeUpIndex; // directional: layer of the sharper close-up map, -1 = none
     float cutOff;
     float outerCutOff;
 };
@@ -100,7 +100,7 @@ Light getLight(int i) {
     light.ambient = gpu.color.w;
     light.attenuation = gpu.attenuation.xyz;
     light.shadowIndex = int(floor(gpu.shadow.x + 0.5)); // rounds -1 to -1
-    light.shadowTexel = gpu.shadow.y;
+    light.closeUpIndex = int(floor(gpu.shadow.y + 0.5));
     light.cutOff = gpu.cutOff.x;      // inner cutoff cos
     light.outerCutOff = gpu.cutOff.y; // outer cutoff cos
     return light;
@@ -179,34 +179,13 @@ vec3 shadowCoords(int layer, vec3 position) {
     return p.xyz / p.w * 0.5 + 0.5;
 }
 
-// 1 = lit, 0 = in shadow. Texels can be large, so average around them to soften
-// the stair steps on shadow edges. Depth is linear over the whole range, so the
-// bias scales with the texel size, not with shadowFar.
-float directionalShadow(Light light, Surface surf, vec3 lightDir) {
-    vec3 c = shadowCoords(light.shadowIndex, surf.position);
-    if (c.z > 1.0)
-        return 1.0; // behind the far plane
-
-    float slope = 1.0 - dot(surf.normal, lightDir);
-    float bias = light.shadowTexel * (2.0 + 2.0 * slope);
-    vec2 texel = 1.0 / vec2(textureSize(uShadowMaps, 0).xy);
-    float lit = 0.0;
-    for (int x = -1; x <= 1; x++)
-        for (int y = -1; y <= 1; y++)
-            lit += texture(uShadowMaps, vec4(c.xy + vec2(x, y) * texel,
-                                             float(light.shadowIndex), c.z - bias));
-    return lit / 9.0;
-}
-
-// 1 = lit, 0 = in shadow (hardware filtered between the two at the edges)
+// 1 = lit, 0 = in shadow
 float shadowFactor(Light light, Surface surf, vec3 lightDir) {
     if (light.shadowIndex < 0)
         return 1.0;
-    if (light.type == LIGHT_DIRECTIONAL)
-        return directionalShadow(light, surf, lightDir);
 
     int layer = light.shadowIndex;
-    if (light.type == 1) { // point: layer + cube face (+X -X +Y -Y +Z -Z)
+    if (light.type == LIGHT_POINT) { // layer + cube face (+X -X +Y -Y +Z -Z)
         vec3 d = surf.position - light.position;
         vec3 a = abs(d);
         int face = (a.x >= a.y && a.x >= a.z) ? (d.x > 0.0 ? 0 : 1)
@@ -216,20 +195,37 @@ float shadowFactor(Light light, Surface surf, vec3 lightDir) {
     }
 
     vec3 c = shadowCoords(layer, surf.position);
+    // Sun: the sharper close-up map, wherever it covers
+    if (light.closeUpIndex >= 0) {
+        vec3 d = shadowCoords(light.closeUpIndex, surf.position);
+        // Inside its box, depth too: the box is a column along the sun
+        if (all(greaterThan(d, vec3(0.01))) && all(lessThan(d, vec3(0.99)))) {
+            c = d;
+            layer = light.closeUpIndex;
+        }
+    }
     if (c.z > 1.0)
         return 1.0; // behind the far plane
 
     // Surfaces at a steep angle to the light need more bias
     float bias = max(0.005 * (1.0 - dot(surf.normal, lightDir)), 0.0005);
 
-    vec2 uv = c.xy;
-    if (light.type == 1) {
+    if (light.type == LIGHT_POINT) {
         // Into the used square, kept half a texel inside so the filter never
         // reads the unused part of the layer
         float res = float(textureSize(uShadowMaps, 0).x) * POINT_SHADOW_SCALE;
-        uv = clamp(uv, 0.5 / res, 1.0 - 0.5 / res) * POINT_SHADOW_SCALE;
+        vec2 uv = clamp(c.xy, 0.5 / res, 1.0 - 0.5 / res) * POINT_SHADOW_SCALE;
+        return texture(uShadowMaps, vec4(uv, float(layer), c.z - bias));
     }
-    return texture(uShadowMaps, vec4(uv, float(layer), c.z - bias));
+
+    // Sun texels are big, so average a 3x3 block around them to soften edges
+    vec2 texel = 1.0 / vec2(textureSize(uShadowMaps, 0).xy);
+    float lit = 0.0;
+    for (int x = -1; x <= 1; x++)
+        for (int y = -1; y <= 1; y++)
+            lit += texture(uShadowMaps, vec4(c.xy + vec2(x, y) * texel,
+                                             float(layer), c.z - bias));
+    return lit / 9.0;
 }
 
 // Phong ambient + diffuse + specular for light arriving from lightDir

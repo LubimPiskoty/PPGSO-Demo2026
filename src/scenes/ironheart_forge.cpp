@@ -286,7 +286,7 @@ scn::Scene ironheartForge() {
                                 (cols * spacing - 2 * hx) / 2,
                             potFloor + spacing * (layer + 0.6f),
                             cz - hz + spacing * (k / cols + 0.5f) -
-                                (rows * spacing - 2 * hz) / 2);
+                                (spacing * rows - 2 * hz) / 2);
 
         auto piece = scn::Node::create(p.asset + " " + std::to_string(i), pos);
         piece->setLocalRotEuler(p.rot);
@@ -342,82 +342,109 @@ scn::Scene ironheartForge() {
     auto outside = scn::Node::create("Outside");
 
     // The sun first, so it gets the first shadow layer. Everything it shines
-    // on is static, so its map is only redrawn when its extent changes.
+    // on is static, so its maps are only rendered once (baked).
     {
         auto node = scn::Node::create("Sun");
-        // Higher than the pack's golden hour sun so the shadows are visible
-        node->setLocalRotEuler(lookEuler({0.5f, -0.65f, -0.6f}));
+        // Low from the front left of the camera flight (which heads to -z),
+        // so the shadows fall towards the camera instead of hiding behind
+        // what casts them
+        const glm::vec3 sunRot = lookEuler({0.42f, -0.7f, 0.91f});
+        node->setLocalRotEuler(sunRot);
         auto sun =
             component::Light::directional({1.0f, 0.82f, 0.6f}, 1.5f, 0.3f);
         sun.castsShadow = true;
         sun.bakedShadow = true;
-        sun.shadowExtent = 350.f;
+        sun.shadowExtent = 300.f;
         sun.shadowNear = 200.f;
         sun.shadowFar = 800.f;
-        auto light = node->add_component<component::Light>(sun);
+        node->add_component<component::Light>(sun);
         outside->add_child(node);
 
-        // Holds for a second, then shrinks at a steady 10 units per second
-        component::Curve<float> extent;
-        extent.keys = {{0.f, 350.f, 0.f, 0.f},
-                       {1.f, 350.f, 0.f, -10.f},
-                       {27.f, 90.f, -10.f, -10.f}};
-        // show extent animation
-        auto &track = node->add_component<component::Animator>()->addTrack(
-            light->shadowExtent, extent, component::PlayMode::Single);
-        track.setProperty = [light](const glm::vec3 &v) {
-            light->shadowExtent = v.x;
-            light->shadowDirty = true;
+        // Close-up shadow over the village: a shadow-only copy of the sun
+        // (same rotation, so the shadows line up) centered on the forge (at
+        // the origin) and every house. Half the diagonal covers them from
+        // any sun direction, + 10 for the house size.
+        glm::vec2 lo(0.f), hi(0.f);
+        const cJSON *list;
+        cJSON_ArrayForEach(list, get(get(layout, "instances"), "houses")) {
+            for (const Instance &h : instanceList(list)) {
+                lo = glm::min(lo, glm::vec2(h.position.x, h.position.z));
+                hi = glm::max(hi, glm::vec2(h.position.x, h.position.z));
+            }
+        }
+        const glm::vec2 mid = (lo + hi) * 0.5f;
+        auto closeNode = scn::Node::create("Sun close-up shadow",
+                                           glm::vec3(mid.x, 0.f, mid.y));
+        closeNode->setLocalRotEuler(sunRot);
+        auto closeUp = sun;
+        closeUp.shadowOnly = true;
+        closeUp.shadowExtent = glm::length(hi - lo) * 0.25f + 10.f;
+        // Box only 100 m deep around the village instead of the sun's 600:
+        // the shader's bias is in depth units, so this keeps it at 5-50 cm
+        closeUp.shadowNear = 0.f;
+        closeUp.shadowFar = 100.f;
+        closeNode->add_component<component::Light>(closeUp);
+        outside->add_child(closeNode);
+    }
+    {
+        auto trees = scn::Node::create("Trees");
+        const cJSON *tree;
+        constexpr int farTreeCopies = 2;
+        cJSON_ArrayForEach(tree, get(layout, "trees")) {
+            const std::string type = tree->string;
+            auto group = scn::Node::create(type);
+            // Every tree of this type. The layout's far list is copied five
+            // times over: each one gets copies a few metres away, turned and
+            // scaled a little differently, so the forest keeps its shape (and
+            // stays off the river).
+            std::vector<Instance> all = instanceList(get(tree, "near"));
+            std::mt19937 treeRng(11);
+            auto jitter = [&](float lo, float hi) {
+                return std::uniform_real_distribution<float>(lo, hi)(treeRng);
+            };
+            for (const Instance &original : instanceList(get(tree, "far"))) {
+                all.push_back(original);
+                for (int copy = 0; copy < farTreeCopies - 1; copy++) {
+                    Instance t = original;
+                    const float angle = jitter(0.f, glm::two_pi<float>());
+                    const float dist = jitter(2.f, 6.f);
+                    t.position.x += std::cos(angle) * dist;
+                    t.position.z += std::sin(angle) * dist;
+                    t.rotation.y = jitter(0.f, glm::two_pi<float>());
+                    t.scale *= jitter(0.85f, 1.15f);
+                    all.push_back(t);
+                }
+            }
+#ifdef NDEBUG
+            // Release: the full bark + leaves model
+            group->add_child(
+                b.instanced(type + " Bark", str(tree, "bark"), all, true));
+            group->add_child(b.instanced(type + " Leaves", str(tree, "leaves"),
+                                         std::move(all), true));
+#else
+            // Debug: the cheap LOD1 mesh
+            group->add_child(b.instanced(type + " LOD1", str(tree, "lod1"),
+                                         std::move(all), true));
+#endif
+            trees->add_child(group);
+        }
+        outside->add_child(trees);
+
+        // Same 80 s clock as the camera: the trees switch off at 27 s
+        auto &track = trees->add_component<component::Animator>()->addTrack(
+            component::AnimTarget::Property,
+            component::Curve<glm::vec3>::flat({{0.f, glm::vec3(1.f)},
+                                               {27.f, glm::vec3(1.f)},
+                                               {27.f, glm::vec3(0.f)}}),
+            component::PlayMode::Single);
+        track.setProperty = [trees = trees.get()](const glm::vec3 &v) {
+            trees->enabled = v.x > 0.5f;
         };
 #ifndef DEBUG
         track.playback.playing = true;
 #else
         track.playback.playing = false;
 #endif // !DEBUG
-    }
-    {
-        constexpr int farTreeCopies = 5;
-        auto trees = scn::Node::create("Trees");
-        const cJSON *tree;
-        cJSON_ArrayForEach(tree, get(layout, "trees")) {
-            const std::string type = tree->string;
-            auto group = scn::Node::create(type);
-            const cJSON *near = get(tree, "near"), *far = get(tree, "far");
-            if (cJSON_GetArraySize(near)) {
-                group->add_child(b.instanced(type + " Bark", str(tree, "bark"),
-                                             instanceList(near), true));
-                group->add_child(b.instanced(type + " Leaves",
-                                             str(tree, "leaves"),
-                                             instanceList(near), true));
-            }
-            if (cJSON_GetArraySize(far)) {
-                // Five times the far trees: each one gets copies a few metres
-                // away, turned and scaled a little differently, so the forest
-                // keeps its shape (and stays off the river)
-                std::vector<Instance> trees = instanceList(far);
-                const size_t original = trees.size();
-                std::mt19937 treeRng(11);
-                auto jitter = [&](float lo, float hi) {
-                    return std::uniform_real_distribution<float>(lo,
-                                                                 hi)(treeRng);
-                };
-                for (size_t i = 0; i < original; i++)
-                    for (int copy = 0; copy < farTreeCopies - 1; copy++) {
-                        Instance t = trees[i];
-                        const float angle = jitter(0.f, glm::two_pi<float>());
-                        const float dist = jitter(2.f, 6.f);
-                        t.position.x += std::cos(angle) * dist;
-                        t.position.z += std::sin(angle) * dist;
-                        t.rotation.y = jitter(0.f, glm::two_pi<float>());
-                        t.scale *= jitter(0.85f, 1.15f);
-                        trees.push_back(t);
-                    }
-                group->add_child(b.instanced(type + " LOD1", str(tree, "lod1"),
-                                             std::move(trees), true));
-            }
-            trees->add_child(group);
-        }
-        outside->add_child(trees);
     }
     {
         const cJSON *list;
@@ -540,32 +567,45 @@ scn::Scene ironheartForge() {
         addCycle(forgeLight, component::AnimTarget::Color, glow);
     }
 
-    // ---- Camera: flies the pack's camera path, then the closeups ----
-    std::vector<glm::vec3> positions, rotations;
-    auto addKey = [&](glm::vec3 pos, glm::vec3 lookAt) {
-        glm::vec3 r = lookEuler(lookAt - pos);
+    // ---- Camera: one 80 s flight, from the valley down into the forge ----
+    // The doors run on the same clock (open 27-31 s, close 36-40 s), so keep
+    // the shots that pass through them around those times.
+    struct Shot {
+        float time;
+        glm::vec3 pos, lookAt;
+    };
+    const Shot shots[] = {
+        {0.f, {-170.f, 115.f, 250.f}, {10.f, 0.f, -30.f}},     // valley
+        {6.f, {-95.f, 62.f, 150.f}, {5.f, 0.f, -10.f}},        // descend
+        {12.5f, {-38.f, 24.f, 62.f}, {0.f, 2.f, 0.f}},         // village
+        {18.5f, {-8.f, 5.f, 20.f}, {0.f, 2.f, 3.f}},           // path
+        {24.5f, {0.f, 1.8f, 9.f}, {0.f, 1.4f, 0.f}},           // at the doors
+        {31.f, {0.f, 1.7f, 4.2f}, {0.f, 1.3f, 0.f}},           // doors open
+        {37.f, {0.f, 1.65f, 1.5f}, {0.2f, 0.95f, -2.f}},       // inside
+        {43.f, {-0.3f, 1.35f, -0.9f}, {0.2f, 0.85f, -2.4f}},   // coal bed
+        {49.f, {0.2f, 1.2f, -1.75f}, {0.2f, 0.8f, -2.4f}},     // coal macro
+        {55.5f, {-1.7f, 1.25f, -1.1f}, {-1.f, 0.8f, -2.25f}},  // bellows
+        {61.5f, {1.7f, 1.6f, 0.9f}, {0.45f, 0.95f, -0.35f}},   // anvil wide
+        {67.5f, {0.95f, 1.25f, 0.4f}, {0.43f, 0.95f, -0.34f}}, // anvil
+        {74.f, {0.68f, 1.1f, 0.12f}, {0.43f, 0.95f, -0.34f}},  // strike
+        {80.f, {-0.2f, 1.8f, 1.6f}, {0.45f, 1.f, -0.5f}},      // pull back
+    };
+    std::vector<component::Curve<glm::vec3>::Point> positions, rotations;
+    for (const Shot &shot : shots) {
+        glm::vec3 r = lookEuler(shot.lookAt - shot.pos);
         if (!rotations.empty()) { // keep yaw continuous, no spin the long way
-            while (r.y - rotations.back().y > glm::pi<float>())
+            const float last = rotations.back().second.y;
+            while (r.y - last > glm::pi<float>())
                 r.y -= glm::two_pi<float>();
-            while (r.y - rotations.back().y < -glm::pi<float>())
+            while (r.y - last < -glm::pi<float>())
                 r.y += glm::two_pi<float>();
         }
-        positions.push_back(pos);
-        rotations.push_back(r);
-    };
-    const cJSON *key;
-    cJSON_ArrayForEach(key, get(layout, "camera_path"))
-        addKey(vec3Of(key, "position"), vec3Of(key, "look_at"));
-    // Closeups after the coal bed (DEMO_SCRIPT)
-    addKey({0.2f, 1.2f, -1.75f}, {0.2f, 0.8f, -2.4f});    // coal macro
-    addKey({-1.7f, 1.25f, -1.1f}, {-1.0f, 0.8f, -2.25f}); // bellows
-    addKey({1.7f, 1.6f, 0.9f}, {0.45f, 0.95f, -0.35f});   // anvil wide
-    addKey({0.95f, 1.25f, 0.4f}, {0.43f, 0.95f, -0.34f}); // anvil
-    addKey({0.68f, 1.1f, 0.12f}, {0.43f, 0.95f, -0.34f}); // strike
-    addKey({-0.2f, 1.8f, 1.6f}, {0.45f, 1.0f, -0.5f});    // pull back
+        positions.push_back({shot.time, shot.pos});
+        rotations.push_back({shot.time, r});
+    }
 
-    auto camNode = scn::Node::create("Camera", positions[0]);
-    camNode->setLocalRotEuler(rotations[0]);
+    auto camNode = scn::Node::create("Camera", positions[0].second);
+    camNode->setLocalRotEuler(rotations[0].second);
     scene.activeCamera =
         camNode->add_component<component::Camera>(50.f, 1.f, 1.f, 0.1f, 1000.f);
 
@@ -574,16 +614,13 @@ scn::Scene ironheartForge() {
 #endif // DEBUG
 
     {
-        constexpr float duration = 80.f;
         auto animator = camNode->add_component<component::Animator>();
         for (auto [target, points] :
              {std::pair{component::AnimTarget::Position, &positions},
               std::pair{component::AnimTarget::Rotation, &rotations}}) {
-            auto &track =
-                animator->addTrack(target,
-                                   component::Curve<glm::vec3>::smoothEven(
-                                       *points, duration),
-                                   component::PlayMode::Single);
+            auto &track = animator->addTrack(
+                target, component::Curve<glm::vec3>::smooth(*points),
+                component::PlayMode::Single);
 #ifndef DEBUG
             track.playback.playing = true;
 #else
@@ -593,7 +630,8 @@ scn::Scene ironheartForge() {
     }
 
     // ---- Animate Doors -----
-    // Same 80 s clock as the camera: open from 27 to 31 s, close from 36 to 40 s
+    // Same 80 s clock as the camera: open from 27 to 31 s, close from 36 to 40
+    // s
     {
         constexpr float duration = 80.f;
         auto animateDoor = [&](const char *name, float openAngle) {

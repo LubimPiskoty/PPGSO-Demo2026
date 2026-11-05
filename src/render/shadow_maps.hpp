@@ -17,7 +17,11 @@ class ShadowMaps {
   public:
     // Max layers: a point light takes 6, every other light 1
     static constexpr size_t MAX_SHADOW_LIGHTS = 12;
+#ifdef NDEBUG
     static constexpr uint16_t RESOLUTION = 1 << 12; // 4096
+#else
+    static constexpr uint16_t RESOLUTION = 1 << 11; // 2048, Debug is slow enough
+#endif
     // Point light faces only use the lower left POINT_RESOLUTION square of
     // their layer (half the width and height = quarter of the pixels). Must
     // match POINT_SHADOW_SCALE in lit.fs (1 / POINT_RESOLUTION_DIV).

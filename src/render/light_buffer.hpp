@@ -12,7 +12,7 @@ struct GpuLight {
     glm::vec4 color;       // rgb = color, w = ambient
     glm::vec4 attenuation; // x = constant, y = linear, z = quadratic
     glm::vec4 shadow;      // x = shadow map layer / ShadowBlock index, -1 = none
-                           // y = directional: texel size in depth units
+                           // y = directional: close-up map layer, -1 = none
     glm::vec4 cutOff;      // x = inner cutoff, y = outer cutoff
 };
 
