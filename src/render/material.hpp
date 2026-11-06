@@ -76,6 +76,9 @@ public:
   float opacity = 1.f;
 
   BlendMode blend = BlendMode::Opaque;
+  // Both sides drawn (no back-face culling), lit.fs flips the normal on the
+  // back side. For thin cards: leaves, grass, cloth.
+  bool doubleSided = false;
 
   // Extra per-material uniforms that don't fit the fields above,
   // uploaded in bind()

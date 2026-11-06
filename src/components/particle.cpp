@@ -198,6 +198,7 @@ void ParticleSystem::draw(glm::mat4 projection, glm::mat4 invCameraTransform) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
     glDepthMask(GL_FALSE);
+    glDisable(GL_CULL_FACE); // the material turned it on
 
     glBindVertexArray(vao);
     indirectDrawBuffer.bind(GL_DRAW_INDIRECT_BUFFER);

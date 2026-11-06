@@ -72,7 +72,7 @@ glm::mat4 Light::shadowView(int face) const {
 
 glm::mat4 Light::shadowProjection() const {
     if (type == LightType::Spot)
-        return glm::perspective(glm::radians(cutOff * 2.f), 1.f, shadowNear,
+        return glm::perspective(glm::radians(outerCutOff * 2.f), 1.f, shadowNear,
                                 shadowFar);
     else if (type == LightType::Point)
         return glm::perspective(glm::half_pi<float>(), 1.f, shadowNear,
@@ -85,7 +85,7 @@ glm::mat4 Light::shadowProjection() const {
 render::GpuLight Light::toGpu() const {
     render::GpuLight g;
     g.position = glm::vec4(position(), (float)type); // xyz pos, w typ
-    g.direction = glm::vec4(direction(), 0.f);       // xyz dir, w cutoff
+    g.direction = glm::vec4(direction(), 0.f);       // xyz dir
     g.cutOff = glm::vec4(glm::cos(glm::radians(cutOff)), glm::cos(glm::radians(outerCutOff)), 0.f, 0.f);
     g.color = glm::vec4(color * intensity, ambient); // rgb col, w ambient
     g.attenuation = glm::vec4(constant, linear, quadratic, 0.f); // point light

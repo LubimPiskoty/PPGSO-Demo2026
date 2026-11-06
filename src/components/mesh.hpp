@@ -53,7 +53,13 @@ class Mesh : public component::ComponentBase<Mesh> {
         setMat4(depthShader.program, "uView", lightView);
         setMat4(depthShader.program, "uModel",
                 this->node.lock()->globalTransform());
+        // The pass culls front faces, a double sided caster needs both
+        const bool cull = material->doubleSided && glIsEnabled(GL_CULL_FACE);
+        if (cull)
+            glDisable(GL_CULL_FACE);
         model->draw();
+        if (cull)
+            glEnable(GL_CULL_FACE);
     }
 
   private:

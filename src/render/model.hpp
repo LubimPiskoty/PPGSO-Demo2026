@@ -24,6 +24,9 @@ struct Mesh {
     // Textures the model file brought along, indexed by TextureSlot.
     // 0 means none, so the material's texture for that slot stays bound.
     GLuint textures[(int)TextureSlot::Count] = {};
+    // The file's material is double sided (glTF doubleSided): drawn without
+    // back-face culling whatever the Material says
+    bool doubleSided = false;
 
     void draw() const;
     void draw_instanced(GLsizei instance_count) const;

@@ -156,6 +156,18 @@ void Scene::shadow_pass() {
 
     // Only nodes with a Shadow component are rendered into the maps
     const auto shadowCasters = getAllComponents<component::Shadow>();
+    // The parent node of the shadow-only light above a caster, if any
+    auto groupOf = [&](const std::shared_ptr<component::Shadow> &shadow) {
+        for (auto n = shadow->node.lock(); n; n = n->parent.lock())
+            for (auto &c : n->children)
+                if (auto l = c->get_component<component::Light>())
+                    if (l->shadowOnly)
+                        return n.get();
+        return (scn::Node *)nullptr;
+    };
+    // Front faces culled: the map holds the back sides, so a lit surface is
+    // never compared with its own depth (no bias needed)
+    glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
     for (size_t i = 0; i < casters.size(); i++) {
         if (casters[i]->bakedShadow && !casters[i]->shadowDirty && !wiped)
@@ -166,9 +178,16 @@ void Scene::shadow_pass() {
 
         shadowMaps->bindLayer(i, casters[i]->type == component::LightType::Point);
         glClear(GL_DEPTH_BUFFER_BIT);
+        // A shadow-only sun draws only the casters under its parent node, the
+        // other suns draw the rest. Point and spot lights draw everything.
+        const bool sun = casters[i]->type == component::LightType::Directional;
+        scn::Node *own = nullptr;
+        if (casters[i]->shadowOnly)
+            own = casters[i]->node.lock()->parent.lock().get();
         for (auto &shadow : shadowCasters)
             if (shadow->enabled &&
-                (casters[i]->bakedShadow || !shadow->bakedOnly))
+                (casters[i]->bakedShadow || !shadow->bakedOnly) &&
+                (!sun || groupOf(shadow) == own))
                 shadow->drawShadow(proj, view, depthShader,
                                    depthShaderInstanced);
     }

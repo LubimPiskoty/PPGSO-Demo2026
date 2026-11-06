@@ -9,8 +9,7 @@
 #include "loaders/scene_loader.hpp"
 #include "render/framebuffer.hpp"
 #include "scenes/ball_jar.hpp"
-#include "scenes/barrel_run.hpp"
-#include "scenes/ironheart_forge.hpp"
+#include "scenes/demo_scene/demo_scene.hpp"
 #include "scenes/light_test.hpp"
 #include "scenes/particle_test.hpp"
 #include "scenes/physics_test.hpp"
@@ -68,17 +67,18 @@ int main() {
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
     glDepthFunc(GL_LESS);
     glEnable(GL_MULTISAMPLE);
+    // Back faces culled, Material::doubleSided turns it off per draw
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
 
     debug_ui::init(window);
     profiler::init();
 
     scenes::SceneManager scenes;
-    scenes.add("Ironheart forge", scenes::ironheartForge);
+    scenes.add("Demo scene", scenes::demoScene);
     scenes.add("Shadow test", scenes::shadowTest);
     scenes.add("Light test", scenes::lightTest);
     scenes.add("Particle test", scenes::particle_test);
-    scenes.add("Barrel run", scenes::barrelRun);
-    scenes.add("scene.json", [] { return loader::loadScene("scene.json"); });
     scenes.add("diorama.json",
                [] { return loader::loadScene("diorama.json"); });
     scenes.setViewport((float)fbWidth, (float)fbHeight);

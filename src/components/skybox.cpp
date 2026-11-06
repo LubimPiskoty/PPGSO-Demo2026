@@ -23,6 +23,9 @@ void Skybox::draw(const std::shared_ptr<Camera> &camera) {
   glm::mat4 view = glm::inverse(camNode->globalTransform());
 
   glDepthFunc(GL_LEQUAL);
+  // Seen from inside the cube
+  const bool cull = glIsEnabled(GL_CULL_FACE);
+  glDisable(GL_CULL_FACE);
   glUseProgram(shader);
   glUniformMatrix4fv(glGetUniformLocation(shader, "uView"), 1, GL_FALSE,
                      glm::value_ptr(view));
@@ -32,11 +35,14 @@ void Skybox::draw(const std::shared_ptr<Camera> &camera) {
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
   glUniform1i(glGetUniformLocation(shader, "uSkybox"), 0);
+  glUniform3fv(glGetUniformLocation(shader, "uTint"), 1, glm::value_ptr(tint));
 
   glBindVertexArray(vao);
   glDrawArrays(GL_TRIANGLES, 0, 36);
   glBindVertexArray(0);
   glDepthFunc(GL_LESS);
+  if (cull)
+    glEnable(GL_CULL_FACE);
 }
 
 void Skybox::createCube() {

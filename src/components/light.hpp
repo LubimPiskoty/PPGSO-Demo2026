@@ -35,9 +35,10 @@ class Light : public ComponentBase<Light> {
     bool bakedShadow = false;
     // Set it after changing a baked light, its map is rendered once more
     bool shadowDirty = true;
-    // Renders a shadow map but adds no light. A directional one is a sharper
-    // close-up for the sun: same rotation, smaller extent, its node placed
-    // over the area. The sun uses its map wherever it covers.
+    // Renders a shadow map but adds no light. A directional one is a second
+    // sun map of only the casters under its parent node (the other suns
+    // leave those out): same rotation, a small box over those casters,
+    // multiplied onto the sun's shadow.
     bool shadowOnly = false;
     // directional: half-size of the orthographic box, centered on the node
     float shadowExtent = 20.f;

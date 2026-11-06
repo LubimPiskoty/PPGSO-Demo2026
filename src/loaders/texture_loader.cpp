@@ -1,5 +1,6 @@
 #include "texture_loader.hpp"
 
+#include <algorithm>
 #include <cmrc/cmrc.hpp>
 #include <iostream>
 
@@ -22,6 +23,14 @@ GLuint createTexture(const unsigned char *pixels, int width, int height) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
                     GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // Plain mipmapping blurs surfaces seen at a flat angle (the ground),
+    // anisotropic filtering keeps them sharp along the view direction
+    if (GLEW_EXT_texture_filter_anisotropic) {
+        GLfloat maxAniso = 1.f;
+        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAniso);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT,
+                        std::min(16.f, maxAniso));
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
     return texture;
 }

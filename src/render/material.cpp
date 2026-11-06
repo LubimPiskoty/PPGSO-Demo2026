@@ -83,6 +83,10 @@ void Material::bind() const {
         glUniformMatrix4fv(uniLoc(n), 1, GL_FALSE, glm::value_ptr(v));
 
     // Render state
+    if (doubleSided)
+        glDisable(GL_CULL_FACE);
+    else
+        glEnable(GL_CULL_FACE);
     if (blend == BlendMode::Transparent) {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

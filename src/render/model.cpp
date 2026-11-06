@@ -54,8 +54,23 @@ void Mesh::restoreTextures(const Overridden &saved) const {
     glActiveTexture(GL_TEXTURE0);
 }
 
+// Turns culling off for a double sided mesh, back on after if it was on
+struct CullOff {
+    bool restore;
+    explicit CullOff(bool doubleSided)
+        : restore(doubleSided && glIsEnabled(GL_CULL_FACE)) {
+        if (restore)
+            glDisable(GL_CULL_FACE);
+    }
+    ~CullOff() {
+        if (restore)
+            glEnable(GL_CULL_FACE);
+    }
+};
+
 void Mesh::draw() const {
     Overridden saved = bindTextures();
+    CullOff cull(doubleSided);
     glBindVertexArray(vao);
     glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, nullptr);
     glBindVertexArray(0);
@@ -64,6 +79,7 @@ void Mesh::draw() const {
 
 void Mesh::draw_instanced(GLsizei instance_count) const {
     Overridden saved = bindTextures();
+    CullOff cull(doubleSided);
     glBindVertexArray(vao);
     glDrawElementsInstanced(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, nullptr,
                             instance_count);

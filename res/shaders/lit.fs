@@ -34,8 +34,8 @@ uniform bool uHasNormalMap;
 uniform bool uHasRoughnessMap;
 uniform bool uHasSpecularMap;
 uniform sampler2DArrayShadow uShadowMaps; // depth array, slot 5
-uniform samplerCube uSkybox;     // cubemap of skybox slot 4
-uniform float uReflectivity;     // 0 no reflect, 1 mirror
+uniform samplerCube uSkybox; // cubemap of skybox slot 4
+uniform float uReflectivity; // 0 no reflect, 1 mirror
 uniform float uRoughness; // when mat doesnt have roughmap
 
 // ---------------------------------------------------------------------------
@@ -52,11 +52,11 @@ uniform float uRoughness; // when mat doesnt have roughmap
 // One light as uploaded, matches render::GpuLight
 struct GpuLight {
     vec4 position; // xyz = position, w = type
-    vec4 direction; // xyz = direction, w = cutoff for spotlight
+    vec4 direction; // xyz = direction
     vec4 color; // rgb = color, w = ambient strength
     vec4 attenuation; // x = constant, y = linear, z = quadratic
     vec4 shadow; // x = shadow map layer / ShadowBlock index, -1 = none
-                  // y = directional: close-up map layer, -1 = none
+    // y = directional: close-up map layer, -1 = none
     vec4 cutOff; // x = inner cutoff, y = outer cutoff
 };
 
@@ -64,7 +64,7 @@ struct GpuLight {
 #define MAX_SHADOW_LIGHTS 12
 // Must match 1 / ShadowMaps::POINT_RESOLUTION_DIV: point faces only fill the
 // lower left part of their layer
-#define POINT_SHADOW_SCALE 0.5
+#define POINT_SHADOW_SCALE 0.25
 
 layout(std140) uniform ShadowBlock {
     mat4 uLightSpace[MAX_SHADOW_LIGHTS]; // world -> light clip space per layer
@@ -85,7 +85,7 @@ struct Light {
     float ambient;
     vec3 attenuation;
     int shadowIndex; // layer in uShadowMaps, -1 = casts no shadow
-    int closeUpIndex; // directional: layer of the sharper close-up map, -1 = none
+    int closeUpIndex; // directional: layer of the close-up (houses) map, -1 = none
     float cutOff;
     float outerCutOff;
 };
@@ -101,7 +101,7 @@ Light getLight(int i) {
     light.attenuation = gpu.attenuation.xyz;
     light.shadowIndex = int(floor(gpu.shadow.x + 0.5)); // rounds -1 to -1
     light.closeUpIndex = int(floor(gpu.shadow.y + 0.5));
-    light.cutOff = gpu.cutOff.x;      // inner cutoff cos
+    light.cutOff = gpu.cutOff.x; // inner cutoff cos
     light.outerCutOff = gpu.cutOff.y; // outer cutoff cos
     return light;
 }
@@ -121,7 +121,8 @@ struct Surface {
 
 // Surface normal, perturbed by the normal map when there is one
 vec3 getNormal() {
-    vec3 N = normalize(FragNormal);
+    // Double sided materials: the back side faces the other way
+    vec3 N = normalize(gl_FrontFacing ? FragNormal : -FragNormal);
 
     // Meshes without UVs have no tangent, so the map can't be oriented
     bool hasTangent = dot(FragTangent, FragTangent) > 1e-8;
@@ -144,7 +145,7 @@ Surface getSurface() {
     surf.normal = getNormal();
     vec4 albedo = texture(uAlbedoTex, FragTexCoord);
     // Alpha-masked cards (tree leaves)
-    if (albedo.a < 0.5)
+    if (albedo.a < 0.1)
         discard;
     surf.albedo = albedo.rgb;
     surf.specular = uMaterial.specular;
@@ -179,53 +180,49 @@ vec3 shadowCoords(int layer, vec3 position) {
     return p.xyz / p.w * 0.5 + 0.5;
 }
 
-// 1 = lit, 0 = in shadow
-float shadowFactor(Light light, Surface surf, vec3 lightDir) {
-    if (light.shadowIndex < 0)
-        return 1.0;
-
-    int layer = light.shadowIndex;
-    if (light.type == LIGHT_POINT) { // layer + cube face (+X -X +Y -Y +Z -Z)
-        vec3 d = surf.position - light.position;
-        vec3 a = abs(d);
-        int face = (a.x >= a.y && a.x >= a.z) ? (d.x > 0.0 ? 0 : 1)
-                 : (a.y >= a.z)               ? (d.y > 0.0 ? 2 : 3)
-                 :                              (d.z > 0.0 ? 4 : 5);
-        layer += face;
-    }
-
-    vec3 c = shadowCoords(layer, surf.position);
-    // Sun: the sharper close-up map, wherever it covers
-    if (light.closeUpIndex >= 0) {
-        vec3 d = shadowCoords(light.closeUpIndex, surf.position);
-        // Inside its box, depth too: the box is a column along the sun
-        if (all(greaterThan(d, vec3(0.01))) && all(lessThan(d, vec3(0.99)))) {
-            c = d;
-            layer = light.closeUpIndex;
-        }
-    }
+// 3x3 PCF on one layer of a sun / spot shadow map, one texel apart
+float shadowPcf(int layer, vec3 c) {
     if (c.z > 1.0)
         return 1.0; // behind the far plane
-
-    // Surfaces at a steep angle to the light need more bias
-    float bias = max(0.005 * (1.0 - dot(surf.normal, lightDir)), 0.0005);
-
-    if (light.type == LIGHT_POINT) {
-        // Into the used square, kept half a texel inside so the filter never
-        // reads the unused part of the layer
-        float res = float(textureSize(uShadowMaps, 0).x) * POINT_SHADOW_SCALE;
-        vec2 uv = clamp(c.xy, 0.5 / res, 1.0 - 0.5 / res) * POINT_SHADOW_SCALE;
-        return texture(uShadowMaps, vec4(uv, float(layer), c.z - bias));
-    }
-
-    // Sun texels are big, so average a 3x3 block around them to soften edges
     vec2 texel = 1.0 / vec2(textureSize(uShadowMaps, 0).xy);
     float lit = 0.0;
     for (int x = -1; x <= 1; x++)
         for (int y = -1; y <= 1; y++)
             lit += texture(uShadowMaps, vec4(c.xy + vec2(x, y) * texel,
-                                             float(layer), c.z - bias));
+                        float(layer), c.z));
     return lit / 9.0;
+}
+
+// 1 = lit, 0 = in shadow
+float shadowFactor(Light light, Surface surf, vec3 lightDir) {
+    if (light.shadowIndex < 0)
+        return 1.0;
+
+    if (light.type == LIGHT_POINT) {
+        // One layer per cube face (+X -X +Y -Y +Z -Z)
+        vec3 d = surf.position - light.position;
+        vec3 a = abs(d);
+        int face = (a.x >= a.y && a.x >= a.z) ? (d.x > 0.0 ? 0 : 1) : (a.y >= a.z) ? (d.y > 0.0 ? 2 : 3) : (d.z > 0.0 ? 4 : 5);
+        int layer = light.shadowIndex + face;
+        vec3 c = shadowCoords(layer, surf.position);
+        if (c.z > 1.0)
+            return 1.0;
+        // Into the used square, kept half a texel inside so the filter never
+        // reads the unused part of the layer
+        float res = float(textureSize(uShadowMaps, 0).x) * POINT_SHADOW_SCALE;
+        vec2 uv = clamp(c.xy, 0.5 / res, 1.0 - 0.5 / res) * POINT_SHADOW_SCALE;
+        return texture(uShadowMaps, vec4(uv, float(layer), c.z));
+    }
+
+    float lit = shadowPcf(light.shadowIndex,
+            shadowCoords(light.shadowIndex, surf.position));
+
+    // Sun: the houses are only in the close-up map, so both shadows apply.
+    // Outside its box the close-up map reads as lit.
+    if (light.closeUpIndex >= 0)
+        lit *= shadowPcf(light.closeUpIndex,
+                shadowCoords(light.closeUpIndex, surf.position));
+    return lit;
 }
 
 // Phong ambient + diffuse + specular for light arriving from lightDir
@@ -253,48 +250,32 @@ vec3 directionalLight(Light light, Surface surf, vec3 viewDir) {
     return phong(light, surf, lightDir, viewDir, shadow);
 }
 
+// The further away, the weaker the light
+float attenuation(Light light, vec3 position) {
+    float d = length(light.position - position);
+    return 1.0 / (light.attenuation.x + light.attenuation.y * d +
+            light.attenuation.z * d * d);
+}
+
 vec3 pointLight(Light light, Surface surf, vec3 viewDir) {
-    vec3 toLight = light.position - surf.position;
-    vec3 lightDir = normalize(toLight);
-
-    // The further away, the weaker the light
-    float d = length(toLight);
-    float attenuation = 1.0 / (light.attenuation.x +
-                light.attenuation.y * d +
-                light.attenuation.z * d * d);
-
+    vec3 lightDir = normalize(light.position - surf.position);
     float shadow = shadowFactor(light, surf, lightDir);
-    return phong(light, surf, lightDir, viewDir, shadow) * attenuation;
+    return phong(light, surf, lightDir, viewDir, shadow) *
+        attenuation(light, surf.position);
 }
 
 vec3 spotLight(Light light, Surface surf, vec3 viewDir) {
-    vec3 toLight = light.position - surf.position;
-    vec3 lightDir = normalize(toLight);
+    vec3 lightDir = normalize(light.position - surf.position);
 
-    // Attenuation rovnako ako pri point light
-    float d = length(toLight);
-    float attenuation = 1.0 / (light.attenuation.x +
-                light.attenuation.y * d +
-                light.attenuation.z * d * d);
-
-    // angle calc
+    // 1 inside the inner cone, fading to 0 at the outer one
     float theta = dot(lightDir, normalize(-light.direction));
-    float epsilon   = light.cutOff - light.outerCutOff;
-    float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
+    float cone = clamp((theta - light.outerCutOff) /
+                (light.cutOff - light.outerCutOff), 0.0, 1.0);
 
-    // outside dark ambient
-    vec3 ambient = light.color * light.ambient * surf.albedo;
-
-    // inside full phong
-    vec3 lit = vec3(0.0);
-    if (intensity > 0.0) {
-        float shadow = shadowFactor(light, surf, lightDir);
-        Light direct = light;
-        direct.ambient = 0.0; // ambient uz je hore, nech sa neratá dvakrát
-        lit = phong(direct, surf, lightDir, viewDir, shadow);
-    }
-
-    return (ambient + lit * intensity) * attenuation;
+    // Outside the cone only the ambient part is left
+    float shadow = cone * shadowFactor(light, surf, lightDir);
+    return phong(light, surf, lightDir, viewDir, shadow) *
+        attenuation(light, surf.position);
 }
 
 // ---------------------------------------------------------------------------
@@ -310,24 +291,22 @@ void main() {
             result += directionalLight(light, surf, viewDir);
         else if (light.type == LIGHT_POINT)
             result += pointLight(light, surf, viewDir);
-        else if (light.type == LIGHT_SPOT) {
-             result += spotLight(light, surf, viewDir);
-        }
+        else if (light.type == LIGHT_SPOT)
+            result += spotLight(light, surf, viewDir);
     }
 
     // Sky reflection with Fresnel
     if (uReflectivity > 0.0) {
         vec3 reflectDir = reflect(-viewDir, surf.normal); // reflection from camera view
-        float lod       = surf.roughness * 8.0; // 0 = sharp sky, 8 = very blurry
-        vec3 envColor   = textureLod(uSkybox, reflectDir, lod).rgb; // read from blurred mip level
+        float lod = surf.roughness * 8.0; // 0 = sharp sky, 8 = very blurry
+        vec3 envColor = textureLod(uSkybox, reflectDir, lod).rgb; // read from blurred mip level
 
         // Schlick Fresnel
-        float NdotV   = max(dot(surf.normal, viewDir), 0.0); // if its 1 then its 90angles direction => fresnel weak
+        float NdotV = max(dot(surf.normal, viewDir), 0.0); // if its 1 then its 90angles direction => fresnel weak
         float fresnel = uReflectivity + (1.0 - uReflectivity) * pow(1.0 - NdotV, 5.0);
-        float amount = fresnel * (1.0 - surf.roughness);   // rough surfaces reflect less
+        float amount = fresnel * (1.0 - surf.roughness); // rough surfaces reflect less
         result = mix(result, envColor, amount);
     }
-
 
     FragColor = vec4(result, 1.0);
 }

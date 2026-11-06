@@ -2,6 +2,7 @@
 
 #include "camera.hpp"
 #include "ecs.hpp"
+#include <glm/glm.hpp>
 #include <memory>
 #include <string>
 
@@ -22,6 +23,9 @@ namespace component {
         void draw(const std::shared_ptr<Camera> &camera);
 
         void bindForReflections(); // bind texture for reflection
+
+        // Multiplies the sky's colour, darkens it for the night
+        glm::vec3 tint{1.f};
 
     private:
         std::string textureFile;

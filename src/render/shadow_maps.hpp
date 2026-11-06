@@ -20,12 +20,13 @@ class ShadowMaps {
 #ifdef NDEBUG
     static constexpr uint16_t RESOLUTION = 1 << 12; // 4096
 #else
-    static constexpr uint16_t RESOLUTION = 1 << 11; // 2048, Debug is slow enough
+    static constexpr uint16_t RESOLUTION = 1
+                                           << 11; // 2048, Debug is slow enough
 #endif
     // Point light faces only use the lower left POINT_RESOLUTION square of
     // their layer (half the width and height = quarter of the pixels). Must
     // match POINT_SHADOW_SCALE in lit.fs (1 / POINT_RESOLUTION_DIV).
-    static constexpr int POINT_RESOLUTION_DIV = 2;
+    static constexpr int POINT_RESOLUTION_DIV = 4;
     static constexpr uint16_t POINT_RESOLUTION =
         RESOLUTION / POINT_RESOLUTION_DIV;
     // Frames the light count has to stay lower before layers are freed, so

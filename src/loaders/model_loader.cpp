@@ -57,7 +57,17 @@ GLuint loadMeshTexture(const aiScene *scene, const aiMesh *mesh,
     // glTF/GLB textures are embedded in the file itself, referenced as "*N";
     // Assimp resolves that back to the raw image bytes for us.
     const aiTexture *embedded = scene->GetEmbeddedTexture(path.C_Str());
-    if (!embedded || embedded->mHeight != 0) {
+    if (!embedded) {
+        // Not embedded: a file in res/textures, shared by many models (the
+        // MC_ city objects), so each one is decoded once
+        static std::unordered_map<std::string, std::shared_ptr<render::Texture>>
+            files;
+        auto &file = files[path.C_Str()];
+        if (!file)
+            file = loadTexture(path.C_Str());
+        return file ? file->id : 0;
+    }
+    if (embedded->mHeight != 0) {
         std::cerr << "Unsupported or missing embedded texture: " << path.C_Str()
                   << std::endl;
         return 0;
@@ -188,6 +198,11 @@ Mesh processMesh(const aiScene *scene, const aiMesh *mesh) {
 
     Mesh result = createMesh(vertices, indices);
     loadMeshTextures(scene, mesh, result);
+    int twoSided = 0;
+    if (mesh->mMaterialIndex < scene->mNumMaterials &&
+        scene->mMaterials[mesh->mMaterialIndex]->Get(AI_MATKEY_TWOSIDED,
+                                                     twoSided) == AI_SUCCESS)
+        result.doubleSided = twoSided != 0;
     return result;
 }
 
