@@ -491,10 +491,9 @@ scn::Scene ironheartForge() {
                 light = node->add_component<component::Light>(pl);
             } else {
                 node->setLocalRotEuler(lookEuler(vec3Of(l, "direction")));
-                auto sl = component::Light::spot(
-                    color, intensity,
-                    (float)cJSON_GetNumberValue(get(l, "cone_deg")), 0.09f,
-                    0.032f);
+                float cone = (float)cJSON_GetNumberValue(get(l, "cone_deg"));
+                auto sl = component::Light::spot(color, intensity, cone,
+                                                 cone + 5.f, 0.09f, 0.032f);
                 sl.ambient = 0.05f;
                 sl.castsShadow = true;
                 sl.shadowFar = 20.f;
