@@ -253,14 +253,14 @@ static void animationWindow(scn::Scene &scene) {
         for (auto &animator : animators)
             animator->stop();
 
-    // One timeline for everything: the camera, doors, sun box, ... stay in sync
+    // One timeline for everything: the camera, doors, sun, ... stay in sync.
+    // Looping tracks count too (the day / night cycle), seek() wraps them.
     float timeline = 0.f, timelineEnd = 0.f;
     for (auto &animator : animators)
-        for (auto &track : animator->tracks)
-            if (track.playback.mode == component::PlayMode::Single) {
-                timeline = std::max(timeline, track.playback.time);
-                timelineEnd = std::max(timelineEnd, track.playback.duration);
-            }
+        for (auto &track : animator->tracks) {
+            timeline = std::max(timeline, track.playback.time);
+            timelineEnd = std::max(timelineEnd, track.playback.duration);
+        }
     if (timelineEnd > 0.f &&
         ImGui::SliderFloat("Timeline", &timeline, 0.f, timelineEnd, "%.2f s"))
         for (auto &animator : animators)
@@ -313,8 +313,10 @@ static void physicsWindow(scenes::SceneManager &scenes) {
         scenes.requestReload();
 
     ImGui::Separator();
+    // Up to 8x to fast-forward the day / night cycle. Logarithmic, so the
+    // slow end stays easy to pick.
     ImGui::SliderFloat("Timescale", &scene.physics_context.timeScale, 0.f,
-                       2.f);
+                       8.f, "%.2fx", ImGuiSliderFlags_Logarithmic);
     if (ImGui::Button("Reset timescale"))
         scene.physics_context.timeScale = 1.f;
     ImGui::End();

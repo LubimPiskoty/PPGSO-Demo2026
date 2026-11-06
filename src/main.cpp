@@ -107,7 +107,7 @@ int main() {
         // Update and draw the scene
         {
             profiler::Scope _(profiler::Stage::Update);
-            scene.update(dt * scene.physics_context.timeScale);
+            scene.update(dt); // applies the timescale itself
         }
         {
             profiler::Scope _(profiler::Stage::Physics);

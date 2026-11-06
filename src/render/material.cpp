@@ -70,6 +70,7 @@ void Material::bind() const {
     glUniform3fv(uniLoc("uMaterial.specular"), 1, glm::value_ptr(specular));
     glUniform1f(uniLoc("uMaterial.shininess"), shininess);
     glUniform1f(uniLoc("uMaterial.opacity"), opacity);
+    glUniform1f(uniLoc("uTime"), time);
 
 
     // Extra uniforms

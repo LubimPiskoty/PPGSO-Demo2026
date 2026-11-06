@@ -6,6 +6,9 @@
 #include "../components/skybox.hpp"
 #include "../debug/profiler.hpp"
 #include "../render/framebuffer.hpp"
+#include "../render/material.hpp"
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <memory>
@@ -38,7 +41,14 @@ void Scene::draw() {
     this->root->draw(camera_projection, inv_camera_transform);
 }
 
-void Scene::update(float dt) { this->root->update(dt); }
+void Scene::update(float dt) {
+    const float scale = std::max(physics_context.timeScale, 0.f);
+    // Shader effects (waves, wind) speed up only by the square root: sped
+    // up 4x they move 2x, so it shows without them looking frantic
+    render::Material::time += dt * std::sqrt(scale);
+    // Animations (the day / night cycle) follow the timescale exactly
+    this->root->update(dt * scale);
+}
 
 std::shared_ptr<Node> Scene::findByGuid(util::Guid guid) const {
     std::vector<std::shared_ptr<Node>> stack{root};
@@ -166,7 +176,8 @@ void Scene::shadow_pass() {
         return (scn::Node *)nullptr;
     };
     // Front faces culled: the map holds the back sides, so a lit surface is
-    // never compared with its own depth (no bias needed)
+    // never compared with its own depth (no bias needed). Open surfaces
+    // (Shadow::open) have no back sides, they draw their front faces.
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
     for (size_t i = 0; i < casters.size(); i++) {
@@ -187,9 +198,21 @@ void Scene::shadow_pass() {
         for (auto &shadow : shadowCasters)
             if (shadow->enabled &&
                 (casters[i]->bakedShadow || !shadow->bakedOnly) &&
-                (!sun || groupOf(shadow) == own))
+                (!sun || groupOf(shadow) == own)) {
+                if (shadow->open) {
+                    glCullFace(GL_BACK);
+                    glEnable(GL_POLYGON_OFFSET_FILL);
+                    // Deeper by a bit more on slopes, where a texel covers
+                    // more depth
+                    glPolygonOffset(2.f, 4.f);
+                }
                 shadow->drawShadow(proj, view, depthShader,
                                    depthShaderInstanced);
+                if (shadow->open) {
+                    glDisable(GL_POLYGON_OFFSET_FILL);
+                    glCullFace(GL_FRONT);
+                }
+            }
     }
     glCullFace(GL_BACK);
     shadowMaps->endLayers();

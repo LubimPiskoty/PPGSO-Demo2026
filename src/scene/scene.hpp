@@ -28,6 +28,7 @@ class Scene {
     Scene();
 
     // Call on whole scene graph
+    // dt in real seconds, the timescale is applied here
     void update(float dt);
     // Advances physics by physics_context.fixedDt (scaled by timeScale)
     void physics_step();

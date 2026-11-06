@@ -16,6 +16,11 @@ class Shadow : public component::ComponentBase<Shadow> {
     // every frame don't need
     bool bakedOnly = false;
 
+    // Open surface (ground, terrain): no back side for the front-face culled
+    // pass to draw, so its front faces go into the map instead, pushed a
+    // little deeper (glPolygonOffset) so it doesn't shadow itself
+    bool open = false;
+
     // Called by Scene::shadow_pass with the light's matrices and depth shaders
     void drawShadow(glm::mat4 projection, glm::mat4 lightView,
                     const render::Shader &depthShader,

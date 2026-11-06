@@ -76,6 +76,10 @@ public:
   float opacity = 1.f;
 
   BlendMode blend = BlendMode::Opaque;
+
+  // Seconds of scene time, uploaded as uTime for animated shaders (water).
+  // Scene::update advances it, so it pauses with the scene.
+  static inline float time = 0.f;
   // Both sides drawn (no back-face culling), lit.fs flips the normal on the
   // back side. For thin cards: leaves, grass, cloth.
   bool doubleSided = false;

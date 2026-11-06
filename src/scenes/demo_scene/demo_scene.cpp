@@ -19,11 +19,10 @@
 
 namespace scenes {
 
-// Flat ground tiles and decals (and the leftover terrain and water) only
-// receive shadows: casting, they shadow each other and themselves
-bool isGround(const std::string &model) {
-    for (const char *prefix : {"City_Ground", "Ground_", "Grass_1_Alpha",
-                               "Grass_2_Alpha", "Rest_Environment"})
+// Flat ground tiles and decals: one-sided quads
+bool isFlat(const std::string &model) {
+    for (const char *prefix :
+         {"City_Ground", "Ground_", "Grass_1_Alpha", "Grass_2_Alpha"})
         if (model.rfind(prefix, 0) == 0)
             return true;
     return false;
@@ -39,12 +38,25 @@ scn::Scene demoScene() {
 
     auto lit = std::make_shared<render::Material>(
         "Lit", std::make_shared<render::Shader>("default.vs", "lit.fs"));
+    // Gerstner waves in water.vs, lit.fs adds the sky reflection
+    auto water_material = std::make_shared<render::Material>(
+        "Water", std::make_shared<render::Shader>("water.vs", "lit.fs"));
+    water_material->setFloat("uReflectivity", 0.3f);
+    water_material->setFloat("uRoughness", 0.1f);
+    water_material->specular = glm::vec3(0.8f);
+    water_material->shininess = 96.f;
     auto litInstanced = std::make_shared<render::Material>(
         "Lit instanced", std::make_shared<render::Shader>(
                              "default_instanced.vs", "lit.fs", true));
+    // Trees: bend in the wind (foliage_instanced.vs), leaves seen from both
+    // sides. Same wind direction as the water's swells.
     auto foliage = std::make_shared<render::Material>(
-        "Lit instanced, double sided", litInstanced->getShader());
+        "Foliage", std::make_shared<render::Shader>("foliage_instanced.vs",
+                                                    "lit.fs", true));
     foliage->doubleSided = true;
+    foliage->setVec3("uWindDir", glm::vec3(1.f, 0.f, 0.25f));
+    foliage->setFloat("uWindStrength", 1.75f);
+    foliage->setFloat("uPlantHeight", 11.f); // the tallest tree models
 
     // ---- The city: every copy of an object in one instanced draw ----
     auto cityNode = scn::Node::create("City");
@@ -69,19 +81,34 @@ scn::Scene demoScene() {
                 loader::loadModel("MC_" + model + ".glb")),
             isFoliage(model) ? foliage : litInstanced);
         node->add_component<component::Instances>(std::move(instances));
-        if (!isGround(model))
-            node->add_component<component::Shadow>();
+        // Everything casts, the ground too. Flat tiles are open surfaces:
+        // nothing behind their front faces for the shadow pass to draw.
+        node->add_component<component::Shadow>()->open = isFlat(model);
         cityNode->add_child(node);
     }
     // What the objects don't cover (the ground), where the demo has it
     for (const char *model : city::rest) {
+        // Drawn by the water below instead
+        if (std::string(model) == "Rest_Environment_Water")
+            continue;
         auto node = scn::Node::create(model);
         node->add_component<component::Mesh>(
             std::make_shared<render::Model>(
                 loader::loadModel(std::string("MC_") + model + ".glb")),
             lit);
-        if (!isGround(model))
-            node->add_component<component::Shadow>();
+        // The leftover terrain is one open surface too (houses and people
+        // pieces in the other Rest_ models are closed)
+        node->add_component<component::Shadow>()->open =
+            std::string(model) == "Rest_Environment";
+        cityNode->add_child(node);
+    }
+    // The demo's water, split into small triangles for the waves
+    // (tools/subdivide_water.py)
+    {
+        auto node = scn::Node::create("Water", glm::vec3(0, -1, 0));
+        node->add_component<component::Mesh>(
+            std::make_shared<render::Model>(loader::loadModel("MC_Water.glb")),
+            water_material);
         cityNode->add_child(node);
     }
     scene.root->add_child(cityNode);
@@ -94,12 +121,14 @@ scn::Scene demoScene() {
     scene.root->add_child(sky);
 
     // ---- Day and night: the sun turns once around the city per DAY ----
-    // Pitch 0 is sunrise in the east, -90 noon, -180 sunset, below that the
-    // sun shines up from under the ground, so it is dark then
+    // Pitch 0 is sunrise, -90 noon, -180 sunset, below that the sun shines
+    // up from under the ground, so it is dark then. The pitch turns it inside
+    // the Sun path node, which tips that circle off the vertical.
     using component::AnimTarget;
     using V = glm::vec3;
     constexpr float DAY = 120.f; // seconds
-    const float yaw = glm::radians(35.f);
+    const float tilt = glm::radians(35.f);
+    const float yaw = glm::radians(70.f);
     // (fraction of the day, value) -> keys in seconds
     auto day = [&](std::vector<std::pair<float, V>> points) {
         for (auto &point : points)
@@ -107,23 +136,27 @@ scn::Scene demoScene() {
         return points;
     };
     {
-        auto node = scn::Node::create("Sun", center);
+        auto path = scn::Node::create("Sun path", center);
+        path->setLocalRot(glm::angleAxis(yaw, V(0.f, 1.f, 0.f)) *
+                          glm::angleAxis(tilt, V(0.f, 0.f, 1.f)));
+        scene.root->add_child(path);
+        auto node = scn::Node::create("Sun");
         auto sun =
             component::Light::directional({1.f, 0.9f, 0.75f}, 1.5f, 0.3f);
         // Moves all the time, so its map is drawn every frame
         sun.castsShadow = true;
-        sun.shadowExtent = radius / 2.f + 20.f;
+        sun.shadowExtent = radius / 1.75f + 20.f;
         sun.shadowNear = 0.f;
         sun.shadowFar = 2.f * radius + 100.f;
         node->add_component<component::Light>(sun);
-        scene.root->add_child(node);
+        path->add_child(node);
 
         auto animator = node->add_component<component::Animator>();
         // Evenly spaced points on a line: Catmull-Rom keeps the speed even,
         // and -360 deg is the same as 0, so the loop doesn't jump
         std::vector<V> pitch;
         for (float deg : {0.f, -90.f, -180.f, -270.f, -360.f})
-            pitch.push_back({glm::radians(deg), yaw, 0.f});
+            pitch.push_back({glm::radians(deg), 0.f, 0.f});
         animator->addTrack(AnimTarget::Rotation,
                            component::Curve<V>::smoothEven(pitch, DAY));
         // Orange low over the horizon, white at noon, gone at night. Flat
@@ -178,7 +211,7 @@ scn::Scene demoScene() {
         // each other, a 24 bit depth buffer needs the precision far away
         scene.activeCamera =
             node->add_component<component::Camera>(50.f, 1.f, 1.f, 0.5f, 800.f);
-        node->add_component<component::UserMovement>(20.f, 0.1f);
+        node->add_component<component::UserMovement>(50.f, 0.1f);
         scene.root->add_child(node);
     }
 
