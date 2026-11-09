@@ -24,8 +24,8 @@
     - x ] Must compute acceleration in addition to velocity (e.g. gravity + wind), and support mass [Timon]
     - [x] Correct numerical integration, e.g. semi-implicit Euler or RK4 [Timon]
   - [x] (2b) Rigid body simulation with correct force computation, combining linear and angular motion, and applying torque [Timon]
-- [ ] Camera work [3b]
-  - [ ] (2b) Perspective-projection camera; correct handling of window/viewport resizing; adjustable camera parameters (Chyba resizable funkcia) [David]
+- [x] Camera work [3b]
+  - [x] (2b) Perspective-projection camera; correct handling of window/viewport resizing; adjustable camera parameters (Chyba resizable funkcia) [David]
   - [x] (1b) Animated camera using keyframes storing position and look-at direction over time, using interpolation other than linear [David]
 - [x] Lighting with multiple light sources [13b] [David]
   - [x] (3b) All light source types with appropriate parameters: directional, point, spot

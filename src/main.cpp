@@ -83,11 +83,23 @@ int main() {
                [] { return loader::loadScene("diorama.json"); });
     scenes.setViewport((float)fbWidth, (float)fbHeight);
     scenes.load(0);
+    int lastFbWidth = fbWidth, lastFbHeight = fbHeight;
 
     double time = glfwGetTime();
     double physicsAccumulator = 0.0;
     while (!glfwWindowShouldClose(window)) {
         profiler::beginFrame();
+
+        // Handle window resize
+        int curW, curH;
+        glfwGetFramebufferSize(window, &curW, &curH);
+        if (curW > 0 && curH > 0 &&
+            (curW != lastFbWidth || curH != lastFbHeight)) {
+            lastFbWidth = curW;
+            lastFbHeight = curH;
+            glViewport(0, 0, curW, curH);
+            scenes.setViewport((float)curW, (float)curH);
+            }
 
         // Scene switches/reloads requested by the UI last frame happen here,
         // never in the middle of an update or draw
