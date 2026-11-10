@@ -57,6 +57,10 @@ class ParticleSystem : public ComponentBase<ParticleSystem> {
 
     const char *type_name() const override { return "ParticleSystem"; }
 
+    // Mixed into the spawn shader's random numbers: emitters with the same
+    // settings but different seeds don't spawn the same particles in step
+    uint32_t seed = 0;
+
   private:
     GLuint vao, vbo;
     uint32_t allocatedParticles = 0;

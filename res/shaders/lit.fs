@@ -149,7 +149,7 @@ Surface getSurface() {
     surf.normal = getNormal();
     vec4 albedo = texture(uAlbedoTex, FragTexCoord);
     // Alpha-masked cards (tree leaves)
-    if (albedo.a < 0.1)
+    if (albedo.a < 0.5)
         discard;
     surf.albedo = albedo.rgb;
     surf.specular = uMaterial.specular;

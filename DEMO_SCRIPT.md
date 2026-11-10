@@ -8,37 +8,50 @@ The cut goes through `Scene::cutTo`, the SceneManager loads the named scene.
 
 | Shot | Scene | Time | What |
 |---|---|---|---|
-| 1 | Demo scene | 0-82 s | Day flyby: low along the road and over the lake |
-| 2 | Demo scene | 82-96 s | Tilt-shift timelapse from high above, day into night |
-| 3 | Demo scene | 96-186 s | The same flyby at night, then into the smithy's door |
+| 1 | Demo scene | 0-75 s | The day, five takes: fields, river, gate, market, main street |
+| 2 | Demo scene | 75-97 s | Tilt-shift timelapse from high above, day into night |
+| 3 | Demo scene | 97-133 s | At night: low down the north street, round the market, into the smithy's door |
 | 4 | Smithy interior | 0-44 s | Inside the smithy: bellows, coal, anvil |
 
-The flyby's length comes from its path (`FLYBY`: points with the camera's
-speed at each, so slower or faster is a matter of those speeds), the rest from
+Each take's length comes from its path (`DAY_TAKES`, `NIGHT_TAKE`: points with
+the camera's speed at each, at least the take's cruise speed between them,
+slowing down over 20 m, `EASE`, to the slower points), the rest from
 `LAPSE` and `APPROACH` at the top of the demo scene's file; the smithy has
 `DOORS_SHUT`, `GUST`, `SLOW_IN`, `SLOW_OUT`, `END`.
 
 ## Shot 1: the day flyby
 
 Late morning, the sun stands still: its shadow map is baked (drawn once), one
-box over the whole city. The camera flies low (4 to 10 m up), looking along
-its path:
+box over the whole city. The story of the city's day, five takes, a short dip
+to black between each two:
 
-- in over the east wheat field and the east village, across the east bridge
-  and over the east gate
-- down the road to the market square, then south down the main street and
-  over the south gate and bridge
-- west along the road through the south village and its wheat field, down to
-  the river's west arm
-- the lake: around the west of the island under the castle, past the ships
-  and the north shore's village, to the two ships off the port
-- into the port, over the north gate and down the north street to the square,
-  in front of the smithy
+| Take | Time | What |
+|---|---|---|
+| Fields | 0-16 s | A slow glide low over the east wheat past the farmers, rising a little, the walls on the island ahead |
+| River | 16-31 s | Gliding east low over the water, looking across it: the ships, the port and the walls slide by |
+| East gate | 31-47.5 s | Over the bridge toward the two guards, then straight up beside the gate, tilting up to the towers and archers |
+| Market | 47.5-62.5 s | In from the gate, a little above the people, along the street to the stalls |
+| Main street | 62.5-75 s | South past the church, the south gate and its guards ahead |
 
-The path was read off a top-down picture of the city and every point checked
-against a height map of everything in it, trees and towers are close
-(`tools/flyby/`). The camera looks from where it was a second ago to where it
-will be in three: it turns into a bend early and doesn't sway with the path.
+Each take is one simple, slow move (1.5 to 3.5 m/s, 5 at night). The camera
+has two paths: where it is, and the point it looks at, turned to face that
+point every frame (no angles interpolated, so it can't overshoot or swing the
+long way round). A take's points say what it looks at there (the gate, the
+guards, the towers; across the river for the river); the looked-at point
+moves smoothly from one to the next. A point with nothing to look at looks
+25 m ahead along the path, a little down. It turns at most about 6 deg/s
+(`tools/flyby/rot2.py` measures it).
+
+The paths were read off a top-down picture of the city and every point checked
+against a height map of everything in it, at least 1 m clear of whatever
+stands within 2.5 m, people too (`tools/flyby/`: `hm.py` makes the height
+maps, `poi.py` marks the guards, gates, towers, ships and farmers on the
+picture, `planner.py` checks and draws the takes of `takes.py`, a copy of the
+ones in the code).
+
+The grass and dirt patches on the ground are laid onto the terrain under
+them (`tools/drape_ground.py`, they were flat and hung over the slopes) and
+don't cast shadows.
 
 The boats and ships ride the water's waves (`Floating`: the height and slope
 of the same sum of waves `water.vs` draws, at the boat, every frame), and
@@ -72,19 +85,24 @@ the shadows don't sweep along with the camera.
   gets dark
 - Lamps (point lights) turning on one by one
 
-## Shot 3: the night flyby
+## Shot 3: the night
 
-The same path as shot 1, under the moon, then on between the market stalls
-and low over the ground beside the people in front of the smithy. The smithy
-(the forge building, standing where one House_7_1 of the city was, door toward
-the square) opens its doors, the camera flies into the dark doorway (a black
-card behind the doors) and the demo cuts to shot 4.
+Under the moon, slowly (3 m/s) and low (about 4 m up, just over the people
+and the stalls): in through the north gate, down the north street to the
+market square, round the stalls on the west of its tree and back east along
+its south side (lamps to be added along this way). At the end of the market it turns to
+the smithy's doorway (the forge building, standing where one House_7_1 of the
+city was, door toward the square), comes onto the door's axis over the stalls
+in front of it, sinks to eye height and
+pushes in slowly while the doors open (from 5 s before the cut), into the
+dark doorway (a black card behind the doors). It fades to black only over
+the last 1.2 s, then the demo cuts to shot 4.
 
 ### To add
 
 - The lamps of shot 2, lit
 
-Smoke rises out of the chimneys near the path and the smithy's own (a
+Smoke rises out of every chimney of the city and the smithy's own (a
 particle emitter each, on from half way into the timelapse). The water
 reflects the sky with its night tint, so it's dark too.
 
@@ -99,10 +117,16 @@ Then second blacksmith moves prepares to strike red hot metal, vertigo effect sl
 
 ### What's in it
 
-The room is the forge building's shell, furnished with the old-smithy pack
-(`tools/export_smithy.py` makes `res/models/SMY_*.glb` and
-`src/scenes/smithy/smithy_layout.hpp` from `../old-smithy`) and the props of
-the building's own pack (barrels, quench tub, tool rack, workbench...).
+The room is the high-poly smithy (`tools/export_hpforge.py` makes
+`res/models/HPF_*.glb` and `src/scenes/smithy/forge_layout.hpp` from the pack
+in `~/Downloads/highpoly-forge.zip`): its stone house, hearth with the coal
+in its bowl, hood, anvil, workbenches, buckets, hammers, swords. Decimated
+to about 100k triangles, the house sheared level (it stood on a slope in the
+pack), plank doors made for its doorway. The same house stands in the city.
+The pack's hammer and bellows move on their own (no smith yet), procedural:
+the hammer swings about its grip onto the sword on the anvil, heavy blows
+and light taps; the bellows press down and open, every press blows over the
+coal.
 
 - 0-3.5 s: the camera comes in, the doors shut behind it
 - 3.5-11 s: the bellows pumping (the lever, rope and bellows body animate)
@@ -126,7 +150,8 @@ the building's own pack (barrels, quench tub, tool rack, workbench...).
   (emissive maps) and ember particles
 - Particles: embers off the coal, sparks off every hammer blow (bursts),
   dust in the window's light
-- Lights: the fire (point, shadows), the hot metal (point), the window (spot,
+- Lights: four fill lights (points, no shadows) so the corners aren't black,
+  the fire (point, shadows), the hot metal (point), the window (spot,
   shadows), a dim bounce light so the room isn't black
 
 ### To add

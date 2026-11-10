@@ -94,9 +94,14 @@ int main() {
     // F12 saves every buffer of the next frame (the scene, its depth map
     // and each post-processing pass) into capture/
     bool captureRequested = false;
-    input::onKey([&captureRequested](int key, int action) {
+    // Space skips 5 s ahead
+    constexpr float SKIP = 5.f;
+    float skip = 0.f;
+    input::onKey([&captureRequested, &skip](int key, int action) {
         if (key == GLFW_KEY_F12 && action == GLFW_PRESS)
             captureRequested = true;
+        if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
+            skip += SKIP;
     });
     int lastFbWidth = fbWidth, lastFbHeight = fbHeight;
 
@@ -128,6 +133,15 @@ int main() {
         // Clamp so a long stall (window drag, breakpoint) doesn't teleport
         // everything in one update
         float dt = std::min((float)(time - last_time), 0.1f);
+        // A skip runs the time in 0.1 s updates (and its physics) before
+        // this frame's, nothing drawn in between
+        for (; skip > 0.f; skip -= 0.1f) {
+            const float step = std::min(skip, 0.1f);
+            scene.update(step);
+            for (double t = 0.0; t < step;
+                 t += scene.physics_context.fixedDt)
+                scene.physics_step();
+        }
 
         // Update and draw the scene
         {

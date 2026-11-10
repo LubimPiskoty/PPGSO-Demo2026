@@ -1,5 +1,6 @@
 #include "demo_scene.hpp"
 #include "city_layout.hpp"
+#include "../smithy/forge_layout.hpp"
 
 #include "../../components/animator.hpp"
 #include "../../components/camera.hpp"
@@ -20,6 +21,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <optional>
 #include <random>
 #include <string>
 #include <tuple>
@@ -33,6 +35,15 @@ bool isFlat(const std::string &model) {
     for (const char *prefix :
          {"City_Ground", "Ground_", "Grass_1_Alpha", "Grass_2_Alpha"})
         if (model.rfind(prefix, 0) == 0)
+            return true;
+    return false;
+}
+
+// Grass and dirt patches lying on the ground, drawn draped (not instanced)
+bool isDecal(const std::string &model) {
+    for (const char *decal : {"Ground_1_Alpha", "Ground_2_Alpha",
+                              "Grass_1_Alpha", "Grass_2_Alpha"})
+        if (model == decal)
             return true;
     return false;
 }
@@ -51,8 +62,8 @@ using Curve = component::Curve<V>;
 // timelapse into the night seen from high above, the same flyby at night,
 // then into the smithy's door, where the demo cuts to its own scene
 // (scenes::smithyScene). The flyby's length comes from its path, see flyby().
-constexpr float LAPSE = 14.f;   // seconds of timelapse between the flybys
-constexpr float APPROACH = 7.f; // from the flyby's end into the door
+constexpr float LAPSE = 22.f;   // seconds of timelapse between the flybys
+constexpr float APPROACH = 8.5f; // from the night take's end into the door
 // SceneManager name of shot 4, see main.cpp
 constexpr const char *INTERIOR = "Smithy interior";
 
@@ -61,12 +72,10 @@ constexpr const char *INTERIOR = "Smithy interior";
 constexpr const char *REPLACED = "House_7_1";
 const V FORGE_AT{25.7f, -2.45f, -48.9f};
 const V SQUARE{2.f, -2.45f, -71.f};
+// The middle of the smithy's doorway, x in its house's space
+constexpr float DOOR_MID = (forge::doorX0 + forge::doorX1) / 2;
 
-// Euler (pitch, yaw, 0) that points a node's -Z along d
-V lookEuler(V d) {
-    d = glm::normalize(d);
-    return {std::asin(d.y), std::atan2(-d.x, -d.z), 0.f};
-}
+V vec(const float v[3]) { return {v[0], v[1], v[2]}; }
 
 struct Shot {
     float time;
@@ -142,44 +151,19 @@ bool isPerson(const std::string &model) {
 }
 
 // Where smoke comes out of a house: the top of its chimney, in the model
+// (every house has one, its variants _1, _2... have it in the same place)
 bool chimney(const std::string &model, V &top) {
-    if (model.rfind("House_1_", 0) == 0)
-        top = {0.f, 7.7f, -1.3f};
-    else if (model.rfind("House_2_", 0) == 0)
-        top = {0.4f, 4.8f, -0.9f};
-    else if (model.rfind("House_4_", 0) == 0)
-        top = {0.4f, 8.2f, -0.95f};
-    else
-        return false;
-    return true;
-}
-
-// Distance from p to the segment a-b, seen from above
-float distance(V p, V a, V b) {
-    p.y = a.y = b.y = 0.f;
-    const V ab = b - a;
-    const float t =
-        glm::clamp(glm::dot(p - a, ab) / glm::dot(ab, ab), 0.f, 1.f);
-    return glm::length(p - (a + ab * t));
-}
-
-// (time, view direction) -> rotation curve, Catmull-Rom. The yaw stays
-// continuous, so the camera never spins the long way round.
-using Views = std::vector<std::pair<float, V>>;
-Curve turns(const Views &views) {
-    std::vector<Curve::Point> rotations;
-    for (const auto &[time, direction] : views) {
-        V r = lookEuler(direction);
-        if (!rotations.empty()) {
-            const float last = rotations.back().second.y;
-            while (r.y - last > glm::pi<float>())
-                r.y -= glm::two_pi<float>();
-            while (r.y - last < -glm::pi<float>())
-                r.y += glm::two_pi<float>();
+    static const std::map<std::string, V> tops = {
+        {"House_1_", {0.f, 7.7f, -1.3f}},   {"House_2_", {0.4f, 4.8f, -0.95f}},
+        {"House_3_", {-4.17f, 7.2f, -2.27f}}, {"House_4_", {0.4f, 8.2f, -0.98f}},
+        {"House_5_", {-1.54f, 4.45f, -1.98f}}, {"House_6_", {3.67f, 8.5f, -1.5f}},
+        {"House_7_", {0.24f, 6.3f, -5.33f}}};
+    for (const auto &[prefix, at] : tops)
+        if (model.rfind(prefix, 0) == 0) {
+            top = at;
+            return true;
         }
-        rotations.push_back({time, r});
-    }
-    return Curve::smooth(rotations);
+    return false;
 }
 
 // Catmull-Rom through the shots' positions
@@ -190,34 +174,21 @@ Curve path(const std::vector<Shot> &shots) {
     return Curve::smooth(positions);
 }
 
-// Positions and view directions of the shots, each looking at its lookAt
-std::pair<Curve, Curve> flight(const std::vector<Shot> &shots) {
-    Views views;
-    for (const Shot &shot : shots)
-        views.push_back({shot.time, shot.lookAt - shot.pos});
-    return {path(shots), turns(views)};
-}
+// The camera's path and the path of what it looks at: Catmull-Rom through
+// the positions and through the points looked at, the camera turned to face
+// it every frame (see the "look at" track), never through angles, so it
+// doesn't overshoot or take the long way round
+struct Flight {
+    Curve pos, look;
+    float end;
+};
 
-// View directions for flying along a path between two times: the camera
-// looks from where it was a second ago to where it will be in three, a
-// little down. Mostly ahead, so it turns into a bend before the path does
-// instead of trailing behind it, and over four seconds of the path, so the
-// path's small wiggles between its points don't sway it.
-Views lookingAhead(const Curve &positions, float from, float to) {
-    constexpr float step = 0.5f, back = 1.f, lead = 3.f;
-    Views views;
-    for (float time = from; time < to + step * 0.5f; time += step) {
-        // At the path's ends: the direction it leaves / arrives with
-        const float ahead = std::clamp(time + lead, from + back + lead,
-                                       positions.getDuration());
-        V direction =
-            positions.sample(ahead) - positions.sample(ahead - back - lead);
-        direction.y = 0.f;
-        direction = glm::normalize(direction);
-        direction.y = -0.15f;
-        views.push_back({std::min(time, to), direction});
-    }
-    return views;
+// Shots that each look at their lookAt
+Flight flight(const std::vector<Shot> &shots) {
+    std::vector<Curve::Point> looks;
+    for (const Shot &shot : shots)
+        looks.push_back({shot.time, shot.lookAt});
+    return {path(shots), Curve::smooth(looks), shots.back().time};
 }
 
 // a, then b: a hard cut where b starts
@@ -226,92 +197,224 @@ Curve then(Curve a, const Curve &b) {
     return a;
 }
 
-// One point of the flyby: where, and how fast the camera is there (m/s)
+// One point of a take's path: where, how fast the camera is there (m/s),
+// and what it looks at there (nothing: along the path, see fly()). Slower
+// than the take's cruise: it eases down to that over the EASE metres before
+// the point and back up over the ones after it. Faster: the runs on either
+// side of it are that fast.
 struct Way {
     V pos;
     float speed;
+    std::optional<V> look = std::nullopt;
+};
+constexpr float EASE = 20.f; // m
+
+// One shot of the demo: the camera flies along its ways, at least cruise m/s
+// between them
+struct Take {
+    const char *what;
+    float cruise;
+    std::vector<Way> ways;
 };
 
-// The flyby: in over the east field and bridge, through the east gate to the
-// market square, down the main street and out of the south gate, along the
-// road through the south village, around the west of the island over the
-// lake, past the ships to the port, over the north gate back to the square.
-// Read off a top-down picture of the city, every point checked against a
-// height map of everything in it (at least 1.5 m clear of whatever stands
-// within 2.5 m), so move them with care: trees and towers are close. Turns
-// are wide (the path never turns faster than about 45 deg/s): two points
-// close together around a corner whip the camera around.
-const std::vector<Way> FLYBY = {
-    // East field
-    {{222.f, 12.f, -62.f}, 5.f},
-    {{170.f, 8.f, -28.f}, 25.f},
-    // East village
-    {{128.f, 6.f, -8.f}, 24.f},
-    // East bridge
-    {{98.f, 6.5f, -21.f}, 23.f},
-    // East gate
-    {{76.f, 10.5f, -31.f}, 12.f},
-    {{52.f, 8.f, -44.f}, 12.f},
-    // Past the smithy
-    {{35.f, 6.5f, -56.f}, 11.f},
-    // Market square, a wide turn south
-    {{18.f, 5.5f, -61.f}, 7.f},
-    {{5.f, 5.f, -53.f}, 7.f},
-    // Main street
-    {{2.f, 5.f, -36.f}, 10.f},
-    {{4.f, 4.f, 5.f}, 10.f},
-    {{6.f, 5.f, 35.f}, 10.f},
-    // South gate
-    {{8.f, 9.5f, 52.f}, 12.f},
-    // South bridge
-    {{8.f, 4.f, 70.f}, 12.f},
-    // Junction, a wide turn west
-    {{2.f, 5.f, 87.f}, 11.f},
-    {{-14.f, 5.5f, 96.f}, 11.f},
-    // South village
-    {{-45.f, 6.f, 95.f}, 13.f},
-    {{-95.f, 6.5f, 88.f}, 14.f},
-    // Wheat
-    {{-142.f, 9.f, 73.f}, 14.f},
-    {{-160.f, 9.f, 53.f}, 13.f},
-    {{-173.f, 6.5f, 38.f}, 13.f},
-    // The river's west arm
-    {{-193.f, 6.f, 27.f}, 14.f},
-    // River mouth
-    {{-214.f, 7.f, 8.f}, 16.f},
-    // The lake west of the castle
-    {{-225.f, 5.f, -50.f}, 18.f},
-    // Ship
-    {{-222.f, 4.f, -115.f}, 6.f},
-    // Ship, north village
-    {{-170.f, 6.5f, -195.f}, 30.f},
-    {{-90.f, 5.f, -216.f}, 30.f},
-    // The two ships ahead
-    {{-35.f, 5.f, -210.f}, 20.f},
-    // A wide turn into the port
-    {{-3.f, 5.5f, -190.f}, 15.f},
-    // Port
-    {{6.f, 8.5f, -160.f}, 8.f},
-    // North gate
-    {{7.f, 10.5f, -127.f}, 11.f},
-    // North street
-    {{7.f, 6.f, -100.f}, 8.f},
-    // Square, in front of the smithy
-    {{23.3f, 6.55f, -77.1f}, 6.f},
+// The story, read off a top-down picture of the city (tools/flyby/), every
+// point checked against a height map of everything in it, at least 1 m
+// clear of whatever stands within 2.5 m, the streets' people too: move them
+// with care. The day: the farmers out in the east field in the morning, the
+// ships on the river, the guards at the east gate and the archers on its
+// towers, in through the gate along the street to the market, down the main
+// street to the south gate. At night: from the river in over the port and the
+// north gate, down the north street to the smithy.
+const V EAST_GATE{84.f, 4.f, -33.f};
+// Looking at the river, sideways to the camera's way along it
+V riverView(V pos) { return pos + V{25.f, -1.5f, 70.f}; }
+const std::vector<Take> DAY_TAKES = {
+    {"Fields",
+     3.5f,
+     {// Low over the wheat past the farmers, rising slowly, the walls on the
+      // island ahead all along
+      {{214.f, 3.2f, -57.f}, 3.5f, EAST_GATE},
+      {{198.f, 3.2f, -49.f}, 3.5f, EAST_GATE},
+      {{180.f, 3.6f, -42.f}, 3.5f, EAST_GATE},
+      {{162.f, 5.5f, -40.f}, 3.5f, EAST_GATE}}},
+    {"River",
+     3.f,
+     {// Gliding east low over the water, looking across it: the ships, the
+      // port and the walls slide by
+      {{-1.f, -1.5f, -224.f}, 3.f, riverView({-1.f, -1.5f, -224.f})},
+      {{14.f, -1.4f, -223.5f}, 3.f, riverView({14.f, -1.4f, -223.5f})},
+      {{26.f, -1.2f, -223.f}, 3.f, riverView({26.f, -1.2f, -223.f})},
+      {{44.f, -1.f, -222.f}, 3.f, riverView({44.f, -1.f, -222.f})}}},
+    {"East gate",
+     2.f,
+     {// Over the bridge toward the two guards at the gate, then straight up
+      // beside it, tilting up to the towers and the archers on the wall
+      {{112.f, 1.6f, -12.f}, 2.f, V{83.f, -0.6f, -32.5f}},
+      {{104.f, 1.6f, -17.5f}, 2.f, V{83.f, -0.6f, -32.5f}},
+      {{99.f, 2.5f, -21.f}, 1.5f, V{83.f, 0.f, -32.5f}},
+      {{99.f, 8.f, -21.f}, 1.5f, V{83.f, 5.f, -33.f}},
+      {{99.f, 13.f, -21.f}, 1.5f, V{83.f, 9.f, -33.f}}}},
+    {"Market",
+     3.f,
+     {// In from the gate, a little above the people, to the stalls
+      {{60.f, 1.6f, -42.f}, 3.f},
+      {{48.f, 1.7f, -47.f}, 3.f},
+      {{35.f, 0.9f, -56.f}, 3.f},
+      {{20.f, 2.f, -61.f}, 3.f}}},
+    {"Main street",
+     3.5f,
+     {// South past the church, the south gate and its guards ahead
+      {{3.f, 1.3f, -8.f}, 3.5f, V{8.f, 1.f, 57.f}},
+      {{4.f, 1.5f, 15.f}, 3.5f, V{8.f, 1.f, 57.f}},
+      {{6.f, 2.5f, 36.f}, 3.5f, V{8.f, 1.f, 57.f}}}},
+};
+// The night: in through the north gate, low down the north street to the
+// market square, round the stalls on the west of its tree and back east
+// along its south side, where the camera goes on to the smithy's door
+// (that last stretch is in the scene, in the smithy's space)
+const Take NIGHT_TAKE = {"Night",
+                         3.f,
+                         {{{6.f, 1.5f, -117.f}, 3.f},
+                          {{8.5f, 1.6f, -104.f}, 3.f},
+                          {{10.5f, 1.7f, -91.f}, 3.f},
+                          {{9.f, 1.6f, -82.f}, 3.f},
+                          {{0.f, 1.6f, -80.f}, 3.f},
+                          {{-6.f, 1.6f, -70.f}, 3.f},
+                          {{-3.f, 1.6f, -59.f}, 3.f},
+                          {{5.f, 1.8f, -55.f}, 3.f}}};
+
+// A key of a take's path: when, where, and how far between its ways (2.5:
+// half way from the third to the fourth)
+struct Mark {
+    float time;
+    V pos;
+    float way;
 };
 
-// The flyby's path from a start time: times from the distances and speeds
-// (lookAt isn't used, the camera looks along the path, see lookingAhead)
-std::vector<Shot> flyby(float start) {
-    std::vector<Shot> shots;
-    float time = start;
-    for (size_t i = 0; i < FLYBY.size(); i++) {
+// The take's path from a start time. Its shape: Catmull-Rom through the
+// ways. Its speed: along the path, from the ways' speeds (see Way), keys
+// every half second.
+std::vector<Mark> flyby(const Take &take, float start) {
+    const auto &ways = take.ways;
+    std::vector<Curve::Point> byDistance;
+    float total = 0.f;
+    for (size_t i = 0; i < ways.size(); i++) {
         if (i > 0)
-            time += glm::length(FLYBY[i].pos - FLYBY[i - 1].pos) /
-                    ((FLYBY[i].speed + FLYBY[i - 1].speed) * 0.5f);
-        shots.push_back({time, FLYBY[i].pos, FLYBY[i].pos});
+            total += glm::length(ways[i].pos - ways[i - 1].pos);
+        byDistance.push_back({total, ways[i].pos});
     }
-    return shots;
+    const Curve shape = Curve::smooth(byDistance);
+    // Finely along it: the distance flown up to each sample
+    constexpr float step = 0.25f;
+    const int samples = (int)std::ceil(total / step);
+    std::vector<V> points;
+    std::vector<float> flown;
+    for (int k = 0; k <= samples; k++) {
+        points.push_back(shape.sample(std::min(k * step, total)));
+        flown.push_back(k == 0 ? 0.f
+                               : flown.back() + glm::length(points[k] -
+                                                            points[k - 1]));
+    }
+    // Where along it each way is
+    std::vector<float> at;
+    for (const auto &[d, pos] : byDistance)
+        at.push_back(flown[std::min((int)std::lround(d / step), samples)]);
+    // Between which ways a distance is: the first, how far to the next
+    auto between = [&](float s) {
+        size_t i = 0;
+        while (i + 2 < at.size() && at[i + 1] < s)
+            i++;
+        return std::pair{
+            i, glm::clamp((s - at[i]) / (at[i + 1] - at[i]), 0.f, 1.f)};
+    };
+    auto speed = [&](float s) {
+        // The runs between the ways: at least cruise
+        const auto [i, u] = between(s);
+        float v = glm::mix(std::max(ways[i].speed, take.cruise),
+                           std::max(ways[i + 1].speed, take.cruise), u);
+        // Easing down to the slow ways
+        const float base = v;
+        for (size_t j = 0; j < ways.size(); j++)
+            if (ways[j].speed < take.cruise)
+                v = std::min(v, glm::mix(ways[j].speed, base,
+                                         glm::smoothstep(0.f, EASE,
+                                                         std::abs(s - at[j]))));
+        return v;
+    };
+    // The time at each sample
+    std::vector<float> times{0.f};
+    for (int k = 1; k <= samples; k++)
+        times.push_back(times.back() +
+                        (flown[k] - flown[k - 1]) /
+                            ((speed(flown[k]) + speed(flown[k - 1])) * 0.5f));
+    std::vector<Mark> marks;
+    const float duration = times.back();
+    int k = 0;
+    for (float t = 0.f;; t += 0.5f) {
+        if (duration - t < 0.25f) // the last key at the very end
+            t = duration;
+        while (k + 1 < samples && times[k + 1] < t)
+            k++;
+        const float u =
+            glm::clamp((t - times[k]) / (times[k + 1] - times[k]), 0.f, 1.f);
+        const auto [i, w] = between(glm::mix(flown[k], flown[k + 1], u));
+        marks.push_back(
+            {start + t, glm::mix(points[k], points[k + 1], u), i + w});
+        if (t >= duration)
+            break;
+    }
+    return marks;
+}
+
+// How long a take is, seconds
+float length(const Take &take) {
+    const auto marks = flyby(take, 0.f);
+    return marks.back().time;
+}
+
+// The take from a start time, then the shots of tail (each looking at its
+// lookAt). What the camera looks at moves smoothly from what one way looks
+// at to the next's, through them as the camera passes the ways. A way with
+// nothing to look at looks AHEAD metres along the path, a little down.
+constexpr float AHEAD = 25.f;
+Flight fly(const Take &take, float start, const std::vector<Shot> &tail = {}) {
+    const std::vector<Mark> marks = flyby(take, start);
+    std::vector<Shot> shots;
+    for (const Mark &mark : marks)
+        shots.push_back({mark.time, mark.pos, mark.pos});
+    shots.insert(shots.end(), tail.begin(), tail.end());
+    const Curve positions = path(shots);
+    const float end = marks.back().time;
+
+    const auto &ways = take.ways;
+    std::vector<Curve::Point> looks;
+    for (size_t j = 0; j < ways.size(); j++) {
+        // When the camera passes the way
+        size_t k = 0;
+        while (k + 1 < marks.size() && marks[k].way < (float)j)
+            k++;
+        float time = marks[k].time;
+        if (k > 0 && marks[k].way > marks[k - 1].way) {
+            const float u = ((float)j - marks[k - 1].way) /
+                            (marks[k].way - marks[k - 1].way);
+            time = glm::mix(marks[k - 1].time, marks[k].time,
+                            glm::clamp(u, 0.f, 1.f));
+        }
+        V target;
+        if (ways[j].look) {
+            target = *ways[j].look;
+        } else {
+            V along = positions.sample(std::min(time + 1.f, end)) -
+                      positions.sample(std::max(time - 1.f, start));
+            along.y = 0.f;
+            target = ways[j].pos + glm::normalize(along) * AHEAD +
+                     V{0.f, -0.15f * AHEAD, 0.f};
+        }
+        looks.push_back({time, target});
+    }
+    for (const Shot &shot : tail)
+        looks.push_back({shot.time, shot.lookAt});
+    return {positions, Curve::smooth(looks), end};
 }
 
 } // namespace
@@ -319,11 +422,18 @@ std::vector<Shot> flyby(float start) {
 scn::Scene demoScene() {
     scn::Scene scene;
 
-    // The clock's marks, seconds: day flyby from 0, timelapse, night flyby,
-    // the cut to the smithy's inside
-    const float LAPSE_AT = flyby(0.f).back().time;
+    // The clock's marks, seconds: the day's takes from 0 (each cuts to the
+    // next where it ends), the timelapse, the night take, the cut to the
+    // smithy's inside
+    std::vector<float> dayCuts;
+    float LAPSE_AT = 0.f;
+    for (const Take &take : DAY_TAKES) {
+        if (LAPSE_AT > 0.f)
+            dayCuts.push_back(LAPSE_AT);
+        LAPSE_AT += length(take);
+    }
     const float NIGHT_AT = LAPSE_AT + LAPSE;
-    const float CUT = NIGHT_AT + LAPSE_AT + APPROACH;
+    const float CUT = NIGHT_AT + length(NIGHT_TAKE) + APPROACH;
 
     auto lit = std::make_shared<render::Material>(
         "Lit", std::make_shared<render::Shader>("default.vs", "lit.fs"));
@@ -393,19 +503,11 @@ scn::Scene demoScene() {
             crew.push_back({boat, &p});
             continue;
         }
-        // Chimneys near the flyby smoke at night: an emitter each, so only
-        // the ones the camera comes close to
+        // Chimneys, about half of them smoke at night (see the smoke below)
         V top;
-        if (chimney(model, top) && chimneys.size() < 24) {
-            float away = 1e9f;
-            for (size_t i = 1; i < FLYBY.size(); i++)
-                away = std::min(away, distance({p.x, p.y, p.z},
-                                               FLYBY[i - 1].pos, FLYBY[i].pos));
-            if (away < 30.f)
-                chimneys.push_back(V(p.x, p.y, p.z) +
-                                   glm::quat(V(p.rx, p.ry, p.rz)) *
-                                       (top * p.scale));
-        }
+        if (chimney(model, top))
+            chimneys.push_back(V(p.x, p.y, p.z) +
+                               glm::quat(V(p.rx, p.ry, p.rz)) * (top * p.scale));
         component::Instance instance;
         instance.position = {p.x, p.y, p.z};
         instance.rotation = {p.rx, p.ry, p.rz};
@@ -418,6 +520,18 @@ scn::Scene demoScene() {
     }
     for (auto &[model, instances] : copies) {
         auto node = scn::Node::create(model);
+        if (isDecal(model)) {
+            // Grass and dirt patches: every copy laid onto the ground in one
+            // mesh (tools/drape_ground.py), the flat quads hung over the
+            // slopes. They don't cast: just above the ground, their shadows
+            // fell a little off them and lifted them off it.
+            node->add_component<component::Mesh>(
+                std::make_shared<render::Model>(
+                    loader::loadModel("MC_" + model + "_Draped.glb")),
+                lit);
+            cityNode->add_child(node);
+            continue;
+        }
         node->add_component<component::Mesh>(
             std::make_shared<render::Model>(
                 loader::loadModel("MC_" + model + ".glb")),
@@ -474,15 +588,32 @@ scn::Scene demoScene() {
         // Drawn by the water below instead
         if (std::string(model) == "Rest_Environment_Water")
             continue;
+        if (std::string(model) == "Rest_Environment") {
+            // The terrain, split in two (tools/drape_ground.py): the ground,
+            // one open surface that casts, and the round grass and dirt
+            // patches lying on it, which don't (see the decals above)
+            auto ground = scn::Node::create("Rest_Ground");
+            ground->add_component<component::Mesh>(
+                std::make_shared<render::Model>(
+                    loader::loadModel("MC_Rest_Ground.glb")),
+                lit);
+            ground->add_component<component::Shadow>()->open = true;
+            cityNode->add_child(ground);
+            auto patches = scn::Node::create("Rest_Patches");
+            patches->add_component<component::Mesh>(
+                std::make_shared<render::Model>(
+                    loader::loadModel("MC_Rest_Patches.glb")),
+                lit);
+            cityNode->add_child(patches);
+            continue;
+        }
         auto node = scn::Node::create(model);
         node->add_component<component::Mesh>(
             std::make_shared<render::Model>(
                 loader::loadModel(std::string("MC_") + model + ".glb")),
             lit);
-        // The leftover terrain is one open surface too (houses and people
-        // pieces in the other Rest_ models are closed)
-        node->add_component<component::Shadow>()->open =
-            std::string(model) == "Rest_Environment";
+        // Houses and people pieces: closed
+        node->add_component<component::Shadow>();
         cityNode->add_child(node);
     }
     // The demo's water, split into small triangles for the waves
@@ -495,8 +626,8 @@ scn::Scene demoScene() {
         cityNode->add_child(node);
     }
 
-    // ---- The smithy: the forge building of the ironheart pack ----
-    // Door toward the square (the building's door is in its +z wall)
+    // ---- The smithy: the high-poly smithy's house (forge_layout.hpp) ----
+    // Door toward the square (the house's door is in its +z wall)
     const V toSquare = SQUARE - FORGE_AT;
     const float forgeYaw = std::atan2(toSquare.x, toSquare.z);
     auto forge = scn::Node::create("Smithy", FORGE_AT);
@@ -514,16 +645,13 @@ scn::Scene demoScene() {
         forge->add_child(node);
         return node;
     };
-    forgeProp("Building", "SM_Forge_Building", V(0.f));
-    forgeProp("Roof", "SM_Forge_Roof", V(0.f));
-    // Only its chimney shows above the roof from outside
-    forgeProp("Hood", "SM_Forge_Hood", {0.2f, 0.f, -2.4f});
-    forgeProp("Shutters", "SM_Window_Shutters", {3.92f, 0.f, 0.f});
-    // The doors swing in as the camera comes up to them
+    forgeProp("House", "HPF_House", V(0.f));
+    // The doors swing out as the camera comes up to them, hinged on the
+    // wall's outer face
     for (auto [name, model, x, angle] :
-         {std::tuple{"Door_L", "SM_Door_L", -1.1f, -80.f},
-          std::tuple{"Door_R", "SM_Door_R", 1.1f, 80.f}}) {
-        auto door = forgeProp(name, model, {x, 0.f, 3.045f});
+         {std::tuple{"Door_L", "HPF_Door_L", forge::doorX0, -80.f},
+          std::tuple{"Door_R", "HPF_Door_R", forge::doorX1, 80.f}}) {
+        auto door = forgeProp(name, model, {x, 0.f, forge::doorOuter});
         const V shut(0.f), open(0.f, glm::radians(angle), 0.f);
         door->add_component<component::Animator>()->addTrack(
             component::AnimTarget::Rotation,
@@ -543,11 +671,14 @@ scn::Scene demoScene() {
                           std::make_shared<render::Texture>(render::Texture{
                               loader::createTexture(pixel, 1, 1), "black"}));
         black->specular = V(0.f);
-        auto card = scn::Node::create("Darkness", {0.f, 1.3f, 2.6f});
+        auto card = scn::Node::create(
+            "Darkness", {DOOR_MID, forge::doorTop / 2, forge::doorInner - 0.4f});
         // The rect lies in XZ facing +Y, stand it up to face out of the door
         card->setLocalRotEuler({glm::half_pi<float>(), 0.f, 0.f});
         card->add_component<component::Mesh>(
-            std::make_shared<render::Model>(loader::createRect({1.4f, 1.4f})),
+            std::make_shared<render::Model>(loader::createRect(
+                {(forge::doorX1 - forge::doorX0) / 2 + 0.3f,
+                 forge::doorTop / 2 + 0.2f})),
             black);
         forge->add_child(card);
     }
@@ -678,45 +809,53 @@ scn::Scene demoScene() {
     scene.activeCamera = camera;
     auto clock = camNode->add_component<component::Animator>();
     {
-        const Curve posDay = path(flyby(0.f));
-        const Curve rotDay = turns(lookingAhead(posDay, 0.f, LAPSE_AT));
+        // The day's takes one after another, a cut between each two
+        Curve posDay, lookDay;
+        float at = 0.f;
+        for (const Take &take : DAY_TAKES) {
+            const Flight flown = fly(take, at);
+            posDay = then(posDay, flown.pos);
+            lookDay = then(lookDay, flown.look);
+            at = flown.end;
+        }
         // The timelapse: high above the city, looking down on it like on a
         // model (the tilt-shift blur is a post-processing pass), a slow
         // drift while the day goes by. The sun crosses the sky along its
         // path's z axis, (0.94, 0.34) on the ground: the camera looks along
         // that and drifts across it, (0.34, -0.94), so the shadows don't
         // sweep along with the camera.
-        const auto [posLapse, rotLapse] = flight({
+        const Flight lapse = flight({
             {LAPSE_AT, {-200.6f, 120.f, -87.6f}, {-22.f, -2.f, -23.f}},
             {NIGHT_AT, {-166.6f, 120.f, -181.6f}, {12.f, -2.f, -117.f}},
         });
-        // The same flyby at night, then on between the market stalls (one
-        // stands at -12, 24 in the smithy's space, one at -0.7, 15.7), low
-        // over the ground beside the people in front of the smithy (they
-        // stand at x -0.4 .. 0.4, 9 m and further out) and into the door.
-        // These last points are in the smithy's own space: straight at its
-        // door. The flyby ends at (-19, 9, 21) there.
-        std::vector<Shot> night = flyby(NIGHT_AT);
-        night.push_back({CUT - 4.5f, inForge({-3.5f, 1.9f, 12.f}),
-                         inForge({0.f, 1.4f, 3.f})});
-        night.push_back({CUT - 2.f, inForge({-0.3f, 1.7f, 6.f}),
-                         inForge({0.f, 1.5f, 0.f})});
-        night.push_back(
-            {CUT, inForge({0.f, 1.65f, 3.2f}), inForge({0.f, 1.6f, 0.f})});
-        const Curve posNight = path(night);
-        // Along the path up to the flyby's end, from there at the door
-        Views views = lookingAhead(posNight, NIGHT_AT, NIGHT_AT + LAPSE_AT);
-        for (size_t i = FLYBY.size(); i < night.size(); i++)
-            views.push_back({night[i].time, night[i].lookAt - night[i].pos});
-        const Curve rotNight = turns(views);
+        // The night take, then into the smithy: at the end of the market
+        // it turns to the doorway, comes onto the door's axis over the
+        // stalls in front of it (2.9 m tall, 14 to 21 m out), sinks to eye
+        // height and pushes in slowly while the doors open. These points are
+        // in the smithy's own space.
+        const V doorway = inForge({DOOR_MID, 1.4f, forge::doorInner});
+        Take nightTake = NIGHT_TAKE;
+        nightTake.ways.back().look = doorway;
+        const Flight night =
+            fly(nightTake, NIGHT_AT,
+                {{CUT - 5.f, inForge({DOOR_MID, 4.f, 13.f}), doorway},
+                 {CUT - 2.5f, inForge({DOOR_MID, 2.f, 7.f}), doorway},
+                 {CUT, inForge({DOOR_MID, 1.65f, forge::doorOuter + 0.15f}),
+                  inForge({DOOR_MID, 1.6f, forge::doorInner - 2.f})}});
         clock->addTrack(component::AnimTarget::Position,
-                        then(then(posDay, posLapse), posNight),
+                        then(then(posDay, lapse.pos), night.pos),
                         component::PlayMode::Single);
-        clock->addTrack(component::AnimTarget::Rotation,
-                        then(then(rotDay, rotLapse), rotNight),
-                        component::PlayMode::Single);
+        // After the position: turned to face what it looks at
+        auto &look = clock->addTrack(component::AnimTarget::Property,
+                                     then(then(lookDay, lapse.look), night.look),
+                                     component::PlayMode::Single);
+        look.name = "look at";
+        look.setProperty = [node = camNode.get()](const V &target) {
+            node->setLocalRot(glm::quatLookAt(
+                glm::normalize(target - node->localPos()), V{0.f, 1.f, 0.f}));
+        };
         camNode->setLocalPos(posDay.keys.front().value);
-        camNode->setLocalRotEuler(rotDay.keys.front().value);
+        look.setProperty(lookDay.keys.front().value);
     }
     {
         // Narrow view for the timelapse's miniature look, normal for the
@@ -780,23 +919,31 @@ scn::Scene demoScene() {
     }
     {
         // In from black, through black between the shots (the camera jumps
-        // while it's dark). Before the smithy: fades to black from just
-        // before the doors open, over the front of the smithy (the doorway
-        // only fills the view in the last second), its inside fades in
-        // from it.
-        constexpr float dip = 0.8f;
+        // while it's dark): a short dip between the day's takes, a longer
+        // one into and out of the timelapse. Before the smithy: fades to
+        // black from just before the doors open, over the front of the
+        // smithy (the doorway only fills the view in the last second), its
+        // inside fades in from it.
+        constexpr float dip = 1.5f, cut = 0.5f;
+        std::vector<Curve::Point> fades = {{0.f, V(0.f)}, {dip, V(1.f)}};
+        auto fade = [&](float time, float value) {
+            fades.push_back({time, V(value)});
+        };
+        for (float at : dayCuts) {
+            fade(at - cut, 1.f);
+            fade(at, 0.f);
+            fade(at + cut, 1.f);
+        }
+        fade(LAPSE_AT - dip, 1.f);
+        fade(LAPSE_AT, 0.f);
+        fade(LAPSE_AT + dip, 1.f);
+        fade(NIGHT_AT - dip, 1.f);
+        fade(NIGHT_AT, 0.f);
+        fade(NIGHT_AT + dip, 1.f);
+        fade(CUT - 1.2f, 1.f);
+        fade(CUT, 0.f);
         auto &track = clock->addTrack(component::AnimTarget::Property,
-                                      Curve::flat({{0.f, V(0.f)},
-                                                   {dip, V(1.f)},
-                                                   {LAPSE_AT - dip, V(1.f)},
-                                                   {LAPSE_AT, V(0.f)},
-                                                   {LAPSE_AT + dip, V(1.f)},
-                                                   {NIGHT_AT - dip, V(1.f)},
-                                                   {NIGHT_AT, V(0.f)},
-                                                   {NIGHT_AT + dip, V(1.f)},
-                                                   {CUT - 5.f, V(1.f)},
-                                                   {CUT - 1.f, V(0.f)},
-                                                   {CUT, V(0.f)}}),
+                                      Curve::flat(fades),
                                       component::PlayMode::Single);
         track.name = "fade";
         track.setProperty = [fade = scene.fade](const V &v) { *fade = v.x; };
@@ -825,30 +972,54 @@ scn::Scene demoScene() {
             std::make_shared<render::ComputeShader>("spawnParticle.comp");
         auto update =
             std::make_shared<render::ComputeShader>("updateParticle.comp");
-        // The smithy's own chimney too (its hood's, in the building's space)
-        chimneys.push_back(inForge({0.2f, 6.2f, -2.4f}));
+        // About half the houses have a fire going, the smithy always: its
+        // chimney is the last one
+        {
+            std::mt19937 pick(11);
+            std::vector<V> lit;
+            for (const V &top : chimneys)
+                if (std::bernoulli_distribution(0.5)(pick))
+                    lit.push_back(top);
+            chimneys = std::move(lit);
+        }
+        chimneys.push_back(inForge(vec(forge::chimneyTop)));
         std::vector<std::weak_ptr<component::ParticleSystem>> emitters;
+        // Every house's fire its own: how much smoke, how dark, how fast it
+        // rises, how big the puffs, how far the wind takes them
+        std::mt19937 random(7);
+        auto between = [&](float lo, float hi) {
+            return std::uniform_real_distribution<float>(lo, hi)(random);
+        };
         for (const V &top : chimneys) {
             auto node = scn::Node::create("Chimney smoke", top);
             auto puffs = node->add_component<component::ParticleSystem>(
                 material, spawn, update);
+            puffs->seed = (uint32_t)emitters.size() + 1;
+            const float rise = between(0.6f, 1.5f);
+            const float shade = between(0.75f, 1.25f);
+            const float drift = between(0.5f, 1.6f);
+            const float life = between(0.7f, 1.3f);
             // Grey, moonlit, thinning out as it rises and drifts with the
             // wind (the trees' and the water's)
             puffs->additive = false;
-            puffs->minColor = {0.3f, 0.32f, 0.38f, 0.35f};
-            puffs->maxColor = {0.2f, 0.22f, 0.27f, 0.f};
+            puffs->minColor = {0.3f * shade, 0.32f * shade, 0.38f * shade,
+                               between(0.2f, 0.45f)};
+            puffs->maxColor = {0.2f * shade, 0.22f * shade, 0.27f * shade,
+                               0.f};
             puffs->minPosition = V(-0.15f, 0.f, -0.15f);
             puffs->maxPosition = V(0.15f, 0.1f, 0.15f);
-            puffs->minVelocity = {-0.1f, 0.7f, -0.1f};
-            puffs->maxVelocity = {0.15f, 1.3f, 0.1f};
-            puffs->minAccel = {0.08f, -0.03f, 0.f};
-            puffs->maxAccel = {0.2f, 0.02f, 0.06f};
-            puffs->minLife = 4.f;
-            puffs->maxLife = 16.f;
-            puffs->size = 0.55f;
+            puffs->minVelocity = {-0.12f, 0.6f * rise, -0.12f};
+            puffs->maxVelocity = {0.15f, 1.2f * rise, 0.12f};
+            puffs->minAccel = V(0.08f, -0.03f, 0.f) * drift;
+            puffs->maxAccel = V(0.2f, 0.02f, 0.06f) * drift;
+            puffs->minLife = 4.f * life;
+            puffs->maxLife = 16.f * life;
+            puffs->size = between(0.4f, 0.75f);
             puffs->stretch = 0.f;
-            puffs->spawnInterval = 0.06f;
-            puffs->maxParticles = 256;
+            puffs->spawnInterval = between(0.04f, 0.12f);
+            // Enough for every puff alive at once
+            puffs->maxParticles =
+                (uint32_t)std::ceil(puffs->maxLife / puffs->spawnInterval) + 16;
             puffs->spawning = false;
             emitters.push_back(puffs);
             smoke->add_child(node);

@@ -160,7 +160,8 @@ void ParticleSystem::update(float dt) {
         const GLuint prog = spawnCompute->program;
         glUniform1ui(glGetUniformLocation(prog, "u_particlesToSpawn"),
                      particlesToSpawn);
-        glUniform1ui(glGetUniformLocation(prog, "u_seed"), frame++);
+        glUniform1ui(glGetUniformLocation(prog, "u_seed"),
+                     (seed * 0x9E3779B9u) ^ frame++);
         spawnCompute->run(workGroupsFor(
             particlesToSpawn, spawnCompute->QueryLinearWorkGroupSize()));
     }
