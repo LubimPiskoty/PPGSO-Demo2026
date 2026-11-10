@@ -58,18 +58,6 @@
   - [ ] (2b) Convolution filter, or
   - [ ] (4b) Advanced filter, e.g. bloom
 
-## Optional
-
-- [ ] Shell texturing for animal fur
-- [ ] Automatic Camera exposure
-
 ## Engine side of project
 
-- [ ] Make material class so simplify shaders and textures
-- [ ] Rewrite assimp loader
-- [ ] World-aligned texturing (like Unreal's WorldAlignedTexture): UVs from world position instead of mesh UVs, so the texture keeps its size and loops however the mesh is scaled
-  - [ ] Vertex shaders (default + instanced) output the world position
-  - [ ] Planar fragment shader: `uv = worldPos.xz / uTileSize` (ground); triplanar variant blending 3 projections by the world normal for other shapes
-  - [ ] Model loader returns texture 0 for meshes without one, so the material's albedo is used instead of the pink fallback
-  - [ ] Ground as one scaled plain quad with this material instead of the instanced grid
-  - [ ] World-aware grass colouring
+- [ ] Add the blacksmith asset set, animate it
