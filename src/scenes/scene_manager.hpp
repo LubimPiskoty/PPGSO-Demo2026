@@ -30,6 +30,7 @@ class SceneManager {
     // of the next frame, so the scene isn't replaced mid update/draw
     void requestLoad(std::size_t index) { pending = index; }
     void requestReload() { pending = current; }
+    // Also follows a cut the scene asked for (Scene::cutTo)
     void applyPending();
 
     // Framebuffer size, applied to the active camera of every loaded scene

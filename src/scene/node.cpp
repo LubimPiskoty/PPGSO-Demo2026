@@ -57,8 +57,11 @@ void Node::draw(glm::mat4 projection, glm::mat4 invCameraTransform) {
     if (!enabled)
         return;
 
+    // Disabled components don't draw (a disabled Mesh can still cast a
+    // shadow through its Shadow component)
     for (const auto &component : components)
-        component->draw(projection, invCameraTransform);
+        if (component->enabled)
+            component->draw(projection, invCameraTransform);
 
     for (auto const &child : this->children)
         child->draw(projection, invCameraTransform);

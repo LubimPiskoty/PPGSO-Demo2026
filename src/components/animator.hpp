@@ -18,6 +18,8 @@ struct AnimatorTrack {
     Curve<glm::vec3> curve;
     Playback playback;
     std::function<void(const glm::vec3 &)> setProperty; // Property only
+    // Shown in the Animation window instead of the target ("fade", "fov")
+    std::string name;
 };
 
 // Animates the owner node's local position / rotation (Euler radians) /

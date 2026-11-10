@@ -32,6 +32,9 @@ void Scene::draw() {
     if (auto sky = skybox.lock()) {
         sky->draw(activeCamera.lock()); // skybox last
         sky->bindForReflections();      // cubemapa on 4th slot for reflectz
+        render::Material::skyTint = sky->tint;
+    } else {
+        render::Material::skyTint = glm::vec3(1.f);
     }
     shadowMaps->bindForSampling(); // depth array on its own slot
 

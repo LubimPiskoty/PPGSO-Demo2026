@@ -27,6 +27,14 @@ class ParticleSystem : public ComponentBase<ParticleSystem> {
     // Sprite size in world units
     float size = 0.1f;
     float spawnInterval = 0.00001f, timer = 0;
+    // Off: nothing new spawns, the live particles still fly and fade. Bursts
+    // (sparks off a hammer blow) switch it on for a moment.
+    bool spawning = true;
+    // Additive (sparks, embers: they glow) or plain alpha blending (smoke:
+    // it covers what is behind it)
+    bool additive = true;
+    // Multiplies dt, < 1 is slow motion for this system only
+    float timeScale = 1.f;
     // Motion smear: seconds of movement stretched behind each particle, 0 = off
     float stretch = 0.05f;
     uint32_t maxParticles = DEFAULT_MAX_PARTICLES;

@@ -10,6 +10,7 @@ static const char *hasMapNames[(int)TextureSlot::Count] = {
     "uHasNormalMap",
     "uHasRoughnessMap",
     "uHasSpecularMap",
+    "uHasEmissiveMap",
 };
 
 // Binds the mesh's own textures over the material's and returns what was
@@ -22,7 +23,7 @@ Mesh::Overridden Mesh::bindTextures() const {
     for (int i = 0; i < (int)TextureSlot::Count; i++) {
         if (textures[i] == 0)
             continue;
-        glActiveTexture(GL_TEXTURE0 + i);
+        glActiveTexture(GL_TEXTURE0 + textureUnit(i));
         glGetIntegerv(GL_TEXTURE_BINDING_2D, &saved.texture[i]);
         glBindTexture(GL_TEXTURE_2D, textures[i]);
 
@@ -42,7 +43,7 @@ void Mesh::restoreTextures(const Overridden &saved) const {
     for (int i = 0; i < (int)TextureSlot::Count; i++) {
         if (textures[i] == 0)
             continue;
-        glActiveTexture(GL_TEXTURE0 + i);
+        glActiveTexture(GL_TEXTURE0 + textureUnit(i));
         glBindTexture(GL_TEXTURE_2D, saved.texture[i]);
 
         if (!hasMapNames[i] || saved.program == 0)

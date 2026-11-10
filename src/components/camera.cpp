@@ -54,6 +54,11 @@ float Camera::getHeight() {
     return height;
     calculateProjection();
 }
+void Camera::setFov(float fovDegrees) {
+    fov = glm::radians(fovDegrees);
+    calculateProjection();
+}
+
 void Camera::setNearFar(float near, float far) {
     this->near = near;
     this->far = far;

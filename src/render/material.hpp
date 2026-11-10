@@ -10,15 +10,20 @@
 
 namespace render {
 
-// Which texture a slot holds. The slot's index doubles as the texture unit
-// and each slot maps to a fixed sampler name in the shader.
+// Which texture a slot holds. Each slot maps to a fixed sampler name in the
+// shader and binds to textureUnit(slot).
 enum class TextureSlot {
   Albedo,    // uTexture / uAlbedoTex
   Normal,    // uNormalTex
   Roughness, // uRoughnessTex
   Specular,  // uSpecularTex
+  Emissive,  // uEmissiveTex, added on top of the lighting
   Count
 };
+
+// Texture unit of a slot: the slot's index, except that units 4 and 5 are
+// taken by the skybox cubemap and the shadow map array
+constexpr int textureUnit(int slot) { return slot < 4 ? slot : slot + 2; }
 
 enum class BlendMode {
   Opaque,
@@ -80,6 +85,9 @@ public:
   // Seconds of scene time, uploaded as uTime for animated shaders (water).
   // Scene::update advances it, so it pauses with the scene.
   static inline float time = 0.f;
+  // The sky's tint (component::Skybox::tint), uploaded as uSkyTint: what a
+  // surface reflects of the sky gets dark with it. Scene::draw sets it.
+  static inline glm::vec3 skyTint{1.f};
   // Both sides drawn (no back-face culling), lit.fs flips the normal on the
   // back side. For thin cards: leaves, grass, cloth.
   bool doubleSided = false;

@@ -1,7 +1,9 @@
 #version 330 core
-// Water surface: height = sum of sine waves, then lit.fs lights it like any
-// other surface. The mesh must be dense (MC_Water.glb, ~2 m triangles):
-// waves shorter than a few triangles can't show.
+// Water surface: a few Gerstner waves running with the wind, then lit.fs
+// lights it like any other surface. A Gerstner wave also pulls the surface
+// toward its crest, so crests are sharp and troughs wide, unlike a sine's.
+// The mesh must be dense (MC_Water.glb, ~2 m triangles): waves shorter than
+// a few triangles can't show.
 layout(location = 0) in vec3 Position;
 layout(location = 1) in vec3 Normal;
 layout(location = 2) in vec2 TexCoord;
@@ -18,34 +20,40 @@ out vec3 FragNormal;
 out vec3 FragPos;
 out vec3 FragTangent;
 
-const float PI = 3.14159265;
+// The waves: direction (radians from +x, around the wind), wavelength and
+// height, metres. Must match WAVES in demo_scene.cpp, the boats ride them.
+const int WAVES = 4;
+const vec3 waves[WAVES] = vec3[](
+    vec3(0.25, 37.0, 0.16),
+    vec3(0.80, 23.0, 0.10),
+    vec3(-0.20, 14.0, 0.06),
+    vec3(1.30, 9.0, 0.035));
+// How far a crest pulls the surface in, as a part of the wave's height
+const float PINCH = 0.7;
 
 void main() {
     vec3 world = vec3(uModel * vec4(Position, 1.0));
 
-    // y = sum of sines. Each wave is shorter and lower than the one before
-    // and turned 2.4 rad, so they never line up into a repeating pattern.
-    float height = 0.0;
-    vec2 slope = vec2(0.0); // dh/dx, dh/dz, for the normal
-    float wavelength = 200.0, amplitude = 0.25, angle = 0.25;
-    for (int i = 0; i < 12; i++) {
-        vec2 d = vec2(cos(angle), sin(angle));
-        float k = 2.0 * PI / wavelength;
-        // Deep water: omega = sqrt(g k), long waves are slow to rise and fall
+    vec3 offset = vec3(0.0);
+    vec2 slope = vec2(0.0); // dh/dx, dh/dz
+    float squeeze = 0.0;    // how much the surface is pulled together here
+    for (int i = 0; i < WAVES; i++) {
+        vec2 d = vec2(cos(waves[i].x), sin(waves[i].x));
+        float k = 6.2831853 / waves[i].y;
+        float a = waves[i].z;
+        // Deep water: omega = sqrt(g k), long waves travel faster
         float phase = k * dot(d, world.xz) - sqrt(9.81 * k) * uTime;
-        height += amplitude * sin(phase);
-        slope += amplitude * k * cos(phase) * d;
-
-        wavelength *= 0.8;
-        amplitude *= 0.8;
-        angle += 2.4;
+        offset.y += a * sin(phase);
+        offset.xz += PINCH * a * cos(phase) * d;
+        slope += a * k * cos(phase) * d;
+        squeeze += PINCH * a * k * sin(phase);
     }
 
-    FragPos = world + vec3(0.0, height, 0.0);
-    // Surface y = h(x, z): the normal is (-dh/dx, 1, -dh/dz)
-    FragNormal = normalize(vec3(-slope.x, 1.0, -slope.y));
+    FragPos = world + offset;
+    // Gerstner normal: the squeeze stands the crests up
+    FragNormal = normalize(vec3(-slope.x, 1.0 - squeeze, -slope.y));
     // Along +x the surface rises by dh/dx
-    FragTangent = normalize(vec3(1.0, slope.x, 0.0));
+    FragTangent = normalize(vec3(1.0 - squeeze, slope.x, 0.0));
     FragTexCoord = TexCoord;
 
     gl_Position = uProjection * uView * vec4(FragPos, 1.0);

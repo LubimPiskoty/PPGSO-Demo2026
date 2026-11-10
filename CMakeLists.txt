@@ -101,21 +101,24 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_link_libraries(imgui PUBLIC glfw OpenGL::GL)
 endif()
 
-# stb_image is a single header with no CMakeLists.txt of its own, so it's
-# just downloaded directly instead of going through FetchContent.
-set(STB_IMAGE_HEADER "${CMAKE_CURRENT_BINARY_DIR}/_stb/stb_image.h")
-if(NOT EXISTS ${STB_IMAGE_HEADER})
-    file(DOWNLOAD
-            https://raw.githubusercontent.com/nothings/stb/master/stb_image.h
-            ${STB_IMAGE_HEADER}
-            SHOW_PROGRESS
-            STATUS STB_IMAGE_DOWNLOAD_STATUS)
-    list(GET STB_IMAGE_DOWNLOAD_STATUS 0 STB_IMAGE_DOWNLOAD_CODE)
-    if(NOT STB_IMAGE_DOWNLOAD_CODE EQUAL 0)
-        file(REMOVE ${STB_IMAGE_HEADER})
-        message(FATAL_ERROR "Failed to download stb_image.h: ${STB_IMAGE_DOWNLOAD_STATUS}")
+# stb_image (loading) and stb_image_write (saving framebuffers) are single
+# headers with no CMakeLists.txt of their own, so they're just downloaded
+# directly instead of going through FetchContent.
+foreach(STB_NAME stb_image stb_image_write)
+    set(STB_IMAGE_HEADER "${CMAKE_CURRENT_BINARY_DIR}/_stb/${STB_NAME}.h")
+    if(NOT EXISTS ${STB_IMAGE_HEADER})
+        file(DOWNLOAD
+                https://raw.githubusercontent.com/nothings/stb/master/${STB_NAME}.h
+                ${STB_IMAGE_HEADER}
+                SHOW_PROGRESS
+                STATUS STB_IMAGE_DOWNLOAD_STATUS)
+        list(GET STB_IMAGE_DOWNLOAD_STATUS 0 STB_IMAGE_DOWNLOAD_CODE)
+        if(NOT STB_IMAGE_DOWNLOAD_CODE EQUAL 0)
+            file(REMOVE ${STB_IMAGE_HEADER})
+            message(FATAL_ERROR "Failed to download ${STB_NAME}.h: ${STB_IMAGE_DOWNLOAD_STATUS}")
+        endif()
     endif()
-endif()
+endforeach()
 
 #
 # Resources

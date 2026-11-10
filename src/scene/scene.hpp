@@ -11,6 +11,7 @@
 #include "../util/guid.hpp"
 #include "node.hpp"
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace scn {
@@ -24,6 +25,14 @@ class Scene {
     std::unique_ptr<render::ShadowMaps> shadowMaps =
         std::make_unique<render::ShadowMaps>();
     std::vector<std::weak_ptr<component::Light>> shadowLights;
+    // A scene that ends by cutting to another one (the demo's shots) writes
+    // that one's SceneManager name here, the manager loads it before the next
+    // frame. Shared, so components can hold it and the scene can still move.
+    std::shared_ptr<std::string> cutTo = std::make_shared<std::string>();
+    // Brightness of the frame for the fade transition pass (main.cpp), 1 is
+    // the normal image, 0 black. Shared like cutTo, the scene's animations
+    // fade it around the cuts.
+    std::shared_ptr<float> fade = std::make_shared<float>(1.f);
 
     Scene();
 

@@ -276,7 +276,10 @@ static void animationWindow(scn::Scene &scene) {
             static const char *targets[] = {"position", "rotation", "scale", "color",
                                             "property"};
             ImGui::SeparatorText(
-                (owner->name + " " + targets[(int)track.target]).c_str());
+                (owner->name + " " +
+                 (track.name.empty() ? targets[(int)track.target]
+                                     : track.name))
+                    .c_str());
             auto &pb = track.playback;
             ImGui::Checkbox("Playing", &pb.playing);
             ImGui::SameLine();

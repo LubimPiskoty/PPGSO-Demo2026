@@ -29,13 +29,17 @@ uniform sampler2D uAlbedoTex;
 uniform sampler2D uNormalTex;
 uniform sampler2D uRoughnessTex;
 uniform sampler2D uSpecularTex;
+uniform sampler2D uEmissiveTex; // unit 6, units 4 and 5 are taken
 
 uniform bool uHasNormalMap;
 uniform bool uHasRoughnessMap;
 uniform bool uHasSpecularMap;
+uniform bool uHasEmissiveMap;
+uniform float uEmissiveStrength; // multiplies the emissive map
 uniform sampler2DArrayShadow uShadowMaps; // depth array, slot 5
 uniform samplerCube uSkybox; // cubemap of skybox slot 4
 uniform float uReflectivity; // 0 no reflect, 1 mirror
+uniform vec3 uSkyTint; // the skybox's tint: dark at night, so is its reflection
 uniform float uRoughness; // when mat doesnt have roughmap
 
 // ---------------------------------------------------------------------------
@@ -299,7 +303,7 @@ void main() {
     if (uReflectivity > 0.0) {
         vec3 reflectDir = reflect(-viewDir, surf.normal); // reflection from camera view
         float lod = surf.roughness * 8.0; // 0 = sharp sky, 8 = very blurry
-        vec3 envColor = textureLod(uSkybox, reflectDir, lod).rgb; // read from blurred mip level
+        vec3 envColor = textureLod(uSkybox, reflectDir, lod).rgb * uSkyTint; // read from blurred mip level
 
         // Schlick Fresnel
         float NdotV = max(dot(surf.normal, viewDir), 0.0); // if its 1 then its 90angles direction => fresnel weak
@@ -307,6 +311,10 @@ void main() {
         float amount = fresnel * (1.0 - surf.roughness); // rough surfaces reflect less
         result = mix(result, envColor, amount);
     }
+
+    // Glow (hot coal, metal, sparks): not lit, so it shows in the dark too
+    if (uHasEmissiveMap)
+        result += texture(uEmissiveTex, FragTexCoord).rgb * uEmissiveStrength;
 
     FragColor = vec4(result, 1.0);
 }

@@ -134,10 +134,12 @@ void ParticleSystem::uploadEmitterSettings() {
 }
 
 void ParticleSystem::update(float dt) {
+    dt *= timeScale;
     if (allocatedParticles != maxParticles)
         allocateBuffers();
 
-    timer += dt;
+    // Not saved up while off, or switching it on would spawn a big burst
+    timer = spawning ? timer + dt : 0.f;
     spawnInterval =
         std::max(spawnInterval, std::numeric_limits<float>::epsilon());
     uint32_t particlesToSpawn = static_cast<uint32_t>(timer / spawnInterval);
@@ -194,9 +196,9 @@ void ParticleSystem::draw(glm::mat4 projection, glm::mat4 invCameraTransform) {
     particles.bindSSBO(0);
     drawlist.bindSSBO(3);
 
-    // Additive sparks, no depth writes so they don't occlude each other
+    // No depth writes so they don't occlude each other
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+    glBlendFunc(GL_SRC_ALPHA, additive ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA);
     glDepthMask(GL_FALSE);
     glDisable(GL_CULL_FACE); // the material turned it on
 

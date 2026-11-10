@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <glm/matrix.hpp>
 #include <glm/vec3.hpp>
 #include <memory>
@@ -49,7 +50,10 @@ struct Contact {
 
 struct Context {
     glm::vec3 gravity{0, -9.8f, 0};
-    glm::vec3 windVel{0}; // TODO: make into vec field
+    glm::vec3 windVel{0};
+    // Wind at a world position, used instead of windVel when set (a gust
+    // over one spot, like the bellows blowing over the coal bed)
+    std::function<glm::vec3(const glm::vec3 &)> windField;
     // Bellows style gusts: with a period > 0, windVel follows windPeak scaled
     // by a pulse (a push over the first part of each period, then calm)
     glm::vec3 windPeak{0};

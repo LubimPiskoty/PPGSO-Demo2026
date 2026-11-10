@@ -120,6 +120,8 @@ void loadMeshTextures(const aiScene *scene, const aiMesh *mesh, Mesh &result) {
         scene, mesh, {aiTextureType_DIFFUSE_ROUGHNESS, aiTextureType_UNKNOWN});
     slot(TextureSlot::Specular) =
         loadMeshTexture(scene, mesh, {aiTextureType_SPECULAR});
+    slot(TextureSlot::Emissive) =
+        loadMeshTexture(scene, mesh, {aiTextureType_EMISSIVE});
 }
 
 Mesh createMesh(const std::vector<Vertex> &vertices,

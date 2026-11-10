@@ -12,6 +12,7 @@ static const char *samplerNames[(int)TextureSlot::Count] = {
     "uNormalTex",
     "uRoughnessTex",
     "uSpecularTex",
+    "uEmissiveTex",
 };
 
 // 1x1 magenta, bound in place of a missing albedo texture
@@ -37,6 +38,8 @@ Material::Material(const std::string &name, std::shared_ptr<Shader> shader)
     // set values, so it doesnt use values from another mat
     setFloat("uReflectivity", 0.f);
     setFloat("uRoughness", 0.f);
+    // Multiplies the emissive map, animate it for glowing / cooling parts
+    setFloat("uEmissiveStrength", 1.f);
 }
 
 void Material::bind() const {
@@ -46,15 +49,14 @@ void Material::bind() const {
     // Every glUniform* call below targets this program
     glUseProgram(shader->program);
 
-    // Textures: slot index == texture unit
     for (int i = 0; i < (int)TextureSlot::Count; i++) {
-        glActiveTexture(GL_TEXTURE0 + i);
+        glActiveTexture(GL_TEXTURE0 + textureUnit(i));
         GLuint id = textures[i] ? textures[i]->id : 0;
         // Missing albedo shows up magenta instead of silently black
         if (!id && i == (int)TextureSlot::Albedo)
             id = missingTexture();
         glBindTexture(GL_TEXTURE_2D, id);
-        glUniform1i(uniLoc(samplerNames[i]), i);
+        glUniform1i(uniLoc(samplerNames[i]), textureUnit(i));
     }
 
 
@@ -63,6 +65,7 @@ void Material::bind() const {
     glUniform1i(uniLoc("uHasRoughnessMap"),
                 hasTexture(TextureSlot::Roughness));
     glUniform1i(uniLoc("uHasSpecularMap"), hasTexture(TextureSlot::Specular));
+    glUniform1i(uniLoc("uHasEmissiveMap"), hasTexture(TextureSlot::Emissive));
 
     // Material parameters
     glUniform3fv(uniLoc("uMaterial.ambient"), 1, glm::value_ptr(ambient));
@@ -71,6 +74,7 @@ void Material::bind() const {
     glUniform1f(uniLoc("uMaterial.shininess"), shininess);
     glUniform1f(uniLoc("uMaterial.opacity"), opacity);
     glUniform1f(uniLoc("uTime"), time);
+    glUniform3fv(uniLoc("uSkyTint"), 1, glm::value_ptr(skyTint));
 
 
     // Extra uniforms

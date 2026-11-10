@@ -18,7 +18,7 @@ class ShadowMaps {
     // Max layers: a point light takes 6, every other light 1
     static constexpr size_t MAX_SHADOW_LIGHTS = 12;
 #ifdef NDEBUG
-    static constexpr uint16_t RESOLUTION = 1 << 12; // 4096
+    static constexpr uint16_t RESOLUTION = 1 << 13; // 8k
 #else
     static constexpr uint16_t RESOLUTION = 1
                                            << 11; // 2048, Debug is slow enough

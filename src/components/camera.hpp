@@ -28,6 +28,8 @@ class Camera : public ComponentBase<Camera> {
     float getWidth();
     float getHeight();
     void setNearFar(float near, float far);
+    // Vertical field of view, degrees (animated for a dolly zoom)
+    void setFov(float fovDegrees);
     void setSize(float width, float height);
 
   private:

@@ -1,13 +1,16 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <algorithm>
+#include <ctime>
+#include <filesystem>
 #include <iostream>
+#include <string>
 
 #include "debug/debug_ui.hpp"
 #include "debug/profiler.hpp"
 #include "input/input.hpp"
-#include "loaders/scene_loader.hpp"
 #include "render/framebuffer.hpp"
+#include "render/postprocessing.hpp"
 #include "scenes/ball_jar.hpp"
 #include "scenes/demo_scene/demo_scene.hpp"
 #include "scenes/light_test.hpp"
@@ -15,6 +18,7 @@
 #include "scenes/physics_test.hpp"
 #include "scenes/scene_manager.hpp"
 #include "scenes/shadow_test.hpp"
+#include "scenes/smithy/smithy_scene.hpp"
 
 int main() {
     if (!glfwInit()) {
@@ -26,12 +30,6 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_DEPTH_BITS, 24);
-#ifdef NDEBUG
-    glfwWindowHint(GLFW_SAMPLES, 8);
-#else
-    // No MSAA in Debug, it costs a lot of GPU time
-    glfwWindowHint(GLFW_SAMPLES, 0);
-#endif
 
     GLFWwindow *window =
         glfwCreateWindow(1600, 900, "Hello Triangle", nullptr, nullptr);
@@ -74,15 +72,32 @@ int main() {
     debug_ui::init(window);
     profiler::init();
 
+#ifdef NDEBUG
+    render::PostProcessing post(fbWidth, fbHeight, 8);
+#else
+    // No MSAA in Debug, it costs a lot of GPU time
+    render::PostProcessing post(fbWidth, fbHeight, 0);
+#endif
+    // Darkens the frame by the scene's fade (the demo's cuts)
+    const GLuint fadePass = post.add("fade_transition.fs");
+
     scenes::SceneManager scenes;
     scenes.add("Demo scene", scenes::demoScene);
+    // Shot 4 of the demo, the demo scene cuts to it by this name
+    scenes.add("Smithy interior", scenes::smithyScene);
     scenes.add("Shadow test", scenes::shadowTest);
     scenes.add("Light test", scenes::lightTest);
     scenes.add("Particle test", scenes::particle_test);
-    scenes.add("diorama.json",
-               [] { return loader::loadScene("diorama.json"); });
     scenes.setViewport((float)fbWidth, (float)fbHeight);
     scenes.load(0);
+
+    // F12 saves every buffer of the next frame (the scene, its depth map
+    // and each post-processing pass) into capture/
+    bool captureRequested = false;
+    input::onKey([&captureRequested](int key, int action) {
+        if (key == GLFW_KEY_F12 && action == GLFW_PRESS)
+            captureRequested = true;
+    });
     int lastFbWidth = fbWidth, lastFbHeight = fbHeight;
 
     double time = glfwGetTime();
@@ -99,15 +114,13 @@ int main() {
             lastFbHeight = curH;
             glViewport(0, 0, curW, curH);
             scenes.setViewport((float)curW, (float)curH);
-            }
+            post.resize(curW, curH);
+        }
 
         // Scene switches/reloads requested by the UI last frame happen here,
         // never in the middle of an update or draw
         scenes.applyPending();
         scn::Scene &scene = scenes.scene();
-
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Calculate delta time
         double last_time = time;
@@ -124,7 +137,7 @@ int main() {
         {
             profiler::Scope _(profiler::Stage::Physics);
             // Fixed timestep, capped so slow frames don't spiral
-            constexpr int kMaxPhysicsSteps = 6;
+            constexpr int kMaxPhysicsSteps = 12;
             const double fixedDt = scene.physics_context.fixedDt;
             physicsAccumulator =
                 std::min(physicsAccumulator + dt, kMaxPhysicsSteps * fixedDt);
@@ -136,7 +149,35 @@ int main() {
         {
             profiler::Scope _(profiler::Stage::Scene);
             scene.shadow_pass();
+            post.begin();
             scene.draw();
+            glUseProgram(fadePass);
+            glUniform1f(glGetUniformLocation(fadePass, "transition"),
+                        *scene.fade);
+            post.end();
+        }
+
+        if (captureRequested) {
+            captureRequested = false;
+            std::filesystem::create_directories("capture");
+            // capture/<date>_<time>_<frame>_..., so several in one second
+            // don't overwrite each other
+            static int captured = 0;
+            char stamp[32];
+            const std::time_t now = std::time(nullptr);
+            std::strftime(stamp, sizeof stamp, "%Y%m%d_%H%M%S",
+                          std::localtime(&now));
+            const std::string prefix = "capture/" + std::string(stamp) + "_" +
+                                       std::to_string(captured++) + "_";
+            // The depth map needs the camera's planes
+            float near = 0.1f, far = 100.f;
+            if (auto camera = scene.activeCamera.lock()) {
+                near = camera->getNear();
+                far = camera->getFar();
+            }
+            post.save(prefix, near, far);
+            std::cout << "Saved the frame's buffers to " << prefix << "*.png"
+                      << std::endl;
         }
 
         debug_ui::draw(scenes);

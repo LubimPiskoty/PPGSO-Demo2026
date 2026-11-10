@@ -8,14 +8,15 @@
   - [x] (2b) Efficient instancing: render at least 5000 instances using OpenGL instancing
   - [ ] (2b) Transparent objects, correctly blended together with opaque objects in one scene (e.g. sort transparent objects and draw farthest-to-nearest) [David]
   - [x] (1b) Object using a bump texture (normal mapping) [David]
-- [ ] Scene [8b]
+- [x] Scene [8b]
   - [x] (2b) Procedurally generated scene (object placement/constraints defined by a (non-)deterministic algorithm and/or data structure)
   - [x] (4b) Hierarchical scene representation
     - [x] Logical spatial layout (e.g. floor, background, sky, ceiling, walls...) implemented via a scene graph, at minimum a tree data structure
     - [x] Hierarchical transformations: at least 2 levels of hierarchy among 3 objects, using composition of matrix transformations
   - [x] (2b) Cube mapping — as a skybox, or as environment mapping onto an object's surface [David]
-- [ ] Animated objects [6b]
-  - [ ] (2b) Procedural animation (simulating complex object behavior/decision-making: branching, cycles, a closed-form method with parameters, etc.) [Timon]
+- [x] Animated objects [6b]
+  - [x] (2b) Procedural animation (simulating complex object behavior/decision-making: branching, cycles, a closed-form method with parameters, etc.) [Timon]
+        BOATS RACKING
   - [x] (3b) Keyframe-based animation with interpolation (a keyframe is a dedicated data structure storing an object's transform — at least position and rotation — over time)
   - [x] (1b) Animation driven by complex animation curves for smooth motion (linear interpolation and smoothstep are not sufficient)
 - [x] Simulation, particle system [7b]
@@ -37,27 +38,25 @@
     - [x] Material and light color components correctly combined
   - [x] (1b) Blinn-Phong modified lighting model
   - [ ] (1b) HDR rendering with tone mapping and gamma correction [Timon]
-  - [ ] Shadows (pick one)
-    - [ ] (1b) Simple approach — shadow must be recomputed based on the relative position/distance of object and light, i.e. not "statically" glued to the object, or
-    - [ ] (4b) Shadow maps [Timon]
+  - [x] Shadows (pick one)
+    <!-- - [ ] (1b) Simple approach — shadow must be recomputed based on the relative position/distance of object and light, i.e. not "statically" glued to the object, or -->
+    - [x] (4b) Shadow maps [Timon]
       - [x] Depth array (`GL_TEXTURE_2D_ARRAY`, layer per light) + one FBO, `render::ShadowMaps` owned by Scene
       - [x] Shadow pass: only nodes with `Shadow` component, depth-only shaders (`depth.vs`, `depth_instanced.vs`), front-face culling
       - [x] Directional box centered on the light's node (`shadowExtent` around it), spot uses its own perspective
       - [x] Light -> map mapping: `GpuLight.shadow.x` = layer, matrices in `ShadowBlock` UBO (slot 2), array on texture unit 5 via comparison sampler
       - [x] `lit.fs` samples the map for directional lights (ambient not shadowed)
       - [x] Debug "Light preview" window (slider over the maps)
-      - [ ] Verify in the shadow test scene: shadows move with the sun, tune bias (acne / peter-panning)
-      - [ ] Spot light shadows in `lit.fs` (spot lighting itself is still skipped, needs the cone data packed in `direction.w` / `attenuation.w`)
-      - [ ] Point light shadows (6 faces / cubemap array)
-      - [ ] Fit the directional box to the camera frustum instead of fixed `shadowExtent`, snap to texels (stops shimmer)
       - [x] Baked lights (`Light::bakedShadow`): map rendered once, again only when the light or its box changes
-      - [ ] Cull casters per light
-      - [ ] Distance fog in `lit.fs` to hide the far end of the directional shadow box (shadow quality drops with distance, so the big sun box can stay small instead of growing to cover every tree)
 - [ ] Post-processing [4b] (pick one) [David]
-  - [ ] (1b) Basic per-pixel filter, e.g. grayscale, or via a framebuffer:
+  - [x] (1b) Basic per-pixel filter, e.g. grayscale, or via a framebuffer:
   - [ ] (2b) Convolution filter, or
   - [ ] (4b) Advanced filter, e.g. bloom
 
 ## Engine side of project
 
-- [ ] Add the blacksmith asset set, animate it
+- [x] Add the blacksmith asset set, animate it
+- [ ] Fix the coal phyiscs problbly wind bug
+- [ ] Add procedural grass on the fields yk HAY
+- [ ] Add laterns for guards
+- [ ] Light lamp posts in village and on boats at night

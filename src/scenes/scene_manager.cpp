@@ -1,6 +1,7 @@
 #include "scene_manager.hpp"
 
 #include "../components/camera.hpp"
+#include <iostream>
 #include <utility>
 
 namespace scenes {
@@ -25,6 +26,16 @@ void SceneManager::load(std::size_t index) {
 }
 
 void SceneManager::applyPending() {
+    if (!pending && active.cutTo && !active.cutTo->empty()) {
+        for (std::size_t i = 0; i < list.size(); i++)
+            if (list[i].name == *active.cutTo)
+                pending = i;
+        if (!pending) {
+            std::cerr << "[Warning] Cut to unknown scene '" << *active.cutTo
+                      << "'" << std::endl;
+            active.cutTo->clear();
+        }
+    }
     if (!pending)
         return;
     std::size_t index = *pending;

@@ -19,8 +19,9 @@ class PhysicsBody : public ComponentBase<PhysicsBody> {
             return;
 
         // Apply forces (gravity, wind drag)
-        body.force =
-            body.mass * ctx.gravity + ctx.drag * (ctx.windVel - body.velocity);
+        const glm::vec3 wind =
+            ctx.windField ? ctx.windField(n->globalPosition()) : ctx.windVel;
+        body.force = body.mass * ctx.gravity + ctx.drag * (wind - body.velocity);
 
         // Integrate
         // Semi-implicit euler
