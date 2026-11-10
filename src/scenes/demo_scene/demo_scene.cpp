@@ -130,67 +130,6 @@ class Floating : public component::ComponentBase<Floating> {
     }
 };
 
-// The people of one model (they are instances of one draw): now and then,
-// each at its own random time, one of them hops a little on the spot, so
-// the crowd looks alive. Goes on the node with their Instances.
-class Hopping : public component::ComponentBase<Hopping> {
-  public:
-    float minWait = 6.f, maxWait = 25.f;       // seconds between a person's hops
-    float minHeight = 0.08f, maxHeight = 0.2f; // metres
-    float duration = 0.3f;                     // seconds in the air
-
-    Hopping(std::vector<component::Instance> people, unsigned seed)
-        : rest(std::move(people)), random(seed) {
-        for (size_t i = 0; i < rest.size(); i++)
-            hops.push_back({-between(0.f, maxWait), 0.f});
-    }
-
-    const char *type_name() const override { return "Hopping"; }
-
-    void update(float dt) override {
-        auto n = node.lock();
-        auto instances = n ? n->get_component<component::Instances>() : nullptr;
-        if (!instances)
-            return;
-        std::vector<component::Instance> people = rest;
-        bool moved = false;
-        for (size_t i = 0; i < hops.size(); i++) {
-            Hop &hop = hops[i];
-            // Negative: still waiting. From 0 to duration: in the air.
-            const bool waiting = hop.time < 0.f;
-            hop.time += dt;
-            if (hop.time < 0.f)
-                continue;
-            if (waiting) // takes off now
-                hop.height = between(minHeight, maxHeight);
-            if (hop.time >= duration) { // landed, wait for the next one
-                hop.time = -between(minWait, maxWait);
-                moved = true; // back on the ground
-                continue;
-            }
-            // Up and down on a parabola
-            const float t = hop.time / duration;
-            people[i].position.y += hop.height * 4.f * t * (1.f - t);
-            moved = true;
-        }
-        // Only uploaded while somebody is off the ground
-        if (moved)
-            instances->setInstances(std::move(people));
-    }
-
-  private:
-    struct Hop {
-        float time, height;
-    };
-    std::vector<component::Instance> rest; // where they stand
-    std::vector<Hop> hops;
-    std::mt19937 random;
-
-    float between(float lo, float hi) {
-        return std::uniform_real_distribution<float>(lo, hi)(random);
-    }
-};
-
 // People that can hop: everybody standing or walking
 bool isPerson(const std::string &model) {
     if (model.find("Sitting") != std::string::npos)
@@ -304,24 +243,24 @@ struct Way {
 // close together around a corner whip the camera around.
 const std::vector<Way> FLYBY = {
     // East field
-    {{222.f, 12.f, -62.f}, 15.f},
-    {{170.f, 8.f, -28.f}, 15.f},
+    {{222.f, 12.f, -62.f}, 5.f},
+    {{170.f, 8.f, -28.f}, 25.f},
     // East village
-    {{128.f, 6.f, -8.f}, 14.f},
+    {{128.f, 6.f, -8.f}, 24.f},
     // East bridge
-    {{98.f, 6.5f, -21.f}, 13.f},
+    {{98.f, 6.5f, -21.f}, 23.f},
     // East gate
     {{76.f, 10.5f, -31.f}, 12.f},
     {{52.f, 8.f, -44.f}, 12.f},
     // Past the smithy
     {{35.f, 6.5f, -56.f}, 11.f},
     // Market square, a wide turn south
-    {{18.f, 5.5f, -61.f}, 10.f},
-    {{5.f, 5.f, -53.f}, 10.f},
+    {{18.f, 5.5f, -61.f}, 7.f},
+    {{5.f, 5.f, -53.f}, 7.f},
     // Main street
-    {{2.f, 5.f, -36.f}, 11.f},
-    {{4.f, 4.f, 5.f}, 12.f},
-    {{6.f, 5.f, 35.f}, 12.f},
+    {{2.f, 5.f, -36.f}, 10.f},
+    {{4.f, 4.f, 5.f}, 10.f},
+    {{6.f, 5.f, 35.f}, 10.f},
     // South gate
     {{8.f, 9.5f, 52.f}, 12.f},
     // South bridge
@@ -343,22 +282,22 @@ const std::vector<Way> FLYBY = {
     // The lake west of the castle
     {{-225.f, 5.f, -50.f}, 18.f},
     // Ship
-    {{-222.f, 4.f, -115.f}, 18.f},
+    {{-222.f, 4.f, -115.f}, 6.f},
     // Ship, north village
-    {{-170.f, 6.5f, -195.f}, 18.f},
-    {{-90.f, 5.f, -216.f}, 19.f},
+    {{-170.f, 6.5f, -195.f}, 30.f},
+    {{-90.f, 5.f, -216.f}, 30.f},
     // The two ships ahead
-    {{-35.f, 5.f, -210.f}, 17.f},
+    {{-35.f, 5.f, -210.f}, 20.f},
     // A wide turn into the port
     {{-3.f, 5.5f, -190.f}, 15.f},
     // Port
-    {{6.f, 8.5f, -160.f}, 12.f},
+    {{6.f, 8.5f, -160.f}, 8.f},
     // North gate
     {{7.f, 10.5f, -127.f}, 11.f},
     // North street
-    {{7.f, 6.f, -100.f}, 11.f},
+    {{7.f, 6.f, -100.f}, 8.f},
     // Square, in front of the smithy
-    {{23.3f, 6.55f, -77.1f}, 10.f},
+    {{23.3f, 6.55f, -77.1f}, 6.f},
 };
 
 // The flyby's path from a start time: times from the distances and speeds
@@ -483,9 +422,6 @@ scn::Scene demoScene() {
             std::make_shared<render::Model>(
                 loader::loadModel("MC_" + model + ".glb")),
             isFoliage(model) ? foliage : litInstanced);
-        if (isPerson(model))
-            node->add_component<Hopping>(
-                instances, (unsigned)std::hash<std::string>{}(model));
         node->add_component<component::Instances>(std::move(instances));
         // Everything casts, the ground too. Flat tiles are open surfaces:
         // nothing behind their front faces for the shadow pass to draw.
