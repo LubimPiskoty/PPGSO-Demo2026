@@ -37,7 +37,7 @@
     - [x] At least three material color components and three light color components used
     - [x] Material and light color components correctly combined
   - [x] (1b) Blinn-Phong modified lighting model
-  - [ ] (1b) HDR rendering with tone mapping and gamma correction [Timon]
+  - [ ] (1b) HDR rendering with tone mapping and gamma correction [David]
   - [x] Shadows (pick one)
     <!-- - [ ] (1b) Simple approach — shadow must be recomputed based on the relative position/distance of object and light, i.e. not "statically" glued to the object, or -->
     - [x] (4b) Shadow maps [Timon]
