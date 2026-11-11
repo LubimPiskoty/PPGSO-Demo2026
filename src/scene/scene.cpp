@@ -14,6 +14,12 @@
 #include <memory>
 #include <vector>
 
+namespace {
+// glPolygonOffset of the shadow pass (factor, units)
+constexpr float SHADOW_SLOPE_BIAS = 1.5f;
+constexpr float SHADOW_CONSTANT_BIAS = 2.f;
+} // namespace
+
 namespace scn {
 
 Scene::Scene()
@@ -116,12 +122,14 @@ void Scene::uploadLights() {
         if (auto camNode = cam->node.lock())
             viewPos = camNode->globalPosition();
 
-    // First layer of a light's map(s) in the shadow_pass casters, -1 = none
+    // A light's map(s): the array (shadow.z) and its first layer there
+    // (shadow.x, -1 = none), as the shadow_pass laid them out
     auto layerOf = [&](const std::shared_ptr<component::Light> &light) {
         for (size_t i = 0; i < shadowLights.size(); i++)
             if (shadowLights[i].lock() == light)
-                return (float)i;
-        return -1.f;
+                return glm::vec2((float)shadowSlots[i].layer,
+                                 (float)shadowSlots[i].bank);
+        return glm::vec2(-1.f, 0.f);
     };
 
     // A shadow-only directional light is the sun's close-up map
@@ -129,13 +137,36 @@ void Scene::uploadLights() {
     for (const auto &light : getAllComponents<component::Light>())
         if (light->enabled && light->shadowOnly &&
             light->type == component::LightType::Directional)
-            closeUp = layerOf(light);
+            closeUp = layerOf(light).x;
 
     for (const auto &light : getAllComponents<component::Light>()) {
         if (!light->enabled || light->shadowOnly)
             continue; // shadow-only lights add no light
         auto gpu = light->toGpu();
-        gpu.shadow.x = layerOf(light);
+        const glm::vec2 map = layerOf(light);
+        gpu.shadow.x = map.x;
+        gpu.shadow.z = map.y;
+        // The size of a map texel in the world, for lit.fs's normal offset:
+        // cutOff.z, metres (w = 0) or metres per metre from the light (w = 1)
+        if (map.x >= 0.f) {
+            using render::ShadowMaps;
+            switch (light->type) {
+            case component::LightType::Directional:
+                gpu.cutOff.z = 2.f * light->shadowExtent /
+                               (float)ShadowMaps::sunResolution();
+                break;
+            case component::LightType::Spot:
+                gpu.cutOff.z =
+                    2.f * std::tan(glm::radians(light->outerCutOff)) /
+                    (float)ShadowMaps::smallResolution();
+                gpu.cutOff.w = 1.f;
+                break;
+            case component::LightType::Point: // 90 degree faces
+                gpu.cutOff.z = 2.f / (float)ShadowMaps::smallResolution();
+                gpu.cutOff.w = 1.f;
+                break;
+            }
+        }
         if (light->type == component::LightType::Directional)
             gpu.shadow.y = closeUp;
         lights.push_back(gpu);
@@ -145,24 +176,43 @@ void Scene::uploadLights() {
 }
 
 void Scene::shadow_pass() {
-    // One entry per layer: a point light appears 6 times (once per face)
-    std::vector<std::shared_ptr<component::Light>> casters;
-    std::vector<int> faces;
+    using render::ShadowMaps;
+    // One entry per layer: a point light appears 6 times (once per face).
+    // The suns' maps go in the big array, the rest in the small one; the
+    // suns' layers first.
+    struct Caster {
+        std::shared_ptr<component::Light> light;
+        int face;
+        ShadowMaps::Bank bank;
+        size_t layer; // in its array
+    };
+    std::vector<Caster> casters;
+    size_t used[2] = {0, 0};
     for (auto &light : getAllComponents<component::Light>()) {
         if (!light->enabled || !light->castsShadow)
             continue;
-        if (casters.size() + light->shadowLayers() >
-            render::ShadowMaps::MAX_SHADOW_LIGHTS)
+        const auto bank = ShadowMaps::bankOf(
+            light->type == component::LightType::Directional);
+        if (used[bank] + light->shadowLayers() > ShadowMaps::maxLayers(bank))
             continue;
-        for (int f = 0; f < light->shadowLayers(); f++) {
-            casters.push_back(light);
-            faces.push_back(f);
-        }
+        for (int f = 0; f < light->shadowLayers(); f++)
+            casters.push_back({light, f, bank, used[bank]++});
     }
+    std::stable_sort(casters.begin(), casters.end(),
+                     [](const Caster &a, const Caster &b) {
+                         return a.bank < b.bank;
+                     });
 
-    const bool wiped = shadowMaps->sync(casters.size());
-    shadowLights.assign(casters.begin(), casters.end());
-    shadowMatrices.resize(casters.size());
+    const bool wiped[2] = {shadowMaps->sync(ShadowMaps::Sun, used[0]),
+                           shadowMaps->sync(ShadowMaps::Small, used[1])};
+    shadowLights.clear();
+    shadowSlots.clear();
+    for (const Caster &c : casters) {
+        shadowLights.push_back(c.light);
+        shadowSlots.push_back({c.bank, c.layer});
+    }
+    shadowMatrices.resize(used[0]);
+    smallShadowMatrices.resize(used[1]);
 
     GLint viewport[4];
     glGetIntegerv(GL_VIEWPORT, viewport);
@@ -178,54 +228,47 @@ void Scene::shadow_pass() {
                         return n.get();
         return (scn::Node *)nullptr;
     };
-    // Front faces culled: the map holds the back sides, so a lit surface is
-    // never compared with its own depth (no bias needed). Open surfaces
-    // (Shadow::open) have no back sides, they draw their front faces.
+    // Front faces into the map (back faces culled), so a shadow starts right
+    // where a model stands on the ground. Pushed a little deeper, more on
+    // slopes, where a texel covers more depth; lit.fs also looks the depth up
+    // a texel out along the surface's normal, so nothing shadows itself.
     glEnable(GL_CULL_FACE);
-    glCullFace(GL_FRONT);
-    for (size_t i = 0; i < casters.size(); i++) {
-        if (casters[i]->bakedShadow && !casters[i]->shadowDirty && !wiped)
+    glCullFace(GL_BACK);
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glPolygonOffset(SHADOW_SLOPE_BIAS, SHADOW_CONSTANT_BIAS);
+    for (const Caster &caster : casters) {
+        const auto &light = caster.light;
+        if (light->bakedShadow && !light->shadowDirty && !wiped[caster.bank])
             continue;
-        const auto proj = casters[i]->shadowProjection();
-        const auto view = casters[i]->shadowView(faces[i]);
-        shadowMatrices[i] = proj * view;
+        const auto proj = light->shadowProjection();
+        const auto view = light->shadowView(caster.face);
+        (caster.bank == ShadowMaps::Sun ? shadowMatrices
+                                        : smallShadowMatrices)[caster.layer] =
+            proj * view;
 
-        shadowMaps->bindLayer(i, casters[i]->type == component::LightType::Point);
+        shadowMaps->bindLayer(caster.bank, caster.layer);
         glClear(GL_DEPTH_BUFFER_BIT);
         // A shadow-only sun draws only the casters under its parent node, the
         // other suns draw the rest. Point and spot lights draw everything.
-        const bool sun = casters[i]->type == component::LightType::Directional;
+        const bool sun = light->type == component::LightType::Directional;
         scn::Node *own = nullptr;
-        if (casters[i]->shadowOnly)
-            own = casters[i]->node.lock()->parent.lock().get();
+        if (light->shadowOnly)
+            own = light->node.lock()->parent.lock().get();
         for (auto &shadow : shadowCasters)
             if (shadow->enabled &&
-                (casters[i]->bakedShadow || !shadow->bakedOnly) &&
-                (!sun || groupOf(shadow) == own)) {
-                if (shadow->open) {
-                    glCullFace(GL_BACK);
-                    glEnable(GL_POLYGON_OFFSET_FILL);
-                    // Deeper by a bit more on slopes, where a texel covers
-                    // more depth
-                    glPolygonOffset(2.f, 4.f);
-                }
+                (light->bakedShadow || !shadow->bakedOnly) &&
+                (!sun || groupOf(shadow) == own))
                 shadow->drawShadow(proj, view, depthShader,
                                    depthShaderInstanced);
-                if (shadow->open) {
-                    glDisable(GL_POLYGON_OFFSET_FILL);
-                    glCullFace(GL_FRONT);
-                }
-            }
     }
-    glCullFace(GL_BACK);
-    shadowMaps->endLayers();
+    glDisable(GL_POLYGON_OFFSET_FILL);
     // After the loop, a point light has 6 faces to render
-    for (auto &light : casters)
-        light->shadowDirty = false;
+    for (const Caster &caster : casters)
+        caster.light->shadowDirty = false;
 
     render::Framebuffer::unbind(viewport[2], viewport[3]);
     glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 
-    shadowMaps->uploadGPU(shadowMatrices);
+    shadowMaps->uploadGPU(shadowMatrices, smallShadowMatrices);
 }
 }; // namespace scn

@@ -1,6 +1,6 @@
 #pragma once
 #include <glm/glm.hpp>
-#define MAX_LIGHTS 64
+#define MAX_LIGHTS 160
 #include <vector>
 
 namespace render {
@@ -13,7 +13,9 @@ struct GpuLight {
     glm::vec4 attenuation; // x = constant, y = linear, z = quadratic
     glm::vec4 shadow;      // x = shadow map layer / ShadowBlock index, -1 = none
                            // y = directional: close-up map layer, -1 = none
+                           // z = 0: in the suns' array, 1: the small one
     glm::vec4 cutOff;      // x = inner cutoff, y = outer cutoff
+                           // z = shadow texel size, w = 1: per metre away
 };
 
 struct LightBlock {

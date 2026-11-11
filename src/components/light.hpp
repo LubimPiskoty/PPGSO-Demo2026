@@ -51,7 +51,8 @@ class Light : public ComponentBase<Light> {
     static Light point(glm::vec3 color = glm::vec3(1.f), float intensity = 1.f,
                        float linear = 0.09f, float quadratic = 0.032f);
 
-    // TODO: not rendered yet, lit.fs skips spot lights
+    // cutOff / outerCutOff: half-angles in degrees, full light inside the
+    // inner cone, fading out to the outer one
     static Light spot(glm::vec3 color = glm::vec3(1.f), float intensity = 1.f,
                       float cutOff = 12.5f, float outerCutOff = 17.5f,
                       float linear = 0.09f, float quadratic = 0.032f);

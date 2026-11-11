@@ -1,3 +1,4 @@
+#include <utility>
 #include "shader_loader.hpp"
 
 #include <cmrc/cmrc.hpp>
@@ -79,11 +80,14 @@ GLuint createShaderProgram(const std::string &vertexPath,
     }
 
     // read shadow maps from the slot ShadowMaps binds them to
-    GLint shadowLoc = glGetUniformLocation(program, "uShadowMaps");
-    if (shadowLoc != -1) {
-        glUseProgram(program);
-        glUniform1i(shadowLoc, 5);
-        glUseProgram(0);
+    for (auto [name, unit] : {std::pair{"uShadowMaps", 5},
+                              std::pair{"uSmallShadowMaps", 7}}) {
+        GLint loc = glGetUniformLocation(program, name);
+        if (loc != -1) {
+            glUseProgram(program);
+            glUniform1i(loc, unit);
+            glUseProgram(0);
+        }
     }
 
     // Shaders are linked into the program now; the standalone objects aren't

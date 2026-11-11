@@ -25,6 +25,12 @@ class Scene {
     std::unique_ptr<render::ShadowMaps> shadowMaps =
         std::make_unique<render::ShadowMaps>();
     std::vector<std::weak_ptr<component::Light>> shadowLights;
+    // Where each of those maps is: its array and layer there
+    struct ShadowSlot {
+        render::ShadowMaps::Bank bank;
+        size_t layer;
+    };
+    std::vector<ShadowSlot> shadowSlots;
     // A scene that ends by cutting to another one (the demo's shots) writes
     // that one's SceneManager name here, the manager loads it before the next
     // frame. Shared, so components can hold it and the scene can still move.
@@ -84,8 +90,9 @@ class Scene {
     render::Shader depthShader, depthShaderInstanced;
 
     render::LightBuffer lightBuffer;
-    // Matrix each shadow layer was last rendered with
-    std::vector<glm::mat4> shadowMatrices;
+    // Matrix each shadow layer was last rendered with, in the suns' array
+    // and in the small one
+    std::vector<glm::mat4> shadowMatrices, smallShadowMatrices;
     // Recursively get all pbodies in scene (slow now, no caching)
     void gatherPhysicsBodies(const std::shared_ptr<Node> &node);
     // Collects lights from the scene and uploads them to the UBO

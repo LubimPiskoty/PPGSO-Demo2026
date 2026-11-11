@@ -1,6 +1,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <algorithm>
+#include <cstdlib>
 #include <ctime>
 #include <filesystem>
 #include <iostream>
@@ -89,7 +90,29 @@ int main() {
     scenes.add("Light test", scenes::lightTest);
     scenes.add("Particle test", scenes::particle_test);
     scenes.setViewport((float)fbWidth, (float)fbHeight);
-    scenes.load(0);
+    // CAP_SCENE=<index or name> starts in that scene (index: the order
+    // added above), else the demo
+    size_t first = 0;
+    if (const char *scene = std::getenv("CAP_SCENE")) {
+        const auto &entries = scenes.entries();
+        char *end = nullptr;
+        const long index = std::strtol(scene, &end, 10);
+        size_t found = entries.size();
+        if (*scene && *end == '\0') {
+            if (index >= 0 && (size_t)index < entries.size())
+                found = (size_t)index;
+        } else {
+            for (size_t i = 0; i < entries.size(); i++)
+                if (entries[i].name == scene)
+                    found = i;
+        }
+        if (found < entries.size())
+            first = found;
+        else
+            std::cerr << "CAP_SCENE=" << scene << ": no such scene"
+                      << std::endl;
+    }
+    scenes.load(first);
 
     // F12 saves every buffer of the next frame (the scene, its depth map
     // and each post-processing pass) into capture/

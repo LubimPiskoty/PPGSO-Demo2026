@@ -17,7 +17,7 @@ Each take's length comes from its path (`DAY_TAKES`, `NIGHT_TAKE`: points with
 the camera's speed at each, at least the take's cruise speed between them,
 slowing down over 20 m, `EASE`, to the slower points), the rest from
 `LAPSE` and `APPROACH` at the top of the demo scene's file; the smithy has
-`DOORS_SHUT`, `GUST`, `SLOW_IN`, `SLOW_OUT`, `END`.
+`DOORS_SHUT`, `SLOW_IN`, `SLOW_OUT`, `END`.
 
 ## Shot 1: the day flyby
 
@@ -130,8 +130,8 @@ coal.
 
 - 0-3.5 s: the camera comes in, the doors shut behind it
 - 3.5-11 s: the bellows pumping (the lever, rope and bellows body animate)
-- 11-18 s: the coal bed, close; at 15 s a big gust throws some coal over the
-  tray's low rim, it rolls off the hearth onto the floor
+- 11-18 s: the coal bed, close; every press of the bellows swirls the coal
+  a little
 - 21-31 s: the anvil, dolly zoom (vertigo: the camera moves in from 1.4 m to
   0.75 m while the view widens from 30 to 53 deg) in slow motion (0.2x), sparks
   off every hammer blow
@@ -142,10 +142,10 @@ coal.
 - The pack's keyframes (hammer, sword, bellows lever) replayed by the engine's
   Animator, looping every 6.8 s; the bellows body and rope follow the lever
   (not in the pack), the grindstone wheel spins
-- Coal: 120 instanced pieces (3 draws), each a physics sphere with high
-  friction in the hearth tray; the air of the bellows is a wind field over the
-  bed (`physics::Context::windField`), every closing stroke pushes, the gust
-  throws
+- Coal: about 100 instanced pieces (3 draws), each a physics sphere with
+  high friction in the hearth's bowl; the air of the bellows is a wind field
+  (`physics::Context::windField`) going round the bowl's middle and up a
+  little while they press
 - The fire's heat follows the bellows: forge light intensity, coal glow
   (emissive maps) and ember particles
 - Particles: embers off the coal, sparks off every hammer blow (bursts),

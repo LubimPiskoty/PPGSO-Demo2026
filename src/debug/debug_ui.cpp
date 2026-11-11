@@ -169,7 +169,8 @@ static void lightPreviewWindow(scn::Scene &scene) {
     ImGui::Begin("Light preview");
     const auto &maps = scene.getShadowMaps();
     const auto &lights = scene.getShadowLights();
-    if (maps.size() == 0) {
+    const auto &slots = scene.shadowSlots;
+    if (slots.empty()) {
         ImGui::TextUnformatted("No light casts shadows");
         ImGui::End();
         return;
@@ -177,9 +178,9 @@ static void lightPreviewWindow(scn::Scene &scene) {
 
     // Which light's map to show (maps can shrink when lights are removed)
     static int index = 0;
-    index = std::min(index, (int)maps.size() - 1);
-    if (maps.size() > 1)
-        ImGui::SliderInt("Light", &index, 0, (int)maps.size() - 1);
+    index = std::min(index, (int)slots.size() - 1);
+    if (slots.size() > 1)
+        ImGui::SliderInt("Light", &index, 0, (int)slots.size() - 1);
 
     float nearPlane = 0.1f, farPlane = 100.f;
     if (index < (int)lights.size())
@@ -190,10 +191,11 @@ static void lightPreviewWindow(scn::Scene &scene) {
                 ImGui::Text("%s", node->name.c_str());
         }
 
-    depthPreviewTex = maps.getDepthArray();
-    depthPreviewLayer = index;
-    depthPreviewW = maps.resolution();
-    depthPreviewH = maps.resolution();
+    const auto &slot = slots[index];
+    depthPreviewTex = maps.getDepthArray(slot.bank);
+    depthPreviewLayer = (int)slot.layer;
+    depthPreviewW = maps.resolution(slot.bank);
+    depthPreviewH = maps.resolution(slot.bank);
 
     // Distance (in world units) that shows as white
     static float range = 50.f;

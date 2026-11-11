@@ -47,15 +47,15 @@ inline constexpr float bellowsHeight = 0.6021f;
 // HPF_Hammer: origin at the end of its handle, +x along the handle to the
 // head, +y along the head (a striking face at each end), +z = x cross y.
 // From the grip to the head's middle, and from there to a face:
-inline constexpr float hammerReach = 0.4338f;
-inline constexpr float hammerFace = 0.0758f;
+inline constexpr float hammerReach = 0.3200f;
+inline constexpr float hammerFace = 0.1134f;
 // Where it lands: the top of the sword lying across the anvil's face
-inline constexpr float strike[3] = {0.4778f, 0.7474f, 0.1705f};
+inline constexpr float strike[3] = {0.4878f, 0.7445f, 0.1905f};
 
 // The anvil's face (the middle of its flat top) and its long axis
 inline constexpr float anvilFace[3] = {0.4378f, 0.7314f, 0.0505f};
 inline constexpr bool anvilAlongX = true;
-inline constexpr float anvilMin[3] = {-0.0414f, 0.1311f, -0.2572f};
-inline constexpr float anvilMax[3] = {1.3580f, 0.7314f, 0.3591f};
+inline constexpr float anvilMin[3] = {0.2754f, -0.0000f, -0.2442f};
+inline constexpr float anvilMax[3] = {1.0335f, 0.7323f, 0.3288f};
 
 } // namespace scenes::forge

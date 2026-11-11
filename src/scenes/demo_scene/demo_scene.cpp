@@ -1,6 +1,8 @@
 #include "demo_scene.hpp"
-#include "city_layout.hpp"
 #include "../smithy/forge_layout.hpp"
+#include "city_layout.hpp"
+#include "lamp_posts.hpp"
+#include "light_props.hpp"
 
 #include "../../components/animator.hpp"
 #include "../../components/camera.hpp"
@@ -30,29 +32,6 @@
 
 namespace scenes {
 
-// Flat ground tiles and decals: one-sided quads
-bool isFlat(const std::string &model) {
-    for (const char *prefix :
-         {"City_Ground", "Ground_", "Grass_1_Alpha", "Grass_2_Alpha"})
-        if (model.rfind(prefix, 0) == 0)
-            return true;
-    return false;
-}
-
-// Grass and dirt patches lying on the ground, drawn draped (not instanced)
-bool isDecal(const std::string &model) {
-    for (const char *decal : {"Ground_1_Alpha", "Ground_2_Alpha",
-                              "Grass_1_Alpha", "Grass_2_Alpha"})
-        if (model == decal)
-            return true;
-    return false;
-}
-
-// Leaf cards, seen from both sides
-bool isFoliage(const std::string &model) {
-    return model.rfind("Tree_", 0) == 0;
-}
-
 namespace {
 
 using V = glm::vec3;
@@ -62,20 +41,53 @@ using Curve = component::Curve<V>;
 // timelapse into the night seen from high above, the same flyby at night,
 // then into the smithy's door, where the demo cuts to its own scene
 // (scenes::smithyScene). The flyby's length comes from its path, see flyby().
-constexpr float LAPSE = 22.f;   // seconds of timelapse between the flybys
+constexpr float LAPSE = 27.f;    // seconds of timelapse between the flybys
 constexpr float APPROACH = 8.5f; // from the night take's end into the door
 // SceneManager name of shot 4, see main.cpp
 constexpr const char *INTERIOR = "Smithy interior";
 
-// The smithy stands where this house of the demo was, on the south-east side
-// of the market square, its door facing the square
-constexpr const char *REPLACED = "House_7_1";
-const V FORGE_AT{25.7f, -2.45f, -48.9f};
+// The smithy stands where a house of the demo was (city::smithySite), on the
+// south-east side of the market square, its door facing the square
+const V FORGE_AT{city::smithySite.x, city::smithySite.y, city::smithySite.z};
 const V SQUARE{2.f, -2.45f, -71.f};
 // The middle of the smithy's doorway, x in its house's space
 constexpr float DOOR_MID = (forge::doorX0 + forge::doorX1) / 2;
 
 V vec(const float v[3]) { return {v[0], v[1], v[2]}; }
+
+V position(const city::Placement &p) { return {p.x, p.y, p.z}; }
+glm::quat rotation(const city::Placement &p) {
+    return glm::quat(V(p.rx, p.ry, p.rz));
+}
+
+std::shared_ptr<render::Model> model(const std::string &name) {
+    return std::make_shared<render::Model>(
+        loader::loadModel("MC_" + name + ".glb"));
+}
+
+// Every copy of a model in one instanced draw, casting shadows. Flat tiles
+// are open surfaces: nothing behind their front faces for the shadow pass.
+std::shared_ptr<scn::Node>
+instanced(const city::Group &group,
+          const std::shared_ptr<render::Material> &material,
+          bool open = false) {
+    std::vector<component::Instance> instances;
+    for (int i = 0; i < group.count; i++) {
+        const city::Placement &p = group.copies[i];
+        component::Instance instance;
+        instance.position = position(p);
+        instance.rotation = {p.rx, p.ry, p.rz};
+        instance.scale = V(p.scale);
+        if (p.mirrored)
+            instance.scale.y = -p.scale; // flat, so only the normal flips
+        instances.push_back(instance);
+    }
+    auto node = scn::Node::create(group.model);
+    node->add_component<component::Mesh>(model(group.model), material);
+    node->add_component<component::Instances>(std::move(instances));
+    node->add_component<component::Shadow>()->open = open;
+    return node;
+}
 
 struct Shot {
     float time;
@@ -138,33 +150,6 @@ class Floating : public component::ComponentBase<Floating> {
                        glm::angleAxis(rolled, V(0.f, 0.f, 1.f)));
     }
 };
-
-// People that can hop: everybody standing or walking
-bool isPerson(const std::string &model) {
-    if (model.find("Sitting") != std::string::npos)
-        return false;
-    for (const char *prefix : {"Man_", "Woman_", "Armor_", "Warrior_",
-                               "Archer_", "Farmer_", "General"})
-        if (model.rfind(prefix, 0) == 0)
-            return true;
-    return false;
-}
-
-// Where smoke comes out of a house: the top of its chimney, in the model
-// (every house has one, its variants _1, _2... have it in the same place)
-bool chimney(const std::string &model, V &top) {
-    static const std::map<std::string, V> tops = {
-        {"House_1_", {0.f, 7.7f, -1.3f}},   {"House_2_", {0.4f, 4.8f, -0.95f}},
-        {"House_3_", {-4.17f, 7.2f, -2.27f}}, {"House_4_", {0.4f, 8.2f, -0.98f}},
-        {"House_5_", {-1.54f, 4.45f, -1.98f}}, {"House_6_", {3.67f, 8.5f, -1.5f}},
-        {"House_7_", {0.24f, 6.3f, -5.33f}}};
-    for (const auto &[prefix, at] : tops)
-        if (model.rfind(prefix, 0) == 0) {
-            top = at;
-            return true;
-        }
-    return false;
-}
 
 // Catmull-Rom through the shots' positions
 Curve path(const std::vector<Shot> &shots) {
@@ -312,8 +297,8 @@ std::vector<Mark> flyby(const Take &take, float start) {
     for (int k = 0; k <= samples; k++) {
         points.push_back(shape.sample(std::min(k * step, total)));
         flown.push_back(k == 0 ? 0.f
-                               : flown.back() + glm::length(points[k] -
-                                                            points[k - 1]));
+                               : flown.back() +
+                                     glm::length(points[k] - points[k - 1]));
     }
     // Where along it each way is
     std::vector<float> at;
@@ -457,132 +442,239 @@ scn::Scene demoScene() {
     foliage->setFloat("uWindStrength", 1.75f);
     foliage->setFloat("uPlantHeight", 11.f); // the tallest tree models
 
-    // ---- The city: every copy of an object in one instanced draw ----
+    // ---- The city (city_layout.hpp, sorted beforehand) ----
     auto cityNode = scn::Node::create("City");
-    // cityNode->setLocalRot(glm::vec3(-glm::half_pi<float>(), 0, 0));
-    std::map<std::string, std::vector<component::Instance>> copies;
-    std::vector<const city::Placement *> boats; // on the water, drawn singly
-    // What stands on a boat's deck (its crew, cargo) rides with it: index
-    // into boats, or -1
-    auto aboard = [&](const city::Placement &p) {
-        for (size_t i = 0; i < boats.size(); i++) {
-            const city::Placement &b = *boats[i];
-            const V local = glm::inverse(glm::quat(V(b.rx, b.ry, b.rz))) *
-                            (V(p.x, p.y, p.z) - V(b.x, b.y, b.z));
-            // Inside the hull, seen from above (the ships are 13 m long)
-            const bool small = std::string(b.model) == "Boat";
-            if (std::abs(local.x) < (small ? 0.7f : 2.7f) &&
-                std::abs(local.z) < (small ? 1.7f : 6.4f) && local.y > 0.f &&
-                local.y < 9.f)
-                return (int)i;
-        }
-        return -1;
+    auto add = [&](const auto &groups,
+                   const std::shared_ptr<render::Material> &material,
+                   bool open = false) {
+        for (const city::Group &group : groups)
+            cityNode->add_child(instanced(group, material, open));
     };
-    std::vector<std::pair<int, const city::Placement *>> crew;
-    std::vector<V> chimneys; // tops, where smoke comes out
-    glm::vec3 lo(1e9f), hi(-1e9f);
-    bool replaced = false;
-    // Boats and ships ride the waves, each its own node. Not the wreck on
-    // the rocks (it lies lower and on its side).
-    for (const city::Placement &p : city::placements)
-        if ((std::string(p.model) == "Boat" ||
-             std::string(p.model).rfind("Ship_", 0) == 0) &&
-            p.y > -5.f)
-            boats.push_back(&p);
-    for (const city::Placement &p : city::placements) {
-        if (!replaced && std::string(p.model) == REPLACED &&
-            std::abs(p.x - FORGE_AT.x) < 0.5f &&
-            std::abs(p.z - FORGE_AT.z) < 0.5f) {
-            replaced = true; // the smithy goes here instead
-            continue;
-        }
-        const std::string model = p.model;
-        if ((model == "Boat" || model.rfind("Ship_", 0) == 0) && p.y > -5.f)
-            continue; // collected before this loop
-        if (const int boat = aboard(p); boat >= 0 && !isFlat(model)) {
-            crew.push_back({boat, &p});
-            continue;
-        }
-        // Chimneys, about half of them smoke at night (see the smoke below)
-        V top;
-        if (chimney(model, top))
-            chimneys.push_back(V(p.x, p.y, p.z) +
-                               glm::quat(V(p.rx, p.ry, p.rz)) * (top * p.scale));
-        component::Instance instance;
-        instance.position = {p.x, p.y, p.z};
-        instance.rotation = {p.rx, p.ry, p.rz};
-        instance.scale = glm::vec3(p.scale);
-        if (p.mirrored)
-            instance.scale.y = -p.scale; // flat, so only the normal flips
-        copies[p.model].push_back(instance);
-        lo = glm::min(lo, instance.position);
-        hi = glm::max(hi, instance.position);
-    }
-    for (auto &[model, instances] : copies) {
-        auto node = scn::Node::create(model);
-        if (isDecal(model)) {
-            // Grass and dirt patches: every copy laid onto the ground in one
-            // mesh (tools/drape_ground.py), the flat quads hung over the
-            // slopes. They don't cast: just above the ground, their shadows
-            // fell a little off them and lifted them off it.
-            node->add_component<component::Mesh>(
-                std::make_shared<render::Model>(
-                    loader::loadModel("MC_" + model + "_Draped.glb")),
-                lit);
-            cityNode->add_child(node);
-            continue;
-        }
+    add(city::ground, litInstanced, true);
+    add(city::houses, litInstanced);
+    add(city::buildings, litInstanced);
+    add(city::people, litInstanced);
+    add(city::props, litInstanced);
+    add(city::trees, foliage);
+
+    // ---- Lamps: on from dusk (the "dusk" track on the clock below) ----
+    // Each light with the intensity it has when on, and the materials whose
+    // glass glows along. Models from tools/export_lights.py.
+    std::vector<std::pair<std::weak_ptr<component::Light>, float>> lamps;
+    std::vector<std::shared_ptr<render::Material>> glowing;
+    auto lamp = [&](const std::shared_ptr<scn::Node> &node,
+                    const component::Light &light,
+                    const std::shared_ptr<scn::Node> &parent) {
+        lamps.push_back(
+            {node->add_component<component::Light>(light), light.intensity});
+        parent->add_child(node);
+    };
+    auto glow = [&](const char *name) {
+        auto material =
+            std::make_shared<render::Material>(name, litInstanced->getShader());
+        glowing.push_back(material);
+        return material;
+    };
+    auto instancedModel = [&](const char *name, const char *file,
+                              const std::shared_ptr<render::Material> &material,
+                              std::vector<component::Instance> instances,
+                              bool casts = true) {
+        auto node = scn::Node::create(name);
         node->add_component<component::Mesh>(
-            std::make_shared<render::Model>(
-                loader::loadModel("MC_" + model + ".glb")),
-            isFoliage(model) ? foliage : litInstanced);
+            std::make_shared<render::Model>(loader::loadModel(file)), material);
         node->add_component<component::Instances>(std::move(instances));
-        // Everything casts, the ground too. Flat tiles are open surfaces:
-        // nothing behind their front faces for the shadow pass to draw.
-        node->add_component<component::Shadow>()->open = isFlat(model);
+        if (casts)
+            node->add_component<component::Shadow>();
+        cityNode->add_child(node);
+    };
+
+    // Soldiers carry a railroad lantern, hung on its bail from a hand, its
+    // lens to the front, a spot shining ahead and down onto the road: the
+    // gate guards in the spear hand (just outside the shaft), the soldiers
+    // walking about the middle of the city in their free hand
+    {
+        // A soldier's own space: y up, facing +z
+        struct Bearers {
+            const city::Placement *copies;
+            int count;
+            V hand;           // where the bail hangs
+            float onlyWithin; // metres of the market square, 0: all
+        };
+        const V spearHand{0.30f, 1.10f, 0.05f}, freeHand{-0.28f, 0.80f, 0.04f};
+        constexpr float CENTRE = 30.f;
+        const Bearers bearers[] = {
+            {city::people_Armor_2_Guard,
+             (int)std::size(city::people_Armor_2_Guard), spearHand, 0.f},
+            {city::people_Armor_1_Walking,
+             (int)std::size(city::people_Armor_1_Walking), freeHand, CENTRE},
+            {city::people_Armor_2_Walking,
+             (int)std::size(city::people_Armor_2_Walking), freeHand, CENTRE},
+            {city::people_Warrior_3, (int)std::size(city::people_Warrior_3),
+             freeHand, CENTRE},
+        };
+        const V lens = vec(lights::lanternLens);
+        const float down = glm::radians(20.f);
+        const V ahead{0.f, -std::sin(down), std::cos(down)};
+        std::vector<component::Instance> instances;
+        for (const Bearers &group : bearers)
+            for (int i = 0; i < group.count; i++) {
+                const city::Placement &man = group.copies[i];
+                const float fromSquare =
+                    glm::length(glm::vec2(man.x - SQUARE.x, man.z - SQUARE.z));
+                if (group.onlyWithin > 0.f && fromSquare > group.onlyWithin)
+                    continue;
+                const glm::quat turn = rotation(man);
+                const V at = position(man) + turn * (group.hand * man.scale);
+                component::Instance instance;
+                instance.position = at;
+                instance.rotation = {man.rx, man.ry, man.rz};
+                instance.scale = V(man.scale);
+                instances.push_back(instance);
+
+                auto node = scn::Node::create("Lantern light",
+                                              at + turn * (lens * man.scale));
+                node->setLocalRot(
+                    glm::quatLookAt(turn * ahead, V(0.f, 1.f, 0.f)));
+                auto light = component::Light::spot({1.f, 0.72f, 0.4f}, 3.f,
+                                                    22.f, 34.f, 0.09f, 0.032f);
+                // Everyone stands still: drawn once
+                light.castsShadow = true;
+                light.bakedShadow = true;
+                light.shadowNear = 0.05f;
+                light.shadowFar = 30.f;
+                lamp(node, light, cityNode);
+            }
+        instancedModel("Lanterns", "LGT_Lantern.glb", glow("Lantern"),
+                       std::move(instances));
+    }
+    // Street lamps along the streets inside the walls (lamp_posts.hpp, from
+    // tools/flyby/lamps.py): the post, its lamp hung on the chain, a point
+    // light in the lamp
+    const auto lampMaterial = glow("Lamp");
+    const auto streetLight = [] {
+        return component::Light::point({1.f, 0.7f, 0.4f}, 2.5f, 0.14f, 0.07f);
+    };
+    {
+        const V hook = vec(lights::postHook);
+        const V light = vec(lights::lampLight);
+        // The lamp itself casts no shadow (its glass and frame would shut its
+        // own light in): a hidden disc in its base, under the light, casts
+        // the dark spot under the lamp instead
+        const V base = light - V(0.f, 0.15f, 0.f);
+        constexpr float BASE_RADIUS = 0.085f, THIN = 0.08f;
+        std::vector<component::Instance> posts, hung, discs;
+        for (const lights::LampPost &post : lights::lampPosts) {
+            component::Instance instance;
+            instance.position = {post.x, post.y, post.z};
+            instance.rotation = {0.f, post.yaw, 0.f};
+            posts.push_back(instance);
+            const glm::quat turn = glm::angleAxis(post.yaw, V(0.f, 1.f, 0.f));
+            instance.position += turn * hook;
+            hung.push_back(instance);
+            component::Instance disc = instance;
+            disc.position += turn * base;
+            disc.scale = {1.f, THIN, 1.f};
+            discs.push_back(disc);
+            // Those around the market square cast shadows (6 maps each,
+            // baked: nothing there moves)
+            auto lit = streetLight();
+            if (glm::length(glm::vec2(post.x - SQUARE.x, post.z - SQUARE.z)) <
+                30.f) {
+                lit.castsShadow = true;
+                lit.bakedShadow = true;
+                lit.shadowNear = 0.1f;
+                lit.shadowFar = 25.f;
+            }
+            lamp(scn::Node::create("Street lamp light",
+                                   instance.position + turn * light),
+                 lit, cityNode);
+        }
+        instancedModel("Lamp posts", "LGT_LampPost.glb", glow("Lamp post"),
+                       std::move(posts));
+        instancedModel("Street lamps", "LGT_Lamp.glb", lampMaterial,
+                       std::move(hung), false);
+        // Only the shadow pass draws the discs (the Mesh is off, the Shadow
+        // still uses it)
+        auto node = scn::Node::create("Street lamp shadow discs");
+        node->add_component<component::Mesh>(
+                std::make_shared<render::Model>(
+                    loader::createSphere(BASE_RADIUS)),
+                litInstanced)
+            ->enabled = false;
+        node->add_component<component::Instances>(std::move(discs));
+        node->add_component<component::Shadow>();
         cityNode->add_child(node);
     }
-    std::vector<std::shared_ptr<scn::Node>> boatNodes;
-    for (size_t i = 0; i < boats.size(); i++) {
-        const city::Placement &p = *boats[i];
-        auto node = scn::Node::create(p.model, {p.x, p.y, p.z});
-        boatNodes.push_back(node);
-        node->setLocalScale(V(p.scale));
+    // The ships' and boats' lamps, on board (hook positions in the hull's
+    // space): standing on the ships' stern post and hung on the front of the
+    // mast, on the boats' stern
+    const auto shipLamps =
+        std::make_shared<render::Material>("Ship lamp", lit->getShader());
+    glowing.push_back(shipLamps);
+    const auto lampModel =
+        std::make_shared<render::Model>(loader::loadModel("LGT_Lamp.glb"));
+    auto onBoard = [&](const std::shared_ptr<scn::Node> &hull,
+                       const std::string &model, float scale) {
+        std::vector<V> hooks;
+        if (model == "Boat")
+            hooks = {{0.f, 0.3f + lights::lampHeight, -0.85f}};
+        else
+            hooks = {{0.f, 3.47f + lights::lampHeight, -4.45f},
+                     {0.f, 3.2f, 0.4f}}; // on the mast's bow side
+        for (const V &at : hooks) {
+            auto node = scn::Node::create("Ship lamp", at / scale);
+            node->setLocalScale(V(1.f / scale));
+            node->add_component<component::Mesh>(lampModel, shipLamps);
+            node->add_component<component::Shadow>();
+            auto light = streetLight();
+            light.intensity = 2.f;
+            lamp(scn::Node::create("Ship lamp light", vec(lights::lampLight)),
+                 light, node);
+            hull->add_child(node);
+        }
+    };
+    // Grass and dirt patches: every copy laid onto the ground in one mesh
+    // (tools/drape_ground.py), the flat quads hung over the slopes. They
+    // don't cast: just above the ground, their shadows fell a little off
+    // them and lifted them off it.
+    for (const city::Group &group : city::decals) {
+        auto node = scn::Node::create(group.model);
         node->add_component<component::Mesh>(
-            std::make_shared<render::Model>(
-                loader::loadModel(std::string("MC_") + p.model + ".glb")),
-            lit);
+            model(std::string(group.model) + "_Draped"), lit);
+        cityNode->add_child(node);
+    }
+    // Boats and ships ride the waves, each its own node, what stands on
+    // their deck (crews, cargo) their children
+    for (size_t i = 0; i < std::size(city::boats); i++) {
+        const city::Boat &boat = city::boats[i];
+        const city::Placement &p = boat.at;
+        auto node = scn::Node::create(p.model, position(p));
+        node->setLocalScale(V(p.scale));
+        node->add_component<component::Mesh>(model(p.model), lit);
         node->add_component<component::Shadow>();
         auto floating = node->add_component<Floating>();
-        floating->restPos = {p.x, p.y, p.z};
-        floating->restRot = glm::quat(V(p.rx, p.ry, p.rz));
+        floating->restPos = position(p);
+        floating->restRot = rotation(p);
         floating->phase = 1.7f * (float)i;
         // The small boats rock more and quicker than the ships
         if (std::string(p.model) == "Boat") {
             floating->roll = glm::radians(6.f);
             floating->rollPeriod = 2.f;
         }
+        onBoard(node, p.model, p.scale);
+        const glm::quat toBoat = glm::inverse(rotation(p));
+        for (int k = 0; k < boat.deckCount; k++) {
+            const city::Placement &on = boat.deck[k];
+            auto child = scn::Node::create(
+                on.model, toBoat * (position(on) - position(p)) / p.scale);
+            child->setLocalRot(toBoat * rotation(on));
+            child->setLocalScale(V(on.scale / p.scale));
+            child->add_component<component::Mesh>(model(on.model), lit);
+            child->add_component<component::Shadow>();
+            node->add_child(child);
+        }
         cityNode->add_child(node);
     }
-    // The crews and cargo: children of their boat, where they stood on it
-    for (const auto &[boat, placed] : crew) {
-        const city::Placement &p = *placed, &b = *boats[boat];
-        const glm::quat toBoat = glm::inverse(glm::quat(V(b.rx, b.ry, b.rz)));
-        auto node = scn::Node::create(
-            p.model, toBoat * (V(p.x, p.y, p.z) - V(b.x, b.y, b.z)) / b.scale);
-        node->setLocalRot(toBoat * glm::quat(V(p.rx, p.ry, p.rz)));
-        node->setLocalScale(V(p.scale / b.scale));
-        node->add_component<component::Mesh>(
-            std::make_shared<render::Model>(
-                loader::loadModel(std::string("MC_") + p.model + ".glb")),
-            lit);
-        node->add_component<component::Shadow>();
-        boatNodes[boat]->add_child(node);
-    }
-    if (!replaced)
-        std::cerr << "[Warning] The house the smithy replaces is gone from "
-                     "city_layout.hpp"
-                  << std::endl;
     // What the objects don't cover (the ground), where the demo has it
     for (const char *model : city::rest) {
         // Drawn by the water below instead
@@ -671,14 +763,14 @@ scn::Scene demoScene() {
                           std::make_shared<render::Texture>(render::Texture{
                               loader::createTexture(pixel, 1, 1), "black"}));
         black->specular = V(0.f);
-        auto card = scn::Node::create(
-            "Darkness", {DOOR_MID, forge::doorTop / 2, forge::doorInner - 0.4f});
+        auto card = scn::Node::create("Darkness", {DOOR_MID, forge::doorTop / 2,
+                                                   forge::doorInner - 0.4f});
         // The rect lies in XZ facing +Y, stand it up to face out of the door
         card->setLocalRotEuler({glm::half_pi<float>(), 0.f, 0.f});
         card->add_component<component::Mesh>(
-            std::make_shared<render::Model>(loader::createRect(
-                {(forge::doorX1 - forge::doorX0) / 2 + 0.3f,
-                 forge::doorTop / 2 + 0.2f})),
+            std::make_shared<render::Model>(
+                loader::createRect({(forge::doorX1 - forge::doorX0) / 2 + 0.3f,
+                                    forge::doorTop / 2 + 0.2f})),
             black);
         forge->add_child(card);
     }
@@ -692,7 +784,7 @@ scn::Scene demoScene() {
         // into the map only while the sun shines on it from below, so it
         // never shadows anything by day. Not drawn itself (its Mesh is off,
         // the Shadow still uses it), so it can reach past the island.
-        const V middle = (lo + hi) * 0.5f;
+        const V middle = (vec(city::cityMin) + vec(city::cityMax)) * 0.5f;
         auto node =
             scn::Node::create("Shadow floor", {middle.x, -7.5f, middle.z});
         node->setLocalRotEuler({glm::pi<float>(), 0.f, 0.f}); // face down
@@ -708,8 +800,9 @@ scn::Scene demoScene() {
         cityNode->add_child(node);
     }
     scene.root->add_child(cityNode);
-    const glm::vec3 center = (lo + hi) * 0.5f;
-    const float radius = glm::length(hi - lo) * 0.5f;
+    const V center = (vec(city::cityMin) + vec(city::cityMax)) * 0.5f;
+    const float radius =
+        glm::length(vec(city::cityMax) - vec(city::cityMin)) * 0.5f;
 
     auto sky = scn::Node::create("Skybox");
     auto skybox = sky->add_component<component::Skybox>("skybox.png");
@@ -740,10 +833,10 @@ scn::Scene demoScene() {
         scene.root->add_child(path);
         auto node = scn::Node::create("Sun");
         auto sun =
-            component::Light::directional({1.f, 0.9f, 0.75f}, 1.5f, 0.3f);
+            component::Light::directional({1.f, 0.9f, 0.75f}, 1.5f, 0.2f);
         // Moves all the time, so its map is drawn every frame
         sun.castsShadow = true;
-        sun.shadowExtent = radius / 1.75f + 20.f;
+        sun.shadowExtent = radius / 1.65f + 20.f;
         sun.shadowNear = 0.f;
         sun.shadowFar = 2.f * radius + 100.f;
         sunLight = node->add_component<component::Light>(sun);
@@ -788,8 +881,8 @@ scn::Scene demoScene() {
         moonNode->setLocalRotEuler({glm::pi<float>(), 0.f, 0.f});
         node->add_child(moonNode);
         moonNode->add_component<component::Light>(
-            component::Light::directional(V(0.f), 1.f, 0.6f));
-        const V moon{0.25f, 0.3f, 0.45f};
+            component::Light::directional(V(0.f), 1.f, 0.15f));
+        const V moon{0.16f, 0.19f, 0.3f};
         auto moonAnimator = moonNode->add_component<component::Animator>();
         moonAnimator->addTrack(AnimTarget::Color,
                                component::Curve<V>::flat(day({{0.f, none},
@@ -846,9 +939,10 @@ scn::Scene demoScene() {
                         then(then(posDay, lapse.pos), night.pos),
                         component::PlayMode::Single);
         // After the position: turned to face what it looks at
-        auto &look = clock->addTrack(component::AnimTarget::Property,
-                                     then(then(lookDay, lapse.look), night.look),
-                                     component::PlayMode::Single);
+        auto &look =
+            clock->addTrack(component::AnimTarget::Property,
+                            then(then(lookDay, lapse.look), night.look),
+                            component::PlayMode::Single);
         look.name = "look at";
         look.setProperty = [node = camNode.get()](const V &target) {
             node->setLocalRot(glm::quatLookAt(
@@ -942,9 +1036,9 @@ scn::Scene demoScene() {
         fade(NIGHT_AT + dip, 1.f);
         fade(CUT - 1.2f, 1.f);
         fade(CUT, 0.f);
-        auto &track = clock->addTrack(component::AnimTarget::Property,
-                                      Curve::flat(fades),
-                                      component::PlayMode::Single);
+        auto &track =
+            clock->addTrack(component::AnimTarget::Property, Curve::flat(fades),
+                            component::PlayMode::Single);
         track.name = "fade";
         track.setProperty = [fade = scene.fade](const V &v) { *fade = v.x; };
     }
@@ -963,6 +1057,7 @@ scn::Scene demoScene() {
     scene.root->add_child(camNode);
 
     // ---- Chimney smoke, at night. Drawn last: it's blended ----
+    std::vector<std::weak_ptr<component::ParticleSystem>> emitters;
     {
         auto smoke = scn::Node::create("Smoke");
         auto material = std::make_shared<render::Material>(
@@ -972,18 +1067,13 @@ scn::Scene demoScene() {
             std::make_shared<render::ComputeShader>("spawnParticle.comp");
         auto update =
             std::make_shared<render::ComputeShader>("updateParticle.comp");
-        // About half the houses have a fire going, the smithy always: its
-        // chimney is the last one
-        {
-            std::mt19937 pick(11);
-            std::vector<V> lit;
-            for (const V &top : chimneys)
-                if (std::bernoulli_distribution(0.5)(pick))
-                    lit.push_back(top);
-            chimneys = std::move(lit);
-        }
+        // About half the houses have a fire going, the smithy always
+        std::vector<V> chimneys;
+        std::mt19937 pick(11);
+        for (const auto &top : city::chimneys)
+            if (std::bernoulli_distribution(0.3)(pick))
+                chimneys.push_back(vec(top));
         chimneys.push_back(inForge(vec(forge::chimneyTop)));
-        std::vector<std::weak_ptr<component::ParticleSystem>> emitters;
         // Every house's fire its own: how much smoke, how dark, how fast it
         // rises, how big the puffs, how far the wind takes them
         std::mt19937 random(7);
@@ -1004,8 +1094,7 @@ scn::Scene demoScene() {
             puffs->additive = false;
             puffs->minColor = {0.3f * shade, 0.32f * shade, 0.38f * shade,
                                between(0.2f, 0.45f)};
-            puffs->maxColor = {0.2f * shade, 0.22f * shade, 0.27f * shade,
-                               0.f};
+            puffs->maxColor = {0.2f * shade, 0.22f * shade, 0.27f * shade, 0.f};
             puffs->minPosition = V(-0.15f, 0.f, -0.15f);
             puffs->maxPosition = V(0.15f, 0.1f, 0.15f);
             puffs->minVelocity = {-0.12f, 0.6f * rise, -0.12f};
@@ -1025,20 +1114,56 @@ scn::Scene demoScene() {
             smoke->add_child(node);
         }
         scene.root->add_child(smoke);
+    }
 
-        // The fires are lit as it gets dark, half way into the timelapse
-        const float fires = LAPSE_AT + LAPSE * 0.5f;
-        auto &track = clock->addTrack(component::AnimTarget::Property,
-                                      Curve::flat({{0.f, V(0.f)},
-                                                   {fires, V(0.f)},
-                                                   {fires, V(1.f)},
-                                                   {CUT, V(1.f)}}),
-                                      component::PlayMode::Single);
-        track.name = "chimney smoke";
-        track.setProperty = [emitters](const V &v) {
-            for (auto &emitter : emitters)
-                if (auto e = emitter.lock())
-                    e->spawning = v.x > 0.5f;
+    // ---- Dusk: the lamps, lanterns and fires come on while the sun goes
+    // down in the timelapse (day fraction 0.5 is sunset), each at its own
+    // random moment over a few seconds, so not all in one frame ----
+    {
+        const float from = LAPSE_AT + LAPSE * 0.4f,
+                    to = LAPSE_AT + LAPSE * 0.7f;
+        // One random moment in [0, 1) of that time for every lamp and fire
+        std::mt19937 order(5);
+        std::uniform_real_distribution<float> moment(0.f, 1.f);
+        struct Lamp {
+            std::weak_ptr<component::Light> light;
+            float intensity, at;
+        };
+        struct Fire {
+            std::weak_ptr<component::ParticleSystem> smoke;
+            float at;
+        };
+        std::vector<Lamp> lamping;
+        std::vector<Fire> fires;
+        for (const auto &[light, intensity] : lamps)
+            lamping.push_back({light, intensity, moment(order)});
+        for (const auto &smoke : emitters)
+            fires.push_back({smoke, moment(order)});
+        // A lamp fades in over this much of it
+        constexpr float FADE = 0.04f;
+        auto &track = clock->addTrack(
+            component::AnimTarget::Property,
+            Curve::flat(
+                {{0.f, V(0.f)}, {from, V(0.f)}, {to, V(1.f)}, {CUT, V(1.f)}}),
+            component::PlayMode::Single);
+        track.name = "dusk";
+        track.setProperty = [lamping, fires, glowing](const V &v) {
+            const float now = glm::clamp(v.x, 0.f, 1.f) * (1.f + FADE);
+            for (const Lamp &lamp : lamping)
+                if (auto l = lamp.light.lock()) {
+                    const float lit =
+                        glm::clamp((now - lamp.at) / FADE, 0.f, 1.f);
+                    // Shadow casters stay on (at nothing): their maps are
+                    // baked once at the start, not each time one comes on
+                    // (that regrows the shadow array and redraws them all)
+                    l->enabled = lit > 0.f || l->castsShadow;
+                    l->intensity = lamp.intensity * lit;
+                }
+            for (const Fire &fire : fires)
+                if (auto e = fire.smoke.lock())
+                    e->spawning = now >= fire.at;
+            for (const auto &m : glowing)
+                m->setFloat("uEmissiveStrength", v.x);
         };
     }
 

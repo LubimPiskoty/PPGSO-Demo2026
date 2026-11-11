@@ -16,9 +16,8 @@ class Shadow : public component::ComponentBase<Shadow> {
     // every frame don't need
     bool bakedOnly = false;
 
-    // Open surface (ground, terrain): no back side for the front-face culled
-    // pass to draw, so its front faces go into the map instead, pushed a
-    // little deeper (glPolygonOffset) so it doesn't shadow itself
+    // Open surface (ground, terrain), one sided. Drawn like any other caster
+    // now (front faces, see Scene::shadow_pass); kept to mark them.
     bool open = false;
 
     // Called by Scene::shadow_pass with the light's matrices and depth shaders
