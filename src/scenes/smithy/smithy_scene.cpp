@@ -237,19 +237,22 @@ scn::Scene smithyScene() {
     std::vector<float> hammerHits;
     {
         // Swings in the plane along the anvil, the grip on the +x side: its
-        // frame (forge_layout.hpp) turned so the handle points -x at the
-        // anvil, the head's face lands on the sword
+        // frame (forge_layout.hpp) turned half round y so the handle points
+        // -x at the anvil, and half round the handle so the flat face (+y)
+        // looks down and lands on the sword, the peen up
         auto hammer = b.prop("Hammer", "HPF_Hammer", V(0.f));
         const V grip = hit + V(forge::hammerReach, forge::hammerFace, 0.f);
-        const glm::quat base = glm::angleAxis(glm::pi<float>(), V(0, 1, 0));
+        const glm::quat base = glm::angleAxis(glm::pi<float>(), V(0, 1, 0)) *
+                               glm::angleAxis(glm::pi<float>(), V(1, 0, 0));
         hammerClock = hammer->add_component<component::Animator>();
         auto &track = hammerClock->addTrack(
             AnimTarget::Property, hammerSwing(hammerHits), PlayMode::Loop);
         track.name = "swing";
         track.setProperty = [n = hammer.get(), grip, base](const V &v) {
-            // The head goes up about the grip (local z), the arm lifts the
-            // grip and pulls it back a little
-            n->setLocalRot(base * glm::angleAxis(v.x, V(0, 0, 1)));
+            // The head goes up about the grip (local z; turned over, a
+            // negative angle lifts it), the arm lifts the grip and pulls it
+            // back a little
+            n->setLocalRot(base * glm::angleAxis(-v.x, V(0, 0, 1)));
             n->setLocalPos(grip + V(0.06f, 0.18f, 0.f) * v.y);
         };
         slowed.push_back(hammerClock);
@@ -426,6 +429,22 @@ scn::Scene smithyScene() {
         auto node = scn::Node::create("Hot metal", hit + V(0.f, 0.12f, 0.f));
         auto light =
             component::Light::point({1.f, 0.5f, 0.18f}, 0.6f, 0.35f, 0.6f);
+        node->add_component<component::Light>(light);
+        lights->add_child(node);
+    }
+    {
+        // A spot low from the room's side, up across the anvil toward the
+        // back wall: the swinging hammer throws its shadow, big, on the
+        // wall behind it, over the workbench there (the camera looks that
+        // way over the strike)
+        const V from = hit + V(1.3f, -0.05f, 1.9f);
+        auto node = scn::Node::create("Hammer spot", from);
+        node->setLocalRotEuler(lookEuler(hit + V(0.f, 0.3f, 0.f) - from));
+        auto light = component::Light::spot({1.f, 0.62f, 0.32f}, 1.1f, 16.f,
+                                            24.f, 0.09f, 0.032f);
+        light.castsShadow = true;
+        light.shadowNear = 0.2f;
+        light.shadowFar = 8.f;
         node->add_component<component::Light>(light);
         lights->add_child(node);
     }

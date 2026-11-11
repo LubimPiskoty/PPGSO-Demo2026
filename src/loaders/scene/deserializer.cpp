@@ -13,7 +13,6 @@
 #include "../../components/shadow.hpp"
 #include "../../components/skybox.hpp"
 #include "../../components/spin.hpp"
-#include "../curve_loader.hpp"
 #include "../model_loader.hpp"
 #include "../texture_loader.hpp"
 #include "json.hpp"
@@ -266,19 +265,14 @@ static void deserializeAnimatorComponent(const cJSON *json,
             t, "mode", playModeNames, (int)track.playback.mode);
         track.playback.playing = readBool(t, "playing", true);
 
-        // Either a curve file from res/curves or inline control points
-        std::string curveFile = readString(t, "curve");
-        if (!curveFile.empty()) {
-            track.curve = loadCurve(curveFile, duration);
-        } else {
-            std::vector<glm::vec3> control;
-            const cJSON *point;
-            cJSON_ArrayForEach(point,
-                               cJSON_GetObjectItemCaseSensitive(t, "control"))
-                control.push_back(toVec3(point, glm::vec3(0.f)));
-            track.curve =
-                component::Curve<glm::vec3>::fromBezier(control, duration);
-        }
+        // Inline Bezier control points
+        std::vector<glm::vec3> control;
+        const cJSON *point;
+        cJSON_ArrayForEach(point,
+                           cJSON_GetObjectItemCaseSensitive(t, "control"))
+            control.push_back(toVec3(point, glm::vec3(0.f)));
+        track.curve =
+            component::Curve<glm::vec3>::fromBezier(control, duration);
         track.playback.duration = track.curve.getDuration();
         animator->tracks.push_back(track);
     }

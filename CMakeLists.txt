@@ -143,12 +143,11 @@ cmrc_add_resource_library(textures
         WHENCE res/textures
         ${TEXTURE_FILES})
 
-# Bezier curves exported by tools/export_curves.py (raw float32 xyz points)
-file(GLOB CURVE_FILES CONFIGURE_DEPENDS "res/curves/*.bin")
-cmrc_add_resource_library(curves
-        NAMESPACE curves
-        WHENCE res/curves
-        ${CURVE_FILES})
+# The resources are big byte arrays: in Debug, -g would copy each one again
+# into the debug info (the executable twice as big), so they get none
+foreach(res shaders models textures)
+    target_compile_options(${res} PRIVATE -g0)
+endforeach()
 
 #
 # Target
@@ -168,7 +167,6 @@ target_link_libraries(semestralka PUBLIC
         shaders
         models
         textures
-        curves
         OpenGL::GL
         GLEW::GLEW
         glfw

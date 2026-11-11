@@ -45,12 +45,14 @@ inline constexpr float bellowsBase[3] = {-3.2831f, -0.0895f, 1.5654f};
 inline constexpr float bellowsHeight = 0.6021f;
 
 // HPF_Hammer: origin at the end of its handle, +x along the handle to the
-// head, +y along the head (a striking face at each end), +z = x cross y.
-// From the grip to the head's middle, and from there to a face:
+// head, +y along the head to its flat striking face (the peen at -y),
+// +z = x cross y. From the grip to the head's middle, and from the
+// handle's axis to the flat face:
 inline constexpr float hammerReach = 0.3200f;
-inline constexpr float hammerFace = 0.1134f;
-// Where it lands: the top of the sword lying across the anvil's face
-inline constexpr float strike[3] = {0.4878f, 0.7445f, 0.1905f};
+inline constexpr float hammerFace = 0.0971f;
+// Where it lands: the top of the sword lying across the anvil's face, over
+// the face's middle
+inline constexpr float strike[3] = {0.5158f, 0.7350f, 0.0420f};
 
 // The anvil's face (the middle of its flat top) and its long axis
 inline constexpr float anvilFace[3] = {0.4378f, 0.7314f, 0.0505f};

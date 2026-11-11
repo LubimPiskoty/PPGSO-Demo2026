@@ -3,15 +3,17 @@
 #include "../components/light.hpp"
 #include "../components/mesh.hpp"
 #include "../components/shadow.hpp"
+#include "../components/spin.hpp"
 #include "../loaders/model_loader.hpp"
 #include "../loaders/texture_loader.hpp"
 #include "../render/material.hpp"
 #include "../scene/scene.hpp"
-#include "light_test.hpp"
 #include <memory>
 #include <string>
 
 namespace scenes {
+
+using component::Spin;
 
 // A floor with a few shapes on it, lit by a shadow casting sun and a spot
 // light. Check the depth preview in the debug UI.

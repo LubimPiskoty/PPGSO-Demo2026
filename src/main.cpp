@@ -14,7 +14,6 @@
 #include "render/postprocessing.hpp"
 #include "scenes/ball_jar.hpp"
 #include "scenes/demo_scene/demo_scene.hpp"
-#include "scenes/light_test.hpp"
 #include "scenes/particle_test.hpp"
 #include "scenes/physics_test.hpp"
 #include "scenes/scene_manager.hpp"
@@ -87,7 +86,6 @@ int main() {
     // Shot 4 of the demo, the demo scene cuts to it by this name
     scenes.add("Smithy interior", scenes::smithyScene);
     scenes.add("Shadow test", scenes::shadowTest);
-    scenes.add("Light test", scenes::lightTest);
     scenes.add("Particle test", scenes::particle_test);
     scenes.setViewport((float)fbWidth, (float)fbHeight);
     // CAP_SCENE=<index or name> starts in that scene (index: the order
@@ -156,6 +154,22 @@ int main() {
         // Clamp so a long stall (window drag, breakpoint) doesn't teleport
         // everything in one update
         float dt = std::min((float)(time - last_time), 0.1f);
+        // TEMP frame dump: fixed dt, CAPTURE_DIR/f<n>.ppm every CAPTURE_EVERY
+        // s from CAPTURE_START to CAPTURE_END, then quit
+        static const char *capDir = std::getenv("CAPTURE_DIR");
+        static float capT = 0.f, capNext = 0.f;
+        static int capN = 0;
+        if (capDir) {
+            static bool started = false;
+            if (!started) {
+                started = true;
+                skip = capNext = std::atof(std::getenv("CAPTURE_START"));
+                capT = capNext;
+            } else {
+                dt = 1.f / 30.f;
+                capT += dt;
+            }
+        }
         // A skip runs the time in 0.1 s updates (and its physics) before
         // this frame's, nothing drawn in between
         for (; skip > 0.f; skip -= 0.1f) {
@@ -194,6 +208,21 @@ int main() {
             post.end();
         }
 
+        if (capDir && capT >= capNext) {
+            capNext += std::atof(std::getenv("CAPTURE_EVERY"));
+            std::vector<unsigned char> px((size_t)curW * curH * 3);
+            glPixelStorei(GL_PACK_ALIGNMENT, 1);
+            glReadPixels(0, 0, curW, curH, GL_RGB, GL_UNSIGNED_BYTE, px.data());
+            char name[512];
+            std::snprintf(name, sizeof name, "%s/f%03d.ppm", capDir, capN++);
+            FILE *f = std::fopen(name, "wb");
+            std::fprintf(f, "P6 %d %d 255\n", curW, curH);
+            for (int y = curH - 1; y >= 0; y--)
+                std::fwrite(&px[(size_t)y * curW * 3], 1, (size_t)curW * 3, f);
+            std::fclose(f);
+            if (capT > std::atof(std::getenv("CAPTURE_END")))
+                glfwSetWindowShouldClose(window, 1);
+        }
         if (captureRequested) {
             captureRequested = false;
             std::filesystem::create_directories("capture");
