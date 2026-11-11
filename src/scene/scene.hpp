@@ -57,11 +57,6 @@ class Scene {
         return shadowLights;
     }
 
-    // Depth-first search for the node with the given guid, or nullptr if not
-    // found. Used to resolve guid references (activeCamera, parent links,
-    // ...) when deserializing a scene.
-    std::shared_ptr<Node> findByGuid(util::Guid guid) const;
-
     // Depth-first (in scene order) collect of every component of type T on
     // enabled nodes
     // (disabled nodes skip their whole subtree). Disabled components are

@@ -5,21 +5,24 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# `make install` goes to build/dist unless a prefix is given (before the
+# dependencies, they read it)
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/dist CACHE PATH "" FORCE)
+endif()
+
 #
 # Dependencies
 #
 
-# OpenGL, GLEW and OpenMP are expected to be installed system-wide
-# (CMake ships FindOpenGL/FindGLEW/FindOpenMP, so no custom module needed)
+# OpenGL and GLEW are expected to be installed system-wide
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
-find_package(OpenMP)
 
-# GLFW, GLM, ASSIMP and cJSON are fetched and built from source instead
+# GLFW, GLM and ASSIMP are fetched and built from source
 include(FetchContent)
-
-# Show git clone progress instead of hiding it until the download finishes
-set(FETCHCONTENT_QUIET OFF)
+set(FETCHCONTENT_QUIET OFF) # show git clone progress
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -28,20 +31,20 @@ FetchContent_Declare(glfw
         GIT_REPOSITORY https://github.com/glfw/glfw.git
         GIT_TAG 3.4
         GIT_SHALLOW TRUE
-        GIT_PROGRESS TRUE)
+        GIT_PROGRESS TRUE
+        EXCLUDE_FROM_ALL)
 
 FetchContent_Declare(glm
         GIT_REPOSITORY https://github.com/g-truc/glm.git
         GIT_TAG 1.0.1
         GIT_SHALLOW TRUE
-        GIT_PROGRESS TRUE)
+        GIT_PROGRESS TRUE
+        EXCLUDE_FROM_ALL)
 
+# Only embedded .glb models are loaded: just the glTF importer, no exporters
 set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "" FORCE)
 set(ASSIMP_WARNINGS_AS_ERRORS OFF CACHE BOOL "" FORCE)
-
-# We only ever load embedded .glb/.gltf models, so skip building every other
-# importer and skip exporting entirely to keep the binary size down.
 set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE BOOL "" FORCE)
 set(ASSIMP_BUILD_GLTF_IMPORTER ON CACHE BOOL "" FORCE)
 set(ASSIMP_NO_EXPORT ON CACHE BOOL "" FORCE)
@@ -49,43 +52,34 @@ FetchContent_Declare(assimp
         GIT_REPOSITORY https://github.com/assimp/assimp.git
         GIT_TAG v5.4.3
         GIT_SHALLOW TRUE
-        GIT_PROGRESS TRUE)
+        GIT_PROGRESS TRUE
+        EXCLUDE_FROM_ALL)
 
 FetchContent_Declare(cmrc
         GIT_REPOSITORY https://github.com/vector-of-bool/cmrc.git
         GIT_TAG 2.0.1
         GIT_SHALLOW TRUE
-        GIT_PROGRESS TRUE)
-
-set(ENABLE_CJSON_TEST OFF CACHE BOOL "" FORCE)
-set(ENABLE_CJSON_UNINSTALL OFF CACHE BOOL "" FORCE)
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-FetchContent_Declare(cjson
-        GIT_REPOSITORY https://github.com/DaveGamble/cJSON.git
-        GIT_TAG v1.7.18
-        GIT_SHALLOW TRUE
-        GIT_PROGRESS TRUE)
+        GIT_PROGRESS TRUE
+        EXCLUDE_FROM_ALL)
 
 # cmrc 2.0.1 predates CMake 4.0's removal of cmake_minimum_required(VERSION < 3.5)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
-FetchContent_MakeAvailable(glfw glm assimp cmrc cjson)
+FetchContent_MakeAvailable(glfw glm assimp cmrc)
 unset(CMAKE_POLICY_VERSION_MINIMUM)
 
-# cJSON's own CMakeLists.txt doesn't call target_include_directories(), so
-# without this its header isn't visible to anything linking against it.
-target_include_directories(cjson PUBLIC $<BUILD_INTERFACE:${cjson_SOURCE_DIR}>)
+# EXCLUDE_FROM_ALL above: only what the executable links gets built, and
+# `make install` installs nothing of theirs
 
-# Dear ImGui is a debug-only dependency (in-scene overlay/inspector). It has
-# no CMakeLists.txt of its own, so it's fetched as raw source and built into
-# a small static lib by hand, and only in Debug builds - Release never fetches,
-# builds, or links it, and main.cpp's ImGui calls are compiled out via the
-# WITH_IMGUI define (see #ifdef WITH_IMGUI usage there).
+# Dear ImGui (the debug overlay) only in Debug: it has no CMakeLists.txt, so
+# it's built into a small static lib here. Release never fetches it, the UI
+# code is compiled out by WITH_IMGUI.
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     FetchContent_Declare(imgui
             GIT_REPOSITORY https://github.com/ocornut/imgui.git
             GIT_TAG v1.91.5
             GIT_SHALLOW TRUE
-            GIT_PROGRESS TRUE)
+            GIT_PROGRESS TRUE
+        EXCLUDE_FROM_ALL)
     FetchContent_MakeAvailable(imgui)
 
     add_library(imgui STATIC
@@ -102,94 +96,95 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 # stb_image (loading) and stb_image_write (saving framebuffers) are single
-# headers with no CMakeLists.txt of their own, so they're just downloaded
-# directly instead of going through FetchContent.
+# headers, downloaded directly
+set(STB_DIR ${CMAKE_CURRENT_BINARY_DIR}/_stb)
 foreach(STB_NAME stb_image stb_image_write)
-    set(STB_IMAGE_HEADER "${CMAKE_CURRENT_BINARY_DIR}/_stb/${STB_NAME}.h")
-    if(NOT EXISTS ${STB_IMAGE_HEADER})
+    set(STB_HEADER ${STB_DIR}/${STB_NAME}.h)
+    if(NOT EXISTS ${STB_HEADER})
         file(DOWNLOAD
                 https://raw.githubusercontent.com/nothings/stb/master/${STB_NAME}.h
-                ${STB_IMAGE_HEADER}
+                ${STB_HEADER}
                 SHOW_PROGRESS
-                STATUS STB_IMAGE_DOWNLOAD_STATUS)
-        list(GET STB_IMAGE_DOWNLOAD_STATUS 0 STB_IMAGE_DOWNLOAD_CODE)
-        if(NOT STB_IMAGE_DOWNLOAD_CODE EQUAL 0)
-            file(REMOVE ${STB_IMAGE_HEADER})
-            message(FATAL_ERROR "Failed to download ${STB_NAME}.h: ${STB_IMAGE_DOWNLOAD_STATUS}")
+                STATUS STB_STATUS)
+        list(GET STB_STATUS 0 STB_CODE)
+        if(NOT STB_CODE EQUAL 0)
+            file(REMOVE ${STB_HEADER})
+            message(FATAL_ERROR "Failed to download ${STB_NAME}.h: ${STB_STATUS}")
         endif()
     endif()
 endforeach()
 
 #
-# Resources
+# Resources, embedded in the executable
 #
 # WHENCE strips the folder, so files are looked up by bare name
-# (e.g. "default.vs", "grass_plane.glb")
-file(GLOB SHADER_FILES CONFIGURE_DEPENDS "res/shaders/*.vs" "res/shaders/*.fs" "res/shaders/*.comp")
-cmrc_add_resource_library(shaders
-        NAMESPACE shaders
-        WHENCE res/shaders
-        ${SHADER_FILES})
+# (e.g. "default.vs", "HPF_Anvil.glb")
+file(GLOB SHADERS_FILES CONFIGURE_DEPENDS
+        "res/shaders/*.vs" "res/shaders/*.fs" "res/shaders/*.comp")
+file(GLOB MODELS_FILES CONFIGURE_DEPENDS "res/models/*.glb")
+file(GLOB TEXTURES_FILES CONFIGURE_DEPENDS
+        "res/textures/*.png" "res/textures/*.jpg")
 
-file(GLOB MODEL_FILES CONFIGURE_DEPENDS "res/models/*.glb" "res/models/*.gltf")
-cmrc_add_resource_library(models
-        NAMESPACE models
-        WHENCE res/models
-        ${MODEL_FILES})
-
-file(GLOB TEXTURE_FILES CONFIGURE_DEPENDS "res/textures/*.png" "res/textures/*.jpg")
-cmrc_add_resource_library(textures
-        NAMESPACE textures
-        WHENCE res/textures
-        ${TEXTURE_FILES})
-
-# The resources are big byte arrays: in Debug, -g would copy each one again
-# into the debug info (the executable twice as big), so they get none
-foreach(res shaders models textures)
-    target_compile_options(${res} PRIVATE -g0)
+foreach(RES shaders models textures)
+    string(TOUPPER ${RES} RES_UPPER)
+    cmrc_add_resource_library(${RES}
+            NAMESPACE ${RES}
+            WHENCE res/${RES}
+            ${${RES_UPPER}_FILES})
+    # The resources are big byte arrays: in Debug, -g would copy each one
+    # again into the debug info (the executable twice as big)
+    if(NOT MSVC)
+        target_compile_options(${RES} PRIVATE -g0)
+    endif()
 endforeach()
 
 #
 # Target
 #
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.cpp")
-
 add_executable(semestralka ${SOURCES})
 
-target_compile_definitions(semestralka PUBLIC GLM_FORCE_RADIANS GLEW_STATIC
-        GLM_ENABLE_EXPERIMENTAL)
-
-target_include_directories(semestralka PUBLIC
-        ${CMAKE_CURRENT_BINARY_DIR}
-        ${CMAKE_CURRENT_BINARY_DIR}/_stb)
-
-target_link_libraries(semestralka PUBLIC
-        shaders
-        models
-        textures
-        OpenGL::GL
-        GLEW::GLEW
-        glfw
-        glm::glm
-        assimp
-        cjson)
-
-if(OpenMP_CXX_FOUND)
-    target_link_libraries(semestralka PUBLIC OpenMP::OpenMP_CXX)
-endif()
-
-# Texture decoding (loading) and physics (every frame) are too slow at -O0,
-# keep them optimized in Debug too
-file(GLOB PHYSICS_SOURCES CONFIGURE_DEPENDS "src/physics/*.cpp")
-set_source_files_properties(src/loaders/stb_image_impl.cpp ${PHYSICS_SOURCES}
-        PROPERTIES COMPILE_OPTIONS "-O2")
+target_compile_definitions(semestralka PRIVATE GLEW_STATIC GLM_ENABLE_EXPERIMENTAL)
+target_include_directories(semestralka PRIVATE ${STB_DIR})
+target_link_libraries(semestralka PRIVATE
+        shaders models textures
+        OpenGL::GL GLEW::GLEW glfw glm::glm assimp)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_definitions(semestralka PUBLIC WITH_IMGUI)
-    target_link_libraries(semestralka PUBLIC imgui)
+    target_compile_definitions(semestralka PRIVATE WITH_IMGUI)
+    target_link_libraries(semestralka PRIVATE imgui)
 endif()
 
+# Texture decoding (loading) and physics (every frame) are too slow
+# unoptimized, keep them optimized in Debug too
+file(GLOB PHYSICS_SOURCES CONFIGURE_DEPENDS "src/physics/*.cpp")
+if(MSVC)
+    set(FAST_FLAGS /O2)
+else()
+    set(FAST_FLAGS -O2)
+endif()
+set_source_files_properties(src/loaders/stb_image_impl.cpp ${PHYSICS_SOURCES}
+        PROPERTIES COMPILE_OPTIONS ${FAST_FLAGS})
+
 #
-# Installation
+# Installation: `make install` (or `cmake --install .`) puts a stripped
+# executable in the prefix (build/dist by default), packed with UPX when it's installed (LZMA, about 10%
+# smaller: the textures are PNG/JPG already, little is left to squeeze)
 #
+option(PACK_UPX "Pack the installed executable with UPX" ON)
+find_program(UPX_EXECUTABLE upx)
+set(INSTALLED_EXE "\${CMAKE_INSTALL_PREFIX}/$<TARGET_FILE_NAME:semestralka>")
+# The last packed copy would count as up to date and not be replaced
+install(CODE "file(REMOVE \"${INSTALLED_EXE}\")")
 install(TARGETS semestralka DESTINATION .)
+# MSVC keeps the debug info in a .pdb, there is nothing to strip
+if(CMAKE_STRIP AND NOT MSVC)
+    install(CODE "execute_process(COMMAND \"${CMAKE_STRIP}\" \"${INSTALLED_EXE}\" COMMAND_ERROR_IS_FATAL ANY)")
+endif()
+if(PACK_UPX AND UPX_EXECUTABLE)
+    install(CODE "
+        message(STATUS \"Packing ${INSTALLED_EXE} with UPX (takes a few minutes)\")
+        execute_process(COMMAND \"${UPX_EXECUTABLE}\" -q --lzma -f \"${INSTALLED_EXE}\" COMMAND_ERROR_IS_FATAL ANY)")
+elseif(PACK_UPX)
+    message(STATUS "UPX not found, the installed executable won't be packed")
+endif()

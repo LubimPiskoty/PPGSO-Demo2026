@@ -9,8 +9,8 @@
 
 namespace scenes {
 
-// Owns the active scene and a list of named ways to build one (hand built
-// test scenes, loader::loadScene, ...), so the scene can be swapped or
+// Owns the active scene and a list of named ways to build one (the hand
+// built scenes), so the scene can be swapped or
 // rebuilt at runtime (e.g. from the debug UI).
 class SceneManager {
   public:

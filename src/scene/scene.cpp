@@ -59,19 +59,6 @@ void Scene::update(float dt) {
     this->root->update(dt * scale);
 }
 
-std::shared_ptr<Node> Scene::findByGuid(util::Guid guid) const {
-    std::vector<std::shared_ptr<Node>> stack{root};
-    while (!stack.empty()) {
-        auto node = stack.back();
-        stack.pop_back();
-        if (node->guid == guid)
-            return node;
-        for (auto const &child : node->children)
-            stack.push_back(child);
-    }
-    return nullptr;
-}
-
 void Scene::physics_step() {
     // Gather physics bodies
     physics_context.bodies.clear();
