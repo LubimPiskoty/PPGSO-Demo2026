@@ -433,15 +433,18 @@ scn::Scene smithyScene() {
         lights->add_child(node);
     }
     {
-        // A spot low from the room's side, up across the anvil toward the
-        // back wall: the swinging hammer throws its shadow, big, on the
-        // wall behind it, over the workbench there (the camera looks that
-        // way over the strike)
-        const V from = hit + V(1.3f, -0.05f, 1.9f);
+        // A spot low across the anvil toward the back wall: the swinging
+        // hammer throws its shadow, big, on the wall behind it
+        // Square to the swing's plane (it is along x), from the door side,
+        // a little lower than the head: the shadow sweeps up the wall from
+        // the workbench as the hammer lifts, about twice its size
+        const V from = {hit.x + 0.2f, hit.y - 0.1f, forge::doorInner - 0.2f};
         auto node = scn::Node::create("Hammer spot", from);
-        node->setLocalRotEuler(lookEuler(hit + V(0.f, 0.3f, 0.f) - from));
-        auto light = component::Light::spot({1.f, 0.62f, 0.32f}, 1.1f, 16.f,
-                                            24.f, 0.09f, 0.032f);
+        node->setLocalRotEuler(lookEuler(hit + V(0.f, 0.35f, 0.f) - from));
+        // Fades little with distance: about as bright on the wall as on
+        // the anvil, so the shadow shows against the fire's light there
+        auto light = component::Light::spot({1.f, 0.62f, 0.32f}, 0.75f, 16.f,
+                                            24.f, 0.02f, 0.006f);
         light.castsShadow = true;
         light.shadowNear = 0.2f;
         light.shadowFar = 8.f;
