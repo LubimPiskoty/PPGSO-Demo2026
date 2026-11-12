@@ -79,7 +79,10 @@ int main() {
     render::PostProcessing post(fbWidth, fbHeight, 0);
 #endif
     // Darkens the frame by the scene's fade (the demo's cuts)
-    post.add("gama.fs");
+    //post.add("gama.fs");
+    //post.add("blur.fs");
+    //post.add("inverse.fs");
+    post.add("bloom.fs");
     const GLuint fadePass = post.add("fade_transition.fs");
 
 
