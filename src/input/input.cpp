@@ -1,5 +1,7 @@
 #include "input.hpp"
 
+#include <algorithm>
+#include <utility>
 #include <vector>
 
 #ifdef WITH_IMGUI
@@ -9,9 +11,31 @@
 namespace input {
 
 static GLFWwindow *bound_window = nullptr;
-static std::vector<std::function<void(int, int)>> key_callbacks;
-static std::vector<std::function<void(int, int)>> mouse_button_callbacks;
-static std::vector<std::function<void(double, double)>> cursor_pos_callbacks;
+template <typename F> using Callbacks = std::vector<std::pair<int, F>>;
+static Callbacks<std::function<void(int, int)>> key_callbacks;
+static Callbacks<std::function<void(int, int)>> mouse_button_callbacks;
+static Callbacks<std::function<void(double, double)>> cursor_pos_callbacks;
+static int next_id = 1;
+
+// Calls every callback on a copy of the list: one may (un)subscribe while
+// the event is handed out
+template <typename F, typename... Args>
+static void dispatch(const Callbacks<F> &callbacks, Args... args) {
+    const Callbacks<F> copy = callbacks;
+    for (const auto &[id, callback] : copy)
+        callback(args...);
+}
+
+template <typename F> static int add(Callbacks<F> &callbacks, F callback) {
+    callbacks.emplace_back(next_id, std::move(callback));
+    return next_id++;
+}
+
+template <typename F> static void remove(Callbacks<F> &callbacks, int id) {
+    callbacks.erase(std::remove_if(callbacks.begin(), callbacks.end(),
+                                   [id](const auto &c) { return c.first == id; }),
+                    callbacks.end());
+}
 
 static void keyCallback(GLFWwindow *window, int key, int scancode, int action,
                         int mods) {
@@ -19,8 +43,7 @@ static void keyCallback(GLFWwindow *window, int key, int scancode, int action,
     if (ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureKeyboard)
         return;
 #endif
-    for (auto &callback : key_callbacks)
-        callback(key, action);
+    dispatch(key_callbacks, key, action);
 }
 
 static void mouseButtonCallback(GLFWwindow *window, int button, int action,
@@ -32,13 +55,11 @@ static void mouseButtonCallback(GLFWwindow *window, int button, int action,
         ImGui::GetIO().WantCaptureMouse)
         return;
 #endif
-    for (auto &callback : mouse_button_callbacks)
-        callback(button, action);
+    dispatch(mouse_button_callbacks, button, action);
 }
 
 static void cursorPosCallback(GLFWwindow *window, double x, double y) {
-    for (auto &callback : cursor_pos_callbacks)
-        callback(x, y);
+    dispatch(cursor_pos_callbacks, x, y);
 }
 
 void init(GLFWwindow *window) {
@@ -48,16 +69,22 @@ void init(GLFWwindow *window) {
     glfwSetCursorPosCallback(window, cursorPosCallback);
 }
 
-void onKey(std::function<void(int, int)> callback) {
-    key_callbacks.push_back(callback);
+int onKey(std::function<void(int, int)> callback) {
+    return add(key_callbacks, std::move(callback));
 }
 
-void onMouseButton(std::function<void(int, int)> callback) {
-    mouse_button_callbacks.push_back(callback);
+int onMouseButton(std::function<void(int, int)> callback) {
+    return add(mouse_button_callbacks, std::move(callback));
 }
 
-void onCursorPos(std::function<void(double, double)> callback) {
-    cursor_pos_callbacks.push_back(callback);
+int onCursorPos(std::function<void(double, double)> callback) {
+    return add(cursor_pos_callbacks, std::move(callback));
+}
+
+void unsubscribe(int id) {
+    remove(key_callbacks, id);
+    remove(mouse_button_callbacks, id);
+    remove(cursor_pos_callbacks, id);
 }
 
 void setCursorCaptured(bool captured) {

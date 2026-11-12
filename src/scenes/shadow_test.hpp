@@ -33,7 +33,7 @@ scn::Scene shadowTest() {
     auto floor_material =
         std::make_shared<render::Material>("Grid material", litShader);
     floor_material->setTexture(render::TextureSlot::Albedo,
-                               loader::loadTexture("grid_dark.png"));
+                               loader::loadTexture("grid_dark.png", true));
 
     // Floor: receives shadows only, so no Shadow component
     {

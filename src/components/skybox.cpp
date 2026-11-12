@@ -15,6 +15,13 @@ Skybox::Skybox(const std::string &textureFile) : textureFile(textureFile) {
   createCube();
 }
 
+Skybox::~Skybox() {
+  glDeleteTextures(1, &texture);
+  glDeleteProgram(shader);
+  glDeleteVertexArrays(1, &vao);
+  glDeleteBuffers(1, &vbo);
+}
+
 void Skybox::draw(const std::shared_ptr<Camera> &camera) {
   auto camNode = camera->node.lock();
   if (!camNode)
@@ -23,6 +30,9 @@ void Skybox::draw(const std::shared_ptr<Camera> &camera) {
   glm::mat4 view = glm::inverse(camNode->globalTransform());
 
   glDepthFunc(GL_LEQUAL);
+  // Tested against the prepass's depth, not written: where nothing is drawn
+  // the depth stays the cleared 1, the post passes read that as the sky
+  glDepthMask(GL_FALSE);
   // Seen from inside the cube
   const bool cull = glIsEnabled(GL_CULL_FACE);
   glDisable(GL_CULL_FACE);
@@ -41,6 +51,7 @@ void Skybox::draw(const std::shared_ptr<Camera> &camera) {
   glDrawArrays(GL_TRIANGLES, 0, 36);
   glBindVertexArray(0);
   glDepthFunc(GL_LESS);
+  glDepthMask(GL_TRUE);
   if (cull)
     glEnable(GL_CULL_FACE);
 }

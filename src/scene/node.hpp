@@ -96,6 +96,7 @@ class Node : public std::enable_shared_from_this<Node> {
     // Overridable functions
     void update(float dt);
     void draw(glm::mat4 projection, glm::mat4 invCameraTransform);
+    void drawPrepass(glm::mat4 projection, glm::mat4 invCameraTransform);
 
     // General functions
     static std::shared_ptr<Node> create(std::string name);
@@ -103,7 +104,6 @@ class Node : public std::enable_shared_from_this<Node> {
     static std::shared_ptr<Node> create(std::string name,
                                         glm::mat4 localTransform);
     void add_child(const std::shared_ptr<Node> &child);
-    void destroy();
 
     // Pretty-print this node and its subtree as a tree
     void print(std::ostream &os) const;

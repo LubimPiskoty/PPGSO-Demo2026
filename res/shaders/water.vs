@@ -19,6 +19,9 @@ out vec2 FragTexCoord;
 out vec3 FragNormal;
 out vec3 FragPos;
 out vec3 FragTangent;
+// The same depth in the prepass (prepass.fs) and the lit pass, compiled
+// into two programs: the lit pass draws with GL_LEQUAL against it
+invariant gl_Position;
 
 // The waves: direction (radians from +x, around the wind), wavelength and
 // height, metres. Must match WAVES in demo_scene.cpp, the boats ride them.

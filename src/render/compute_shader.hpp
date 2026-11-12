@@ -67,9 +67,15 @@ class ComputeShader {
         program = glCreateProgram();
         glAttachShader(program, shader);
         glLinkProgram(program);
+        // Linked in, the shader object isn't needed any more
+        glDeleteShader(shader);
 
         glGetProgramiv(program, GL_COMPUTE_WORK_GROUP_SIZE, work_group_sizes);
     }
+
+    ~ComputeShader() { glDeleteProgram(program); }
+    ComputeShader(const ComputeShader &) = delete;
+    ComputeShader &operator=(const ComputeShader &) = delete;
 
     void bind() const {
         glUseProgram(program);

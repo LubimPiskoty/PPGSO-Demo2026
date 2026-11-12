@@ -154,10 +154,35 @@ Curve hitPulses(const std::vector<float> &hits, float loop, float length) {
     return Curve::flat(keys);
 }
 
+// The bellows press down and open up again on their own clock, seconds
+constexpr float PRESS = 1.1f, BREATH = 3.2f;
+
+// What the parts of the smithy scene share while it's built, in the order
+// smithyScene() adds them
 struct Builder {
     scn::Scene &scene;
     std::shared_ptr<render::Shader> litShader, instancedShader;
     std::shared_ptr<render::Material> lit;
+
+    // Where the hammer lands, on the sword on the anvil
+    const V hit = vec(forge::strike);
+    // Animated things, slowed down together for the strike
+    std::vector<std::weak_ptr<component::Animator>> slowed;
+    std::vector<std::weak_ptr<component::ParticleSystem>> slowedParticles;
+    std::shared_ptr<component::Animator> hammerClock, bellowsClock;
+    std::vector<float> hammerHits; // when the hammer lands in its loop
+
+    // The coal bed: the bowl in the hearth's top. A little under the coal
+    // pile's bumpy top (bowl is its middle height), so the pieces settle
+    // into it instead of resting on its highest bumps.
+    const float floorY = forge::bowl[1] - 0.025f;
+    const V bedCenter{forge::bowl[0], floorY, forge::bowl[2]};
+    const float bedRadius = forge::bowlRadius;
+    std::shared_ptr<scn::Node> coal;
+    std::vector<std::shared_ptr<render::Material>> coalMats; // they glow
+
+    std::shared_ptr<component::Light> fire;
+    std::shared_ptr<component::ParticleSystem> embers, strike;
 
     explicit Builder(scn::Scene &scene) : scene(scene) {
         litShader = std::make_shared<render::Shader>("default.vs", "lit.fs");
@@ -190,23 +215,9 @@ struct Builder {
     }
 };
 
-} // namespace
-
-scn::Scene smithyScene() {
-    scn::Scene scene;
-    Builder b(scene);
-
-    // Coal: many small bodies, 120 Hz is enough. High angular drag so pieces
-    // settle instead of rolling about.
-    auto &phys = scene.physics_context;
-    phys.fixedDt = 1.f / 120.f;
-    phys.angularDrag = 12.f;
-
-    // Animated things, slowed down together for the strike
-    std::vector<std::weak_ptr<component::Animator>> slowed;
-    std::vector<std::weak_ptr<component::ParticleSystem>> slowedParticles;
-
-    // ---- The room: the high-poly smithy's house and its props ----
+// The room: the high-poly smithy's house and its props, the doors shutting
+// behind the camera as it comes in
+void addRoom(Builder &b) {
     auto room = scn::Node::create("Room");
     room->add_child(b.prop("House", "HPF_House", V(0.f)));
     room->add_child(b.prop("Props", "HPF_Props", V(0.f)));
@@ -217,8 +228,7 @@ scn::Scene smithyScene() {
     for (auto [name, model, x, angle] :
          {std::tuple{"Door_L", "HPF_Door_L", forge::doorX0, -75.f},
           std::tuple{"Door_R", "HPF_Door_R", forge::doorX1, 75.f}}) {
-        // Hinged on the wall's outer face, open outward, shut behind the
-        // camera as it comes in
+        // Hinged on the wall's outer face, open outward
         auto door = b.prop(name, model, {x, 0.f, forge::doorOuter});
         const V open(0.f, glm::radians(angle), 0.f);
         door->setLocalRotEuler(open);
@@ -229,60 +239,54 @@ scn::Scene smithyScene() {
             PlayMode::Single);
         room->add_child(door);
     }
-    scene.root->add_child(room);
+    b.scene.root->add_child(room);
+}
 
-    // ---- What moves: the hammer and the bellows ----
-    const V hit = vec(forge::strike);
-    std::shared_ptr<component::Animator> hammerClock, bellowsClock;
-    std::vector<float> hammerHits;
-    {
-        // Swings in the plane along the anvil, the grip on the +x side: its
-        // frame (forge_layout.hpp) turned half round y so the handle points
-        // -x at the anvil, and half round the handle so the flat face (+y)
-        // looks down and lands on the sword, the peen up
-        auto hammer = b.prop("Hammer", "HPF_Hammer", V(0.f));
-        const V grip = hit + V(forge::hammerReach, forge::hammerFace, 0.f);
-        const glm::quat base = glm::angleAxis(glm::pi<float>(), V(0, 1, 0)) *
-                               glm::angleAxis(glm::pi<float>(), V(1, 0, 0));
-        hammerClock = hammer->add_component<component::Animator>();
-        auto &track = hammerClock->addTrack(
-            AnimTarget::Property, hammerSwing(hammerHits), PlayMode::Loop);
-        track.name = "swing";
-        track.setProperty = [n = hammer.get(), grip, base](const V &v) {
-            // The head goes up about the grip (local z; turned over, a
-            // negative angle lifts it), the arm lifts the grip and pulls it
-            // back a little
-            n->setLocalRot(base * glm::angleAxis(-v.x, V(0, 0, 1)));
-            n->setLocalPos(grip + V(0.06f, 0.18f, 0.f) * v.y);
-        };
-        slowed.push_back(hammerClock);
-        scene.root->add_child(hammer);
-    }
-    // The bellows press down and open up again on their own clock; every
-    // press blows the air over the coal (see Forge)
-    constexpr float PRESS = 1.1f, BREATH = 3.2f; // seconds
-    {
-        auto bellows =
-            b.prop("Bellows", "HPF_Bellows", vec(forge::bellowsBase));
-        bellowsClock = bellows->add_component<component::Animator>();
-        bellowsClock->addTrack(
-            AnimTarget::Scale,
-            Curve::flat(
-                {{0.f, V(1.f)}, {PRESS, V(1.f, 0.62f, 1.f)}, {BREATH, V(1.f)}}),
-            PlayMode::Loop);
-        slowed.push_back(bellowsClock);
-        scene.root->add_child(bellows);
-    }
+// The hammer, swinging on its own clock (hammerSwing)
+void addHammer(Builder &b) {
+    // Swings in the plane along the anvil, the grip on the +x side: its
+    // frame (forge_layout.hpp) turned half round y so the handle points -x
+    // at the anvil, and half round the handle so the flat face (+y) looks
+    // down and lands on the sword, the peen up
+    auto hammer = b.prop("Hammer", "HPF_Hammer", V(0.f));
+    const V grip = b.hit + V(forge::hammerReach, forge::hammerFace, 0.f);
+    const glm::quat base = glm::angleAxis(glm::pi<float>(), V(0, 1, 0)) *
+                           glm::angleAxis(glm::pi<float>(), V(1, 0, 0));
+    b.hammerClock = hammer->add_component<component::Animator>();
+    auto &track = b.hammerClock->addTrack(
+        AnimTarget::Property, hammerSwing(b.hammerHits), PlayMode::Loop);
+    track.name = "swing";
+    track.setProperty = [n = hammer.get(), grip, base](const V &v) {
+        // The head goes up about the grip (local z; turned over, a negative
+        // angle lifts it), the arm lifts the grip and pulls it back a little
+        n->setLocalRot(base * glm::angleAxis(-v.x, V(0, 0, 1)));
+        n->setLocalPos(grip + V(0.06f, 0.18f, 0.f) * v.y);
+    };
+    b.slowed.push_back(b.hammerClock);
+    b.scene.root->add_child(hammer);
+}
 
-    // ---- The coal bed: the bowl in the hearth's top ----
-    // A little under the coal pile's bumpy top (bowl is its middle height),
-    // so the pieces settle into it instead of resting on its highest bumps
-    const float floorY = forge::bowl[1] - 0.025f;
-    const V bedCenter{forge::bowl[0], floorY, forge::bowl[2]};
-    const float bedRadius = forge::bowlRadius;
+// The bellows press down and open up again on their own clock; every press
+// blows the air over the coal (see Forge, addFire)
+void addBellows(Builder &b) {
+    auto bellows = b.prop("Bellows", "HPF_Bellows", vec(forge::bellowsBase));
+    b.bellowsClock = bellows->add_component<component::Animator>();
+    b.bellowsClock->addTrack(
+        AnimTarget::Scale,
+        Curve::flat(
+            {{0.f, V(1.f)}, {PRESS, V(1.f, 0.62f, 1.f)}, {BREATH, V(1.f)}}),
+        PlayMode::Loop);
+    b.slowed.push_back(b.bellowsClock);
+    b.scene.root->add_child(bellows);
+}
 
-    auto coal = scn::Node::create("Coal");
-    scene.root->add_child(coal);
+// The coal bed: static planes for the bowl, its wall, the hearth's ledge
+// and the floor, and the pieces of coal dropped into it
+void addCoal(Builder &b) {
+    b.coal = scn::Node::create("Coal");
+    b.scene.root->add_child(b.coal);
+    const V bedCenter = b.bedCenter;
+    const float bedRadius = b.bedRadius;
     // A static plane, facing its local +Y
     auto collider = [&](const char *name, V pos, glm::quat rot,
                         glm::vec2 half) {
@@ -293,13 +297,13 @@ scn::Scene smithyScene() {
         makeStatic(*pb);
         pb->body.friction = 1.f;
         pb->body.restitution = 0.1f;
-        coal->add_child(node);
+        b.coal->add_child(node);
     };
     collider("Bed floor", bedCenter, glm::quat(1.f, 0.f, 0.f, 0.f),
              {bedRadius + 0.02f, bedRadius + 0.02f});
     // The bowl's round wall, in flat pieces facing in, an invisible 8 cm
     // higher than its rim: a full bed would spill over it by itself
-    const float rim = forge::bowlRim - floorY + 0.08f;
+    const float rim = forge::bowlRim - b.floorY + 0.08f;
     constexpr int SIDES = 16;
     const float chord =
         2.f * bedRadius * std::tan(glm::pi<float>() / SIDES) + 0.01f;
@@ -319,20 +323,19 @@ scn::Scene smithyScene() {
         const glm::vec2 a{bedCenter.x + bedRadius, forge::bowlRim},
             c{forge::hearthMax[0], forge::bowlRim - 0.08f};
         const float slope = std::atan2(a.y - c.y, c.x - a.x);
-        collider("Hearth ledge",
-                 {(a.x + c.x) / 2, (a.y + c.y) / 2, bedCenter.z},
+        collider("Hearth ledge", {(a.x + c.x) / 2, (a.y + c.y) / 2, bedCenter.z},
                  glm::quat(V(0.f, 0.f, -slope)),
                  {glm::length(c - a) / 2, bedRadius + 0.1f});
     }
-    // The room's floor, for coal thrown off the hearth
     {
+        // The room's floor, for coal thrown off the hearth
         auto node = scn::Node::create("Floor", V(0.f));
         auto pb = node->add_component<component::PhysicsBody>();
         pb->collider = physics::PlaneDesc{};
         makeStatic(*pb);
         pb->body.friction = 1.f;
         pb->body.restitution = 0.15f;
-        coal->add_child(node);
+        b.coal->add_child(node);
     }
 
     // Pieces of the ironheart pack's coal (their emissive map is the ember
@@ -349,12 +352,11 @@ scn::Scene smithyScene() {
     // Smaller than the pack's pieces, so twice as many fit the bowl; as
     // heavy as the pack's, so the wind moves them as much
     constexpr float coalSize = 0.7f;
-    std::vector<std::shared_ptr<render::Material>> coalMats;
     std::shared_ptr<scn::Node> kindNodes[3];
     for (int k = 0; k < 3; k++) {
         kindNodes[k] = scn::Node::create(kinds[k].model);
         auto m = std::make_shared<render::Material>("Coal", b.instancedShader);
-        coalMats.push_back(m);
+        b.coalMats.push_back(m);
         kindNodes[k]->add_component<component::Mesh>(
             std::make_shared<render::Model>(
                 loader::loadModel(std::string(kinds[k].model) + ".glb")),
@@ -362,7 +364,7 @@ scn::Scene smithyScene() {
         kindNodes[k]->add_component<component::Instances>()->followChildren =
             true;
         kindNodes[k]->add_component<component::Shadow>();
-        coal->add_child(kindNodes[k]);
+        b.coal->add_child(kindNodes[k]);
     }
     std::mt19937 rng(7);
     auto uniform = [&](float lo, float hi) {
@@ -370,8 +372,7 @@ scn::Scene smithyScene() {
     };
     // Dropped from a grid of layers above the bed (its points inside the
     // round wall), they settle below
-    const float spacing =
-        2.f * 0.0338f * coalSize * 1.1f * colliderScale * 1.1f;
+    const float spacing = 2.f * 0.0338f * coalSize * 1.1f * colliderScale * 1.1f;
     std::vector<V> cells;
     const int across = (int)(2.f * bedRadius / spacing);
     for (int row = 0; row < across; row++)
@@ -395,6 +396,7 @@ scn::Scene smithyScene() {
             {uniform(0, 6.28f), uniform(0, 6.28f), uniform(0, 6.28f)});
         piece->setLocalScale(V(scale * coalSize));
         auto pb = piece->add_component<component::PhysicsBody>();
+        // In world metres: the node's scale isn't applied to it
         const float r = kinds[k].radius * scale * coalSize * colliderScale;
         const float mass = 0.03f * scale * scale * scale;
         pb->collider = physics::SphereDesc{r};
@@ -404,29 +406,30 @@ scn::Scene smithyScene() {
         pb->body.friction = 1.5f;
         pb->body.invInertiaLocal = glm::mat3(1.f / (0.4f * mass * r * r));
         pb->body.invInertiaWorld = pb->body.invInertiaLocal;
-        // Instances are drawn at the child's local transform: the kind
-        // node sits at the coal node's origin, so that's room space
+        // Instances are drawn at the child's local transform: the kind node
+        // sits at the coal node's origin, so that's room space
         kindNodes[k]->add_child(piece);
     }
+}
 
-    // ---- Lights: the fire, the hot metal, the window and fill ----
+// The fire, the hot metal, the hammer's shadow, the window and the fills
+void addLights(Builder &b) {
     const float windowFill = (forge::windowZ[0] + forge::windowZ[1]) / 2;
     auto lights = scn::Node::create("Lights");
-    std::shared_ptr<component::Light> fire;
     {
         auto node =
-            scn::Node::create("Forge fire", bedCenter + V(0.1f, 0.45f, 0));
+            scn::Node::create("Forge fire", b.bedCenter + V(0.1f, 0.45f, 0));
         auto light =
             component::Light::point({1.f, 0.42f, 0.12f}, 3.f, 0.22f, 0.2f);
         light.ambient = 0.10f;
         light.castsShadow = true;
         light.shadowFar = 15.f;
-        fire = node->add_component<component::Light>(light);
+        b.fire = node->add_component<component::Light>(light);
         lights->add_child(node);
     }
     {
         // Over the hot metal on the anvil, where the hammer lands
-        auto node = scn::Node::create("Hot metal", hit + V(0.f, 0.12f, 0.f));
+        auto node = scn::Node::create("Hot metal", b.hit + V(0.f, 0.12f, 0.f));
         auto light =
             component::Light::point({1.f, 0.5f, 0.18f}, 0.6f, 0.35f, 0.6f);
         node->add_component<component::Light>(light);
@@ -434,15 +437,16 @@ scn::Scene smithyScene() {
     }
     {
         // A spot low across the anvil toward the back wall: the swinging
-        // hammer throws its shadow, big, on the wall behind it
-        // Square to the swing's plane (it is along x), from the door side,
-        // a little lower than the head: the shadow sweeps up the wall from
-        // the workbench as the hammer lifts, about twice its size
-        const V from = {hit.x + 0.2f, hit.y - 0.1f, forge::doorInner - 0.2f};
+        // hammer throws its shadow, big, on the wall behind it. Square to
+        // the swing's plane (it is along x), from the door side, a little
+        // lower than the head: the shadow sweeps up the wall from the
+        // workbench as the hammer lifts, about twice its size
+        const V from = {b.hit.x + 0.2f, b.hit.y - 0.1f,
+                        forge::doorInner - 0.2f};
         auto node = scn::Node::create("Hammer spot", from);
-        node->setLocalRotEuler(lookEuler(hit + V(0.f, 0.35f, 0.f) - from));
-        // Fades little with distance: about as bright on the wall as on
-        // the anvil, so the shadow shows against the fire's light there
+        node->setLocalRotEuler(lookEuler(b.hit + V(0.f, 0.35f, 0.f) - from));
+        // Fades little with distance: about as bright on the wall as on the
+        // anvil, so the shadow shows against the fire's light there
         auto light = component::Light::spot({1.f, 0.62f, 0.32f}, 0.75f, 16.f,
                                             24.f, 0.02f, 0.006f);
         light.castsShadow = true;
@@ -454,10 +458,9 @@ scn::Scene smithyScene() {
     {
         // Cold daylight through the window in the +x wall, from outside it
         // down into the room
-        const float windowZ = (forge::windowZ[0] + forge::windowZ[1]) / 2;
         auto node = scn::Node::create(
             "Window light",
-            {forge::wallsMax[0] + 0.9f, forge::windowY[1] + 0.4f, windowZ});
+            {forge::wallsMax[0] + 0.9f, forge::windowY[1] + 0.4f, windowFill});
         node->setLocalRotEuler(lookEuler({-0.91192f, -0.41036f, 0.f}));
         auto light = component::Light::spot({0.75f, 0.82f, 1.f}, 4.f, 30.f,
                                             35.f, 0.09f, 0.032f);
@@ -468,8 +471,8 @@ scn::Scene smithyScene() {
         lights->add_child(node);
     }
     {
-        // Fill: the fire's and the window's light bouncing off the floor and
-        // the walls. Its ambient part lifts the shadows everywhere, its
+        // Fill: the fire's and the window's light bouncing off the floor
+        // and the walls. Its ambient part lifts the shadows everywhere, its
         // direct part comes from below and only reaches faces turned down.
         auto node = scn::Node::create("Bounce light");
         node->setLocalRotEuler(lookEuler({0.f, 1.f, 0.001f}));
@@ -498,18 +501,20 @@ scn::Scene smithyScene() {
         node->add_component<component::Light>(light);
         lights->add_child(node);
     }
-    scene.root->add_child(lights);
+    b.scene.root->add_child(lights);
+}
 
-    // ---- Effects, drawn last: additive, they don't write depth ----
+// Particles, drawn last (additive, they don't write depth): embers over the
+// coal, sparks where the hammer lands, dust in the window's light
+void addEffects(Builder &b) {
     auto effects = scn::Node::create("Effects");
-    std::shared_ptr<component::ParticleSystem> embers, strike, dust;
     {
-        auto node = scn::Node::create("Embers", bedCenter);
-        embers = b.particles(node);
+        auto node = scn::Node::create("Embers", b.bedCenter);
+        auto &embers = b.embers = b.particles(node);
         embers->minColor = {1.0f, 0.8f, 0.3f, 1.0f};
         embers->maxColor = {0.9f, 0.2f, 0.0f, 0.0f};
         // Over the bowl (a square inside its circle)
-        const float half = bedRadius * 0.7f;
+        const float half = b.bedRadius * 0.7f;
         embers->minPosition = {-half, 0.f, -half};
         embers->maxPosition = {half, 0.05f, half};
         embers->minVelocity = {-0.15f, 0.3f, -0.15f};
@@ -525,8 +530,8 @@ scn::Scene smithyScene() {
     }
     {
         // Where the hammer lands
-        auto node = scn::Node::create("Strike sparks", hit);
-        strike = b.particles(node);
+        auto node = scn::Node::create("Strike sparks", b.hit);
+        auto &strike = b.strike = b.particles(node);
         strike->minColor = {1.0f, 0.9f, 0.5f, 1.0f};
         strike->maxColor = {1.0f, 0.35f, 0.05f, 0.0f};
         strike->minPosition = V(-0.02f, 0.f, -0.02f);
@@ -547,7 +552,7 @@ scn::Scene smithyScene() {
         // Dust hanging in the window's light, drifting slowly
         auto node = scn::Node::create(
             "Dust", {2.f, 1.4f, (forge::windowZ[0] + forge::windowZ[1]) / 2});
-        dust = b.particles(node);
+        auto dust = b.particles(node);
         dust->minColor = {0.9f, 0.85f, 0.7f, 0.35f};
         dust->maxColor = {0.8f, 0.8f, 0.75f, 0.0f};
         dust->minPosition = {-2.2f, -1.4f, -1.4f};
@@ -564,69 +569,73 @@ scn::Scene smithyScene() {
         dust->maxParticles = 4096;
         effects->add_child(node);
     }
-    slowedParticles = {embers, strike};
+    b.slowedParticles = {b.embers, b.strike};
+    b.scene.root->add_child(effects);
+}
 
-    // ---- The fire, driven by the bellows ----
-    auto forge = coal->add_component<Forge>();
-    forge->centre = bedCenter;
+// The fire, driven by the bellows: the Forge on the coal, the bellows'
+// push on their clock, the strike's sparks on the hammer's
+void addFire(Builder &b) {
+    auto forge = b.coal->add_component<Forge>();
+    forge->centre = b.bedCenter;
     forge->radius = forge::bowlRadius;
     forge->height = 0.3f;
     // A press swirls the coal a bit, it doesn't blow it away
     forge->swirl = 1.6f;
     forge->lift = 1.3f;
-    forge->light = fire;
+    forge->light = b.fire;
     forge->lightIdle = 1.2f;
     forge->lightHot = 5.f;
-    forge->glowing = coalMats;
+    forge->glowing = b.coalMats;
     forge->glowIdle = 0.3f;
     forge->glowHot = 2.2f;
-    forge->embers = embers;
+    forge->embers = b.embers;
     forge->emberIdle = 0.08f;
     forge->emberHot = 0.006f;
-    phys.windField = [f = std::weak_ptr<Forge>(forge)](const V &p) {
-        auto forge = f.lock();
-        return forge ? forge->wind(p) : V(0.f);
-    };
+    b.scene.physics_context.windField =
+        [f = std::weak_ptr<Forge>(forge)](const V &p) {
+            auto forge = f.lock();
+            return forge ? forge->wind(p) : V(0.f);
+        };
     {
         // The bellows' push while they press down, on their own clock
         auto &track =
-            bellowsClock->addTrack(AnimTarget::Property,
-                                   Curve::flat({{0.f, V(0.f)},
-                                                {0.1f, V(1.f)},
-                                                {PRESS - 0.1f, V(1.f)},
-                                                {PRESS + 0.1f, V(0.f)},
-                                                {BREATH, V(0.f)}}),
-                                   PlayMode::Loop);
+            b.bellowsClock->addTrack(AnimTarget::Property,
+                                     Curve::flat({{0.f, V(0.f)},
+                                                  {0.1f, V(1.f)},
+                                                  {PRESS - 0.1f, V(1.f)},
+                                                  {PRESS + 0.1f, V(0.f)},
+                                                  {BREATH, V(0.f)}}),
+                                     PlayMode::Loop);
         track.name = "bellows push";
         track.setProperty = [f = forge.get()](const V &v) { f->push = v.x; };
     }
     {
         // Sparks for a moment after every hammer blow, on the hammer's clock
-        auto &track = hammerClock->addTrack(
+        auto &track = b.hammerClock->addTrack(
             AnimTarget::Property,
-            hitPulses(hammerHits,
-                      hammerClock->tracks.front().curve.getDuration(), 0.08f),
+            hitPulses(b.hammerHits,
+                      b.hammerClock->tracks.front().curve.getDuration(), 0.08f),
             PlayMode::Loop);
         track.name = "strike sparks";
-        track.setProperty = [s = std::weak_ptr(strike)](const V &v) {
+        track.setProperty = [s = std::weak_ptr(b.strike)](const V &v) {
             if (auto p = s.lock())
                 p->spawning = v.x > 0.5f;
         };
     }
-    scene.root->add_child(effects);
+}
 
-    // The coal falls onto the bed and settles before the first frame
-    for (int i = 0; i < 360; i++)
-        scene.physics_step();
-
-    // ---- Camera: one flight from the door to the anvil ----
+// The camera: one flight from the door to the anvil, the vertigo on the
+// anvil, the fade in, and the slow motion over the strike
+void addCamera(Builder &b) {
     struct Shot {
         float time;
         V pos, lookAt;
     };
     // Room space: the door at x 0.8..2.95 in the +z wall, the hearth
-    // against the -x wall, its bowl at the coal's top, the bellows on its +z
-    // side, the anvil in the middle of the room along x
+    // against the -x wall, its bowl at the coal's top, the bellows on its
+    // +z side, the anvil in the middle of the room along x
+    const V hit = b.hit;
     const V door{(forge::doorX0 + forge::doorX1) / 2, 0.f, forge::doorInner};
     const V bowl = vec(forge::bowl);
     const V bellows =
@@ -670,7 +679,7 @@ scn::Scene smithyScene() {
     camNode->setLocalRotEuler(rotations[0].second);
     auto camera =
         camNode->add_component<component::Camera>(50.f, 1.f, 1.f, 0.05f, 60.f);
-    scene.activeCamera = camera;
+    b.scene.activeCamera = camera;
     auto timeline = camNode->add_component<component::Animator>();
     timeline->addTrack(AnimTarget::Position, Curve::smooth(positions),
                        PlayMode::Single);
@@ -693,14 +702,14 @@ scn::Scene smithyScene() {
     }
     {
         // Fades in from the city shot's black doorway
-        *scene.fade = 0.f;
+        *b.scene.fade = 0.f;
         auto &track = timeline->addTrack(
             AnimTarget::Property,
             Curve::flat(
                 {{0.f, V(0.f)}, {0.3f, V(0.f)}, {2.3f, V(1.f)}, {END, V(1.f)}}),
             PlayMode::Single);
         track.name = "fade";
-        track.setProperty = [fade = scene.fade](const V &v) { *fade = v.x; };
+        track.setProperty = [fade = b.scene.fade](const V &v) { *fade = v.x; };
     }
     {
         // Slow motion over the strike: the smithy's animations and sparks
@@ -715,7 +724,8 @@ scn::Scene smithyScene() {
                                             {END, V(1.f)}}),
                                PlayMode::Single);
         track.name = "slow motion";
-        track.setProperty = [slowed, slowedParticles](const V &v) {
+        track.setProperty = [slowed = b.slowed,
+                             slowedParticles = b.slowedParticles](const V &v) {
             for (auto &a : slowed)
                 if (auto animator = a.lock())
                     for (auto &t : animator->tracks)
@@ -725,8 +735,34 @@ scn::Scene smithyScene() {
                     ps->timeScale = v.x;
         };
     }
-    scene.root->add_child(camNode);
+    b.scene.root->add_child(camNode);
+}
 
+} // namespace
+
+scn::Scene smithyScene() {
+    scn::Scene scene;
+    Builder b(scene);
+
+    // Coal: many small bodies, 120 Hz is enough. High angular drag so pieces
+    // settle instead of rolling about.
+    scene.physics_context.fixedDt = 1.f / 120.f;
+    scene.physics_context.angularDrag = 12.f;
+
+    addRoom(b);
+    // What moves: the hammer and the bellows
+    addHammer(b);
+    addBellows(b);
+    addCoal(b);
+    addLights(b);
+    addEffects(b);
+    addFire(b);
+
+    // The coal falls onto the bed and settles before the first frame
+    for (int i = 0; i < 360; i++)
+        scene.physics_step();
+
+    addCamera(b);
     // Every animation starts with the scene
     for (auto &animator : scene.getAllComponents<component::Animator>())
         animator->play();

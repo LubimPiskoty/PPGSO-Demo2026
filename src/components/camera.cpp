@@ -36,23 +36,18 @@ void Camera::lookAt(glm::vec3 target, glm::vec3 up) {
 
 float Camera::getFov() {
     return fov;
-    calculateProjection();
 }
 float Camera::getNear() {
     return near;
-    calculateProjection();
 }
 float Camera::getFar() {
     return far;
-    calculateProjection();
 }
 float Camera::getWidth() {
     return width;
-    calculateProjection();
 }
 float Camera::getHeight() {
     return height;
-    calculateProjection();
 }
 void Camera::setFov(float fovDegrees) {
     fov = glm::radians(fovDegrees);

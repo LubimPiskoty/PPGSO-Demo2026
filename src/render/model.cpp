@@ -1,7 +1,48 @@
 #include "model.hpp"
 #include <glm/matrix.hpp>
+#include <utility>
 
 namespace render {
+
+Mesh::~Mesh() {
+    glDeleteVertexArrays(1, &vao);
+    glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &ebo);
+}
+
+Mesh::Mesh(Mesh &&other) noexcept { *this = std::move(other); }
+
+Mesh &Mesh::operator=(Mesh &&other) noexcept {
+    if (this != &other) {
+        // Ours go, the other's become ours and it's left owning nothing
+        glDeleteVertexArrays(1, &vao);
+        glDeleteBuffers(1, &vbo);
+        glDeleteBuffers(1, &ebo);
+        vao = std::exchange(other.vao, 0);
+        vbo = std::exchange(other.vbo, 0);
+        ebo = std::exchange(other.ebo, 0);
+        indexCount = other.indexCount;
+        for (int i = 0; i < (int)TextureSlot::Count; i++)
+            textures[i] = other.textures[i];
+        doubleSided = other.doubleSided;
+    }
+    return *this;
+}
+
+Model::~Model() { glDeleteBuffers(1, &instanceVBO); }
+
+Model::Model(Model &&other) noexcept { *this = std::move(other); }
+
+Model &Model::operator=(Model &&other) noexcept {
+    if (this != &other) {
+        glDeleteBuffers(1, &instanceVBO);
+        filename = std::move(other.filename);
+        meshes = std::move(other.meshes);
+        instance_count = std::exchange(other.instance_count, 0);
+        instanceVBO = std::exchange(other.instanceVBO, 0);
+    }
+    return *this;
+}
 
 // Uniform telling the shader whether a slot holds a map, for slots that are
 // optional (albedo always has one)

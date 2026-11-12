@@ -39,6 +39,10 @@ class Scene {
     // the normal image, 0 black. Shared like cutTo, the scene's animations
     // fade it around the cuts.
     std::shared_ptr<float> fade = std::make_shared<float>(1.f);
+    // How much of the depth of field is tilt-shift instead of the lens, 0..1
+    // (dof.fs, render::Dof). Shared like fade: the demo's clock turns it on
+    // for the timelapse.
+    std::shared_ptr<float> tiltShift = std::make_shared<float>(0.f);
 
     Scene();
 
@@ -47,6 +51,10 @@ class Scene {
     void update(float dt);
     // Advances physics by physics_context.fixedDt (scaled by timeScale)
     void physics_step();
+    // Opaque depth and the thin G-buffer's world-space normals from the
+    // camera, before draw (render::PostProcessing::begin binds the buffers):
+    // draw then shades every pixel about once, the post passes read both
+    void depth_prepass();
     void draw();
     // Renders the scene depth from every shadow casting light into shadowMaps
     void shadow_pass();
@@ -82,7 +90,9 @@ class Scene {
     }
 
   private:
-    render::Shader depthShader, depthShaderInstanced;
+    // Behind pointers: they own GL programs and can't be copied, the scene
+    // still moves
+    std::unique_ptr<render::Shader> depthShader, depthShaderInstanced;
 
     render::LightBuffer lightBuffer;
     // Matrix each shadow layer was last rendered with, in the suns' array

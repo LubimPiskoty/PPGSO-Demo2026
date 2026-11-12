@@ -3,11 +3,22 @@
 #include <glm/vec2.hpp>
 
 #include "../render/model.hpp"
+#include <glm/vec3.hpp>
 #include <string>
+#include <vector>
 
 namespace loader {
 // filename is the embedded resource path, e.g. "SM_PROP_crate_02.glb"
 render::Model loadModel(const std::string &filename);
+
+// The model's triangles on the CPU, three corners each, every mesh's in its
+// own space like loadModel (node transforms not applied). For placing things
+// on a surface, e.g. finding the ground's height under a point. Only the
+// triangles whose UVs' middle lies in [uvMin, uvMax] (the file's UVs, v
+// from the image's top as in glTF): one part of a texture atlas.
+std::vector<glm::vec3> loadTriangles(const std::string &filename,
+                                     glm::vec2 uvMin = glm::vec2(-1e30f),
+                                     glm::vec2 uvMax = glm::vec2(1e30f));
 
 // Flat size x size plane on XZ centered at the origin, facing +Y. Its mesh
 // has no texture of its own, the material supplies one. One texture repeat

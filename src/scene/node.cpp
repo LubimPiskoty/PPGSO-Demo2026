@@ -67,6 +67,16 @@ void Node::draw(glm::mat4 projection, glm::mat4 invCameraTransform) {
         child->draw(projection, invCameraTransform);
 }
 
+void Node::drawPrepass(glm::mat4 projection, glm::mat4 invCameraTransform) {
+    if (!enabled)
+        return;
+    for (const auto &component : components)
+        if (component->enabled)
+            component->drawPrepass(projection, invCameraTransform);
+    for (auto const &child : this->children)
+        child->drawPrepass(projection, invCameraTransform);
+}
+
 void Node::add_child(const std::shared_ptr<Node> &child) {
     this->children.push_back(child);
     child->parent = shared_from_this();
@@ -192,9 +202,6 @@ std::ostream &operator<<(std::ostream &os, const Node &node) {
     node.print(os);
     return os;
 }
-
-[[deprecated("NotImplemented")]]
-void Node::destroy() {}
 
 void Node::setGlobalTransform(const glm::mat4 &globalTransform) {
     glm::mat4 local = glm::inverse(parentGlobalTransform()) * globalTransform;

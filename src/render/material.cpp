@@ -43,11 +43,23 @@ Material::Material(const std::string &name, std::shared_ptr<Shader> shader)
 }
 
 void Material::bind() const {
-    if (!shader)
-        return;
+    if (shader)
+        bindTo(shader->program);
+}
 
+bool Material::bindPrepass() const {
+    if (!shader || !shader->prepassProgram())
+        return false;
+    bindTo(shader->prepassProgram());
+    return true;
+}
+
+void Material::bindTo(GLuint program) const {
     // Every glUniform* call below targets this program
-    glUseProgram(shader->program);
+    glUseProgram(program);
+    auto uniLoc = [program](const std::string &name) {
+        return glGetUniformLocation(program, name.c_str());
+    };
 
     for (int i = 0; i < (int)TextureSlot::Count; i++) {
         glActiveTexture(GL_TEXTURE0 + textureUnit(i));
@@ -140,10 +152,6 @@ std::shared_ptr<Shader> Material::getShader() const {
 
 void Material::setShader(std::shared_ptr<Shader> shader) {
     this->shader = shader;
-}
-
-GLint Material::uniLoc(const std::string &name) const {
-    return glGetUniformLocation(this->shader->program, name.c_str());
 }
 
 } // namespace render

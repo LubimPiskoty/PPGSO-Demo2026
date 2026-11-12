@@ -37,6 +37,10 @@ class Component {
 
     virtual void update(float dt) {}
     virtual void draw(glm::mat4 projection, glm::mat4 invCameraTransform) {}
+    // Depth prepass (Scene::depth_prepass): depth and the thin G-buffer's
+    // normals, before draw. Only what's opaque draws here.
+    virtual void drawPrepass(glm::mat4 projection,
+                             glm::mat4 invCameraTransform) {}
 
     virtual ComponentTypeId type_id() const = 0;
     virtual const char *type_name() const = 0;

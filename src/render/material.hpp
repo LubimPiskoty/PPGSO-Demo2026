@@ -27,7 +27,9 @@ constexpr int textureUnit(int slot) { return slot < 4 ? slot : slot + 2; }
 
 enum class BlendMode {
   Opaque,
-  Transparent, // drawn after opaque objects, sorted back to front
+  // Blending on, depth writes off (Material::bind). Not sorted yet, and
+  // lit.fs doesn't output the opacity: see TODO.md, transparent objects
+  Transparent,
 };
 
 // Shared shader program + the source paths it was built from, so several
@@ -38,9 +40,7 @@ struct Shader {
   std::string fragmentPath;
 
   Shader(std::string vertexPath, std::string fragmentPath)
-      : Shader(vertexPath, fragmentPath, false) {
-    program = loader::createShaderProgram(vertexPath, fragmentPath);
-  }
+      : Shader(vertexPath, fragmentPath, false) {}
 
   Shader(std::string vertexPath, std::string fragmentPath, bool instanced)
       : vertexPath(vertexPath), fragmentPath(fragmentPath),
@@ -48,10 +48,34 @@ struct Shader {
     program = loader::createShaderProgram(vertexPath, fragmentPath);
   }
 
+  // Owns its programs: shared through shared_ptr, never copied
+  ~Shader() {
+    glDeleteProgram(program);
+    glDeleteProgram(prepass);
+  }
+  Shader(const Shader &) = delete;
+  Shader &operator=(const Shader &) = delete;
+
   bool isInstanced() { return instanced; }
+
+  // The depth prepass's program: the same vertex shader (wind, waves,
+  // instancing move the vertices the same way) with prepass.fs, which
+  // writes the thin G-buffer's normals. Built on first use. Only for
+  // lit.fs materials, the vertex shaders prepass.fs knows the outputs of;
+  // 0 for the rest, they're drawn in the forward pass only.
+  GLuint prepassProgram() {
+    if (!prepassBuilt) {
+      prepassBuilt = true;
+      if (fragmentPath == "lit.fs")
+        prepass = loader::createShaderProgram(vertexPath, "prepass.fs");
+    }
+    return prepass;
+  }
 
 private:
   bool instanced = false;
+  bool prepassBuilt = false;
+  GLuint prepass = 0;
 };
 
 struct Texture {
@@ -67,6 +91,9 @@ public:
   // Binds the program, textures and material uniforms.
   // Per-object uniforms (uModel, uView, uProjection) stay with the caller.
   void bind() const;
+  // The same into the shader's prepass program (Shader::prepassProgram).
+  // False when it has none.
+  bool bindPrepass() const;
 
   // Textures
   void setTexture(TextureSlot slot, std::shared_ptr<Texture> texture);
@@ -113,7 +140,7 @@ private:
   std::unordered_map<std::string, glm::vec4> uVec4s;
   std::unordered_map<std::string, glm::mat4> uMat4s;
 
-  GLint uniLoc(const std::string &name) const;
+  void bindTo(GLuint program) const;
 };
 
 } // namespace render

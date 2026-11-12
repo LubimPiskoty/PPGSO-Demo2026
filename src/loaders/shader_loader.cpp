@@ -59,7 +59,9 @@ GLuint createShaderProgram(const std::string &vertexPath,
     if (!success) {
         char infoLog[1024];
         glGetProgramInfoLog(program, 1024, nullptr, infoLog);
-        std::cerr << "Program link error:\n" << infoLog << std::endl;
+        std::cerr << "[ERROR]Program link error (" << vertexPath << " + "
+                  << fragmentPath << "):\n"
+                  << infoLog << std::endl;
     }
 
     GLuint blockIndex;

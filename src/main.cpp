@@ -12,6 +12,8 @@
 #include "input/input.hpp"
 #include "render/framebuffer.hpp"
 #include "render/postprocessing.hpp"
+#include "render/dof.hpp"
+#include "render/ssao.hpp"
 #include "scenes/ball_jar.hpp"
 #include "scenes/demo_scene/demo_scene.hpp"
 #include "scenes/particle_test.hpp"
@@ -20,71 +22,46 @@
 #include "scenes/shadow_test.hpp"
 #include "scenes/smithy/smithy_scene.hpp"
 
-int main() {
-    if (!glfwInit()) {
-        std::cerr << "Failed to initialize GLFW" << std::endl;
-        return -1;
-    }
-
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_DEPTH_BITS, 24);
-
-    GLFWwindow *window =
-        glfwCreateWindow(1600, 900, "Hello Triangle", nullptr, nullptr);
-    if (!window) {
-        std::cerr << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
-        return -1;
-    }
-    glfwMakeContextCurrent(window);
-    // Vsync, physics has its own fixed timestep
-    glfwSwapInterval(1);
-
-    // glewExperimental = GL_TRUE; // required for core profile contexts
-    GLenum glewStatus = glewInit();
-    // Under Wayland glewInit reports NO_GLX_DISPLAY even though all GL
-    // function pointers were loaded fine, so that one is not fatal.
-    if (glewStatus != GLEW_OK && glewStatus != GLEW_ERROR_NO_GLX_DISPLAY) {
-        std::cerr << "Failed to initialize GLEW: "
-                  << glewGetErrorString(glewStatus) << std::endl;
-        return -1;
-    }
-
-    // Use the actual framebuffer size (can differ from the window size
-    // passed to glfwCreateWindow on HiDPI displays) so the viewport and the
-    // camera's projection aspect ratio always agree.
-    int fbWidth, fbHeight;
-    glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
-    glViewport(0, 0, fbWidth, fbHeight);
-
-    input::init(window);
-
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-    glDepthFunc(GL_LESS);
-    glEnable(GL_MULTISAMPLE);
-    // Back faces culled, Material::doubleSided turns it off per draw
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
-
-    debug_ui::init(window);
-    profiler::init();
-
+// The scenes, the post-processing and the frame loop, until the window
+// closes
+static void run(GLFWwindow *window, int fbWidth, int fbHeight) {
 #ifdef NDEBUG
     render::PostProcessing post(fbWidth, fbHeight, 8);
 #else
     // No MSAA in Debug, it costs a lot of GPU time
     render::PostProcessing post(fbWidth, fbHeight, 0);
 #endif
-    // Darkens the frame by the scene's fade (the demo's cuts)
-    //post.add("gama.fs");
-    //post.add("blur.fs");
-    //post.add("inverse.fs");
-    post.add("bloom.fs");
+    // The post-processing layers, in the order they run, each toggled by
+    // its number key (1 the first). Added off are left out until turned on.
+    struct Layer {
+        const char *shader;
+        bool on;
+        int repeats = 1; // runs of the shader (PostProcessing::add)
+    };
+    static constexpr Layer LAYERS[] = {
+        // Ambient occlusion (render::Ssao), then darkened by it
+        {"ssao.fs", true, 2},
+        // {"blur.fs", false, 2}, // Gaussian: horizontal, then vertical
+        // {"inverse.fs", false},
+        // Depth of field: blurred distances, then a disc kernel; tilt-shift
+        // in the timelapse (render::Dof)
+        {"dof.fs", true, 4},
+        {"bloom.fs", true},
+        // The thin G-buffer in quarters: scene, normals, positions, distance
+        {"gbuffer_debug.fs", false},
+        // Last: everything before works on linear light (colour textures
+        // are sRGB, decoded when sampled), this encodes it for the screen
+        {"gama.fs", true},
+    };
+    for (const Layer &layer : LAYERS)
+        post.add(layer.shader, layer.on, layer.repeats);
+    // Darkens the frame by the scene's fade (the demo's cuts): always on,
+    // last, not a layer
     const GLuint fadePass = post.add("fade_transition.fs");
-
+    // ssao.fs's sample kernel and noise
+    const render::Ssao ssao(post);
+    // dof.fs's focus, eased, and its tilt-shift
+    render::Dof dof(post);
 
     scenes::SceneManager scenes;
     scenes.add("Demo scene", scenes::demoScene);
@@ -93,29 +70,7 @@ int main() {
     scenes.add("Shadow test", scenes::shadowTest);
     scenes.add("Particle test", scenes::particle_test);
     scenes.setViewport((float)fbWidth, (float)fbHeight);
-    // CAP_SCENE=<index or name> starts in that scene (index: the order
-    // added above), else the demo
-    size_t first = 0;
-    if (const char *scene = std::getenv("CAP_SCENE")) {
-        const auto &entries = scenes.entries();
-        char *end = nullptr;
-        const long index = std::strtol(scene, &end, 10);
-        size_t found = entries.size();
-        if (*scene && *end == '\0') {
-            if (index >= 0 && (size_t)index < entries.size())
-                found = (size_t)index;
-        } else {
-            for (size_t i = 0; i < entries.size(); i++)
-                if (entries[i].name == scene)
-                    found = i;
-        }
-        if (found < entries.size())
-            first = found;
-        else
-            std::cerr << "CAP_SCENE=" << scene << ": no such scene"
-                      << std::endl;
-    }
-    scenes.load(first);
+    scenes.load(0);
 
     // F12 saves every buffer of the next frame (the scene, its depth map
     // and each post-processing pass) into capture/
@@ -123,12 +78,24 @@ int main() {
     // Space skips 5 s ahead
     constexpr float SKIP = 5.f;
     float skip = 0.f;
-    input::onKey([&captureRequested, &skip](int key, int action) {
-        if (key == GLFW_KEY_F12 && action == GLFW_PRESS)
-            captureRequested = true;
-        if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
-            skip += SKIP;
-    });
+    // 1-9 toggle the post-processing layers (LAYERS above, pass i the
+    // i-th layer)
+    // Captures this function's locals: removed when it returns
+    const int keys =
+        input::onKey([&captureRequested, &skip, &post](int key, int action) {
+            if (key == GLFW_KEY_F12 && action == GLFW_PRESS)
+                captureRequested = true;
+            if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
+                skip += SKIP;
+            const size_t layer = (size_t)(key - GLFW_KEY_1);
+            if (key >= GLFW_KEY_1 && key <= GLFW_KEY_9 &&
+                action == GLFW_PRESS && layer < std::size(LAYERS)) {
+                post.setEnabled(layer, !post.isEnabled(layer));
+                std::cout << "Post " << layer + 1 << " " << post.passName(layer)
+                          << (post.isEnabled(layer) ? ": on" : ": off")
+                          << std::endl;
+            }
+        });
     int lastFbWidth = fbWidth, lastFbHeight = fbHeight;
 
     double time = glfwGetTime();
@@ -164,8 +131,7 @@ int main() {
         for (; skip > 0.f; skip -= 0.1f) {
             const float step = std::min(skip, 0.1f);
             scene.update(step);
-            for (double t = 0.0; t < step;
-                 t += scene.physics_context.fixedDt)
+            for (double t = 0.0; t < step; t += scene.physics_context.fixedDt)
                 scene.physics_step();
         }
 
@@ -190,7 +156,13 @@ int main() {
             profiler::Scope _(profiler::Stage::Scene);
             scene.shadow_pass();
             post.begin();
+            scene.depth_prepass();
+            post.shade();
             scene.draw();
+            if (auto camera = scene.activeCamera.lock())
+                post.setCamera(camera->projection,
+                               camera->node.lock()->globalTransform());
+            dof.update(dt, *scene.tiltShift);
             glUseProgram(fadePass);
             glUniform1f(glGetUniformLocation(fadePass, "transition"),
                         *scene.fade);
@@ -226,6 +198,64 @@ int main() {
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+    input::unsubscribe(keys);
+}
+
+int main() {
+    if (!glfwInit()) {
+        std::cerr << "Failed to initialize GLFW" << std::endl;
+        return -1;
+    }
+
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_DEPTH_BITS, 24);
+
+    GLFWwindow *window = glfwCreateWindow(
+        1600, 900, "Village Demo by Piskotka and David PPGSO-ZS2026", nullptr,
+        nullptr);
+    if (!window) {
+        std::cerr << "Failed to create GLFW window" << std::endl;
+        glfwTerminate();
+        return -1;
+    }
+    glfwMakeContextCurrent(window);
+    // Vsync, physics has its own fixed timestep
+    glfwSwapInterval(1);
+
+    // glewExperimental = GL_TRUE; // required for core profile contexts
+    GLenum glewStatus = glewInit();
+    // Under Wayland glewInit reports NO_GLX_DISPLAY even though all GL
+    // function pointers were loaded fine, so that one is not fatal.
+    if (glewStatus != GLEW_OK && glewStatus != GLEW_ERROR_NO_GLX_DISPLAY) {
+        std::cerr << "Failed to initialize GLEW: "
+                  << glewGetErrorString(glewStatus) << std::endl;
+        return -1;
+    }
+
+    // Use the actual framebuffer size (can differ from the window size
+    // passed to glfwCreateWindow on HiDPI displays) so the viewport and the
+    // camera's projection aspect ratio always agree.
+    int fbWidth, fbHeight;
+    glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+    glViewport(0, 0, fbWidth, fbHeight);
+
+    input::init(window);
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+    glDepthFunc(GL_LESS);
+    // Back faces culled, Material::doubleSided turns it off per draw
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+
+    debug_ui::init(window);
+    profiler::init();
+
+    // Everything holding GL objects lives in run(), so it's freed while the
+    // context still exists
+    run(window, fbWidth, fbHeight);
 
     profiler::shutdown();
     debug_ui::shutdown();

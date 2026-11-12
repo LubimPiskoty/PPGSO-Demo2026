@@ -10,6 +10,9 @@
 
 namespace physics {
 
+// Sphere around the shape's center. The radius is in world metres, the
+// node's scale ignored (as for planes): a scaled-down model passes its
+// scaled radius here.
 struct SphereDesc {
     float radius = 0.5f;
 };
@@ -84,13 +87,11 @@ inline AABB getAABB(const Shape &shape, const glm::mat4 &transform) {
             extents += glm::abs(glm::normalize(m[c])) * h[c];
         break;
     }
-    case Shape::Type::Sphere: {
-        // Rotation doesn't change a sphere, only the largest scale axis
-        const float maxScale = glm::max(
-            glm::length(m[0]), glm::max(glm::length(m[1]), glm::length(m[2])));
-        extents = glm::vec3(shape.sphere.radius * maxScale);
+    case Shape::Type::Sphere:
+        // Rotation doesn't change a sphere, and the radius is already in
+        // world metres, like the collision tests take it
+        extents = glm::vec3(shape.sphere.radius);
         break;
-    }
     }
     return {center - extents, center + extents};
 }

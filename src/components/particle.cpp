@@ -75,6 +75,11 @@ ParticleSystem::ParticleSystem(
     glBindVertexArray(0);
 };
 
+ParticleSystem::~ParticleSystem() {
+    glDeleteVertexArrays(1, &vao);
+    glDeleteBuffers(1, &vbo);
+}
+
 void ParticleSystem::allocateBuffers() {
     // A shader can only see GL_MAX_SHADER_STORAGE_BLOCK_SIZE bytes of an
     // SSBO; a bigger particle buffer leaves the shaders with nothing to draw

@@ -16,7 +16,16 @@ struct Vertex {
     glm::vec3 tangent;
 };
 
+// Owns its VAO and buffers, freed with it: move-only. The textures are
+// shared (the loaders' caches) and stay.
 struct Mesh {
+    Mesh() = default;
+    ~Mesh();
+    Mesh(Mesh &&other) noexcept;
+    Mesh &operator=(Mesh &&other) noexcept;
+    Mesh(const Mesh &) = delete;
+    Mesh &operator=(const Mesh &) = delete;
+
     GLuint vao = 0;
     GLuint vbo = 0;
     GLuint ebo = 0;
@@ -42,7 +51,15 @@ struct Mesh {
     void restoreTextures(const Overridden &saved) const;
 };
 
+// Move-only, as its meshes; frees its instance buffer
 struct Model {
+    Model() = default;
+    ~Model();
+    Model(Model &&other) noexcept;
+    Model &operator=(Model &&other) noexcept;
+    Model(const Model &) = delete;
+    Model &operator=(const Model &) = delete;
+
     std::string filename;
     std::vector<Mesh> meshes;
 

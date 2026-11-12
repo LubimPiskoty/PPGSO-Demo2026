@@ -81,7 +81,15 @@ void Animator::seek(float time) {
         if (pb.mode == PlayMode::Single)
             pb.time = std::clamp(time, 0.f, pb.duration);
         else
-            pb.time = pb.duration > 0.f ? std::fmod(time, pb.duration) : 0.f;
+        {
+            // Wrapped into [0, duration), before 0 too
+            pb.time = 0.f;
+            if (pb.duration > 0.f) {
+                pb.time = std::fmod(time, pb.duration);
+                if (pb.time < 0.f)
+                    pb.time += pb.duration;
+            }
+        }
         apply(track);
     }
 }

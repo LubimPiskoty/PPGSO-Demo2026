@@ -8,8 +8,9 @@ namespace component {
 class UserMovement : public ComponentBase<component::UserMovement> {
   public:
     // Keys are GLFW key codes; letters are their uppercase ASCII ('W').
+    // Up E, down Q: Space skips the demo ahead (main.cpp)
     UserMovement(float speed, float sensitivity)
-        : UserMovement(speed, sensitivity, 'W', 'A', 'S', 'D', ' ', 'C') {}
+        : UserMovement(speed, sensitivity, 'W', 'A', 'S', 'D', 'E', 'Q') {}
 
     UserMovement(float speed, float sensitivity, int forward_key, int left_key,
                  int backward_key, int right_key, int up_key, int down_key)
@@ -18,6 +19,10 @@ class UserMovement : public ComponentBase<component::UserMovement> {
           backward_key(backward_key), left_key(left_key), right_key(right_key) {
         subscribeInput();
     }
+    // The input callbacks capture this: removed with it
+    ~UserMovement() override;
+    UserMovement(const UserMovement &) = delete;
+    UserMovement &operator=(const UserMovement &) = delete;
 
     void update(float dt) override;
     void handleInput(int key, bool is_pressed);
@@ -48,5 +53,7 @@ class UserMovement : public ComponentBase<component::UserMovement> {
     float yaw = 0.f, pitch = 0.f;
     double last_x = 0.0, last_y = 0.0;
     bool first_move = true;
+    // input:: subscriptions, see subscribeInput
+    int subscriptions[3] = {0, 0, 0};
 };
 } // namespace component

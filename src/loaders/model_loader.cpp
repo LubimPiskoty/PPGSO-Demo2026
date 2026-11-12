@@ -34,9 +34,11 @@ GLuint pinkFallbackTexture() {
 }
 
 // Decodes the first texture of the given types found on the mesh's material.
-// Returns 0 when there is none (or it can't be loaded).
+// Returns 0 when there is none (or it can't be loaded). srgb: a colour
+// texture (loader::createTexture).
 GLuint loadMeshTexture(const aiScene *scene, const aiMesh *mesh,
-                       std::initializer_list<aiTextureType> types) {
+                       std::initializer_list<aiTextureType> types,
+                       bool srgb) {
     if (mesh->mMaterialIndex >= scene->mNumMaterials) {
         return 0;
     }
@@ -62,9 +64,10 @@ GLuint loadMeshTexture(const aiScene *scene, const aiMesh *mesh,
         // MC_ city objects), so each one is decoded once
         static std::unordered_map<std::string, std::shared_ptr<render::Texture>>
             files;
-        auto &file = files[path.C_Str()];
+        // The same file as colour and as data would be two textures
+        auto &file = files[std::string(srgb ? "srgb:" : "") + path.C_Str()];
         if (!file)
-            file = loadTexture(path.C_Str());
+            file = loadTexture(path.C_Str(), srgb);
         return file ? file->id : 0;
     }
     if (embedded->mHeight != 0) {
@@ -79,7 +82,8 @@ GLuint loadMeshTexture(const aiScene *scene, const aiMesh *mesh,
     static std::unordered_map<std::size_t, GLuint> cache;
     std::string_view bytes(reinterpret_cast<const char *>(embedded->pcData),
                            embedded->mWidth);
-    auto cached = cache.find(std::hash<std::string_view>{}(bytes));
+    const std::size_t key = std::hash<std::string_view>{}(bytes) ^ srgb;
+    auto cached = cache.find(key);
     if (cached != cache.end())
         return cached->second;
 
@@ -93,9 +97,9 @@ GLuint loadMeshTexture(const aiScene *scene, const aiMesh *mesh,
         return 0;
     }
 
-    GLuint texture = createTexture(pixels, width, height);
+    GLuint texture = createTexture(pixels, width, height, srgb);
     stbi_image_free(pixels);
-    cache[std::hash<std::string_view>{}(bytes)] = texture;
+    cache[key] = texture;
     return texture;
 }
 
@@ -105,23 +109,26 @@ void loadMeshTextures(const aiScene *scene, const aiMesh *mesh, Mesh &result) {
         return result.textures[(int)s];
     };
 
+    // Colours sRGB, the rest data (loader::createTexture)
     slot(TextureSlot::Albedo) = loadMeshTexture(
-        scene, mesh, {aiTextureType_BASE_COLOR, aiTextureType_DIFFUSE});
+        scene, mesh, {aiTextureType_BASE_COLOR, aiTextureType_DIFFUSE}, true);
     // Albedo always gets something, so the shader has a valid texture to
     // sample even for untextured meshes
     if (slot(TextureSlot::Albedo) == 0)
         slot(TextureSlot::Albedo) = pinkFallbackTexture();
 
     slot(TextureSlot::Normal) = loadMeshTexture(
-        scene, mesh, {aiTextureType_NORMALS, aiTextureType_NORMAL_CAMERA});
+        scene, mesh, {aiTextureType_NORMALS, aiTextureType_NORMAL_CAMERA},
+        false);
     // glTF packs roughness into the G channel of its metallicRoughness
     // texture, which older Assimp versions report as UNKNOWN
     slot(TextureSlot::Roughness) = loadMeshTexture(
-        scene, mesh, {aiTextureType_DIFFUSE_ROUGHNESS, aiTextureType_UNKNOWN});
+        scene, mesh, {aiTextureType_DIFFUSE_ROUGHNESS, aiTextureType_UNKNOWN},
+        false);
     slot(TextureSlot::Specular) =
-        loadMeshTexture(scene, mesh, {aiTextureType_SPECULAR});
+        loadMeshTexture(scene, mesh, {aiTextureType_SPECULAR}, false);
     slot(TextureSlot::Emissive) =
-        loadMeshTexture(scene, mesh, {aiTextureType_EMISSIVE});
+        loadMeshTexture(scene, mesh, {aiTextureType_EMISSIVE}, true);
 }
 
 Mesh createMesh(const std::vector<Vertex> &vertices,
@@ -243,6 +250,51 @@ Model loadModel(const std::string &filename) {
     }
 
     return model;
+}
+
+std::vector<glm::vec3> loadTriangles(const std::string &filename,
+                                     glm::vec2 uvMin, glm::vec2 uvMax) {
+    std::vector<glm::vec3> corners;
+    auto fs = cmrc::models::get_filesystem();
+    if (!fs.exists(filename)) {
+        std::cerr << "Embedded model not found: " << filename << std::endl;
+        return corners;
+    }
+    auto file = fs.open(filename);
+    Assimp::Importer importer;
+    const aiScene *scene =
+        importer.ReadFileFromMemory(file.begin(), file.size(),
+                                    aiProcess_Triangulate | aiProcess_FlipUVs,
+                                    extensionOf(filename).c_str());
+    if (!scene) {
+        std::cerr << "Assimp error loading " << filename << ": "
+                  << importer.GetErrorString() << std::endl;
+        return corners;
+    }
+    for (unsigned int m = 0; m < scene->mNumMeshes; m++) {
+        const aiMesh *mesh = scene->mMeshes[m];
+        for (unsigned int f = 0; f < mesh->mNumFaces; f++) {
+            const aiFace &face = mesh->mFaces[f];
+            if (face.mNumIndices != 3)
+                continue; // points and lines
+            if (mesh->HasTextureCoords(0)) {
+                glm::vec2 uv(0.f);
+                for (unsigned int j = 0; j < 3; j++) {
+                    const aiVector3D &t =
+                        mesh->mTextureCoords[0][face.mIndices[j]];
+                    uv += glm::vec2(t.x, t.y) / 3.f;
+                }
+                if (glm::any(glm::lessThan(uv, uvMin)) ||
+                    glm::any(glm::greaterThan(uv, uvMax)))
+                    continue;
+            }
+            for (unsigned int j = 0; j < 3; j++) {
+                const aiVector3D &v = mesh->mVertices[face.mIndices[j]];
+                corners.emplace_back(v.x, v.y, v.z);
+            }
+        }
+    }
+    return corners;
 }
 
 Model createPlane(float size, float unitsPerTile) {

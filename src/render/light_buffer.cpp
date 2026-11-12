@@ -5,6 +5,22 @@
 
 namespace render {
 
+LightBuffer::~LightBuffer() { glDeleteBuffers(1, &ubo); }
+
+LightBuffer::LightBuffer(LightBuffer &&other) noexcept
+    : ubo(other.ubo) {
+    other.ubo = 0;
+}
+
+LightBuffer &LightBuffer::operator=(LightBuffer &&other) noexcept {
+    if (this != &other) {
+        glDeleteBuffers(1, &ubo);
+        ubo = other.ubo;
+        other.ubo = 0;
+    }
+    return *this;
+}
+
 void LightBuffer::upload(const std::vector<GpuLight> &lights,
                          const glm::vec3 &viewPos) {
     // create light buffer
@@ -13,6 +29,17 @@ void LightBuffer::upload(const std::vector<GpuLight> &lights,
         glBindBuffer(GL_UNIFORM_BUFFER, ubo);
         glBufferData(GL_UNIFORM_BUFFER, sizeof(LightBlock), nullptr,
                      GL_DYNAMIC_DRAW);
+    }
+
+    // The shaders' block has room for MAX_LIGHTS, the rest would be dropped
+    // without a word
+    static bool warned = false;
+    if (lights.size() > MAX_LIGHTS && !warned) {
+        std::fprintf(stderr,
+                     "LightBuffer: %zu lights, only the first %d are drawn "
+                     "(MAX_LIGHTS in light_buffer.hpp and lit.fs)\n",
+                     lights.size(), MAX_LIGHTS);
+        warned = true;
     }
 
     LightBlock block{};

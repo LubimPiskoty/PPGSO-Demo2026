@@ -23,7 +23,7 @@ scn::Scene particle_test() {
         render::Material("Material", shader));
     // texture.fs/grid_lit.fs sample uTexture; without one bound it's black
     material->setTexture(render::TextureSlot::Albedo,
-                         loader::loadTexture("grid_dark.png"));
+                         loader::loadTexture("grid_dark.png", true));
     material->diffuse = {0.30f, 0.33f, 0.38f};
     material->setFloat("uBrighten", 4.f);
     const auto instanced_material = std::make_shared<render::Material>(

@@ -28,7 +28,7 @@ class ShadowMaps {
     // Map sizes in texels, unless the environment sets them:
     // SHADOW_RES=<suns' maps> SHADOW_SMALL_RES=<spot / point maps>
 #ifdef NDEBUG
-    static constexpr int DEFAULT_SUN_RESOLUTION = 1 << 13;   // 8k
+    static constexpr int DEFAULT_SUN_RESOLUTION = 1 << 14;   // 16k
     static constexpr int DEFAULT_SMALL_RESOLUTION = 1 << 11; // 16 MB a layer
 #else
     // Debug is slow enough
@@ -36,8 +36,7 @@ class ShadowMaps {
     static constexpr int DEFAULT_SMALL_RESOLUTION = 1 << 10;
 #endif
     static int sunResolution() {
-        static const int res =
-            fromEnv("SHADOW_RES", DEFAULT_SUN_RESOLUTION);
+        static const int res = fromEnv("SHADOW_RES", DEFAULT_SUN_RESOLUTION);
         return res;
     }
     static int smallResolution() {
@@ -111,7 +110,8 @@ class ShadowMaps {
             glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
         }
         for (Bank bank : {Sun, Small}) {
-            const int unit = bank == Sun ? SUN_TEXTURE_UNIT : SMALL_TEXTURE_UNIT;
+            const int unit =
+                bank == Sun ? SUN_TEXTURE_UNIT : SMALL_TEXTURE_UNIT;
             glActiveTexture(GL_TEXTURE0 + unit);
             glBindTexture(GL_TEXTURE_2D_ARRAY, arrays[bank].tex);
             glBindSampler(unit, sampler);

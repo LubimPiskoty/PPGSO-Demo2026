@@ -45,6 +45,20 @@ class Mesh : public component::ComponentBase<Mesh> {
         model->draw();
     };
 
+    // Depth prepass: the material's prepass program (its own vertex shader,
+    // prepass.fs), opaque materials only
+    void drawPrepass(glm::mat4 projection,
+                     glm::mat4 invCameraTransform) override {
+        if (material->blend != render::BlendMode::Opaque ||
+            checkInstancedCompatibility())
+            return;
+        material->setMat4("uProjection", projection);
+        material->setMat4("uView", invCameraTransform);
+        material->setMat4("uModel", this->node.lock()->globalTransform());
+        if (material->bindPrepass())
+            model->draw();
+    }
+
     // Shadow pass: no material, just positions through the given depth shader
     void drawDepth(glm::mat4 projection, glm::mat4 lightView,
                    const render::Shader &depthShader) {

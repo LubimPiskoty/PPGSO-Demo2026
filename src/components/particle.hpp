@@ -44,6 +44,10 @@ class ParticleSystem : public ComponentBase<ParticleSystem> {
                    std::shared_ptr<render::ComputeShader> spawnCompute,
                    std::shared_ptr<render::ComputeShader> updateCompute,
                    EmitterType type = EmitterType::SPRITE);
+    // Frees the quad's buffers (the particle buffers free themselves)
+    ~ParticleSystem() override;
+    ParticleSystem(const ParticleSystem &) = delete;
+    ParticleSystem &operator=(const ParticleSystem &) = delete;
 
     render::Buffer particles;
     render::Buffer freelist;
@@ -62,7 +66,7 @@ class ParticleSystem : public ComponentBase<ParticleSystem> {
     uint32_t seed = 0;
 
   private:
-    GLuint vao, vbo;
+    GLuint vao = 0, vbo = 0;
     uint32_t allocatedParticles = 0;
     uint32_t frame = 0;
 

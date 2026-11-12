@@ -8,9 +8,9 @@ uniform sampler2D uScreen;
 void main() {
     vec2 texel = 1.0 / vec2(textureSize(uScreen, 0));
 
-    float threshold = 0.8;   // od akeho jasu ma pixel ziarit
-    float intensity = 1.0;   // sila ziaru
-    int radius = 6;          // velkost ziary px *2
+    float threshold = 0.95; // od akeho jasu ma pixel ziarit
+    float intensity = 1.0; // sila ziaru
+    int radius = 6; // velkost ziary px *2
 
     vec3 glow = vec3(0.0);
     float weightSum = 0.0;
@@ -25,7 +25,7 @@ void main() {
             if (brightness < threshold) c = vec3(0.0);
 
             // 2) BLUR
-            float w = exp(-float(x*x + y*y) / (2.0 * float(radius)));
+            float w = exp(-float(x * x + y * y) / (2.0 * float(radius)));
             glow += c * w;
             weightSum += w;
         }
@@ -36,5 +36,5 @@ void main() {
     vec3 scene = texture(uScreen, vUV).rgb;
     FragColor = vec4(scene + glow * intensity, 1.0);
     //FragColor = vec4(glow * intensity, 1.0); // for debug
-
 }
+

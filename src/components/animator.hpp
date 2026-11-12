@@ -2,6 +2,7 @@
 
 #include "animation.hpp"
 #include "ecs.hpp"
+#include <deque>
 #include <functional>
 #include <glm/glm.hpp>
 #include <string>
@@ -27,7 +28,8 @@ struct AnimatorTrack {
 // curves. Everything it drives shows up in the Animation window.
 class Animator : public ComponentBase<Animator> {
   public:
-    std::vector<AnimatorTrack> tracks;
+    // A deque: the track addTrack returns stays valid when more are added
+    std::deque<AnimatorTrack> tracks;
 
     void update(float dt) override;
 
@@ -35,7 +37,8 @@ class Animator : public ComponentBase<Animator> {
     // scrub a paused track
     void apply(const AnimatorTrack &track);
 
-    // A track lasts until the last key of its curve
+    // A track lasts until the last key of its curve. The returned track
+    // stays valid as more are added.
     AnimatorTrack &addTrack(AnimTarget target, const Curve<glm::vec3> &curve,
                             PlayMode mode = PlayMode::Loop);
     // Animates a value directly. It must outlive this Animator.

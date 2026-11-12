@@ -33,6 +33,11 @@ uniform float uStretch; // seconds of motion smeared behind the particle, 0 = of
 out vec4 vColor;
 out vec2 vUV;
 
+// Close to the camera a particle fades out, gone at NEAR_GONE m, whole from
+// NEAR_WHOLE m: one passing the lens (the forge's dust, the camera flies
+// through it) would fill the view and be cut by the near plane
+const float NEAR_GONE = 0.15, NEAR_WHOLE = 0.6;
+
 void main() {
     Particle p = particles[drawIndices[gl_InstanceID]];
 
@@ -58,6 +63,7 @@ void main() {
     vec3 world = center + right * Corner.x * p.scale.x + up * Corner.y * len;
 
     vColor = p.color;
+    vColor.a *= smoothstep(NEAR_GONE, NEAR_WHOLE, length(uViewPos - p.pos));
     vUV = Corner * 2.0;
     gl_Position = uProjection * uView * vec4(world, 1.0);
 }

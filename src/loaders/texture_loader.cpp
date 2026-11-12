@@ -11,12 +11,13 @@ CMRC_DECLARE(textures);
 
 namespace loader {
 
-GLuint createTexture(const unsigned char *pixels, int width, int height) {
+GLuint createTexture(const unsigned char *pixels, int width, int height,
+                     bool srgb) {
     GLuint texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
-                 GL_UNSIGNED_BYTE, pixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, srgb ? GL_SRGB8_ALPHA8 : GL_RGBA8, width,
+                 height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
     glGenerateMipmap(GL_TEXTURE_2D);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -35,7 +36,8 @@ GLuint createTexture(const unsigned char *pixels, int width, int height) {
     return texture;
 }
 
-std::shared_ptr<render::Texture> loadTexture(const std::string &filename) {
+std::shared_ptr<render::Texture> loadTexture(const std::string &filename,
+                                             bool srgb) {
     auto fs = cmrc::textures::get_filesystem();
     if (!fs.exists(filename)) {
         std::cerr << "Embedded texture not found: " << filename << std::endl;
@@ -54,7 +56,7 @@ std::shared_ptr<render::Texture> loadTexture(const std::string &filename) {
     }
 
     auto texture = std::make_shared<render::Texture>();
-    texture->id = createTexture(pixels, width, height);
+    texture->id = createTexture(pixels, width, height, srgb);
     texture->path = filename;
     stbi_image_free(pixels);
     return texture;
@@ -99,8 +101,9 @@ GLuint loadCubemapCross(const std::string &filename) {
     for (int i = 0; i < 6; i++) {
         glPixelStorei(GL_UNPACK_SKIP_PIXELS, cells[i][0] * face);
         glPixelStorei(GL_UNPACK_SKIP_ROWS,   cells[i][1] * face);
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB,
-                     face, face, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        // A photo of the sky: colours, gamma encoded (see createTexture)
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_SRGB8, face,
+                     face, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
     }
 
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
@@ -112,7 +115,10 @@ GLuint loadCubemapCross(const std::string &filename) {
 
     glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // Mipmapped: lit.fs blurs rough reflections by reading smaller mips
+    // (textureLod), plain GL_LINEAR would ignore them
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER,
+                    GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

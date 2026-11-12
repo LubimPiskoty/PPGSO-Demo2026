@@ -26,6 +26,14 @@ struct LightBlock {
 
 class LightBuffer {
   public:
+    LightBuffer() = default;
+    // Owns its UBO: move-only, freed with it
+    ~LightBuffer();
+    LightBuffer(LightBuffer &&other) noexcept;
+    LightBuffer &operator=(LightBuffer &&other) noexcept;
+    LightBuffer(const LightBuffer &) = delete;
+    LightBuffer &operator=(const LightBuffer &) = delete;
+
     void upload(const std::vector<GpuLight> &lights, const glm::vec3 &viewPos);
 
   private:

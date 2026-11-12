@@ -13,6 +13,9 @@ out vec2 FragTexCoord;
 out vec3 FragNormal;
 out vec3 FragPos;
 out vec3 FragTangent;
+// The same depth in the prepass (prepass.fs) and the lit pass, compiled
+// into two programs: the lit pass draws with GL_LEQUAL against it
+invariant gl_Position;
 
 void main() {
     FragTexCoord = TexCoord;

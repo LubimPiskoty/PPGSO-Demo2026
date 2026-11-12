@@ -5,7 +5,7 @@ JOBS := $(shell nproc 2>/dev/null || echo $(NUMBER_OF_PROCESSORS))
 JOBS := $(if $(JOBS),$(JOBS),4)
 BUILD_TYPE ?=
 
-.PHONY: run build debug release clean distclean configure
+.PHONY: run build debug release install clean distclean configure
 
 run: build
 	./$(BUILD_DIR)/$(TARGET)
@@ -21,6 +21,11 @@ debug:
 
 release:
 	$(MAKE) build BUILD_TYPE=Release
+
+# Stripped (and UPX-packed, if upx is found) executable into build/dist,
+# or into PREFIX when given: make install PREFIX=~/somewhere
+install: build
+	cmake --install $(BUILD_DIR) $(if $(PREFIX),--prefix $(PREFIX))
 
 clean:
 	rm -rf $(BUILD_DIR)/CMakeFiles/$(TARGET).dir $(BUILD_DIR)/$(TARGET)

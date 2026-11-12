@@ -9,7 +9,8 @@ in vec3 FragNormal;
 in vec3 FragPos;
 in vec3 FragTangent;
 
-out vec4 FragColor;
+// To the color texture; in the prepass (prepass.fs) output 1 is the normals
+layout(location = 0) out vec4 FragColor;
 
 // ---------------------------------------------------------------------------
 // Material
@@ -163,7 +164,8 @@ Surface getSurface() {
     surf.normal = getNormal();
     surf.faceNormal = normalize(gl_FrontFacing ? FragNormal : -FragNormal);
     vec4 albedo = texture(uAlbedoTex, FragTexCoord);
-    // Alpha-masked cards (tree leaves)
+    // Alpha-masked cards (tree leaves, the corn's tassels); prepass.fs cuts
+    // the same
     if (albedo.a < 0.5)
         discard;
     surf.albedo = albedo.rgb;

@@ -26,7 +26,7 @@ class TestSceneBuilder {
 
     TestSceneBuilder() {
         shader = std::make_shared<render::Shader>("grid_lit.vs", "grid_lit.fs");
-        grid = loader::loadTexture("grid_dark.png");
+        grid = loader::loadTexture("grid_dark.png", true);
 
         // Muted tones, between pastel and fully saturated
         floorMat = makeMaterial("Floor", {0.30f, 0.33f, 0.38f});

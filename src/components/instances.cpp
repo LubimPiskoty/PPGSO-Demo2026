@@ -34,8 +34,8 @@ void Instances::update(float dt) {
         transforms.reserve(owner->children.size());
         for (const auto &child : owner->children)
             transforms.push_back(child->localTransform());
-        if (!transforms.empty())
-            mesh->model->makeInstanced(transforms);
+        // Also with none left: then nothing is drawn, not the last ones
+        mesh->model->makeInstanced(transforms);
         return;
     }
 

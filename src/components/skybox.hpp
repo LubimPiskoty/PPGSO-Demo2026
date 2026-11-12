@@ -11,6 +11,10 @@ namespace component {
     class Skybox : public ComponentBase<Skybox> {
     public:
         explicit Skybox(const std::string &textureFile);
+        // Frees the cube map, the program and the cube's buffers
+        ~Skybox() override;
+        Skybox(const Skybox &) = delete;
+        Skybox &operator=(const Skybox &) = delete;
 
         const char *type_name() const override {
             return "Skybox";

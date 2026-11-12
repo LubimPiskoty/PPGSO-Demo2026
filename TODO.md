@@ -7,6 +7,8 @@
   - [x] (2b) Unique texture mapping via UV coordinates on a 3D object
   - [x] (2b) Efficient instancing: render at least 5000 instances using OpenGL instancing
   - [ ] (2b) Transparent objects, correctly blended together with opaque objects in one scene (e.g. sort transparent objects and draw farthest-to-nearest) [David]
+    - State now: `BlendMode::Transparent` only turns on blending and stops depth writes (`Material::bind`). Nothing sorts yet, and `lit.fs` ignores `uMaterial.opacity`: it outputs alpha 1, so nothing actually shows through.
+    - To do: draw transparent meshes after all opaque ones, sorted far to near from the camera; output `albedo.a * uMaterial.opacity` from `lit.fs` for them; keep them out of the depth prepass (`Mesh::drawPrepass` already skips non-opaque materials).
   - [x] (1b) Object using a bump texture (normal mapping) [David]
 - [x] Scene [8b]
   - [x] (2b) Procedurally generated scene (object placement/constraints defined by a (non-)deterministic algorithm and/or data structure)
@@ -38,6 +40,9 @@
     - [x] Material and light color components correctly combined
   - [x] (1b) Blinn-Phong modified lighting model
   - [ ] (1b) HDR rendering with tone mapping and gamma correction [David]
+    - [x] Gamma: colour textures (albedo, emissive, skybox) are sRGB (`GL_SRGB8_ALPHA8`), so lighting works on linear light; `gama.fs`, the last post layer, encodes it once
+    - [x] HDR buffers: the scene and every post pass are RGB16F
+    - [ ] Tone mapping (e.g. Reinhard or ACES before the gamma), values above 1 still clip
   - [x] Shadows (pick one)
     <!-- - [ ] (1b) Simple approach — shadow must be recomputed based on the relative position/distance of object and light, i.e. not "statically" glued to the object, or -->
     - [x] (4b) Shadow maps [Timon]
@@ -48,15 +53,15 @@
       - [x] `lit.fs` samples the map for directional lights (ambient not shadowed)
       - [x] Debug "Light preview" window (slider over the maps)
       - [x] Baked lights (`Light::bakedShadow`): map rendered once, again only when the light or its box changes
-- [ ] Post-processing [4b] (pick one) [David]
+- [x] Post-processing [4b] (pick one) [David]
   - [x] (1b) Basic per-pixel filter, e.g. grayscale, or via a framebuffer:
-  - [ ] (2b) Convolution filter, or
-  - [ ] (4b) Advanced filter, e.g. bloom
+  - [x] (2b) Convolution filter, or
+  - [x] (4b) Advanced filter, e.g. bloom
 
 ## Engine side of project
 
 - [x] Add the blacksmith asset set, animate it
-- [ ] Fix the coal phyiscs problbly wind bug
-- [ ] Add procedural grass on the fields yk HAY
-- [ ] Add laterns for guards
-- [ ] Light lamp posts in village and on boats at night
+- [x] Fix the coal phyiscs problbly wind bug
+- [x] Add procedural grass on the fields yk HAY
+- [x] Add laterns for guards
+- [x] Light lamp posts in village and on boats at night

@@ -113,7 +113,7 @@ scn::Scene ballJar() {
 
     auto shader =
         std::make_shared<render::Shader>("grid_lit.vs", "grid_lit.fs");
-    auto grid = loader::loadTexture("grid_dark.png");
+    auto grid = loader::loadTexture("grid_dark.png", true);
 
     auto makeMaterial = [&](const char *name, glm::vec3 color) {
         auto material = std::make_shared<render::Material>(name, shader);

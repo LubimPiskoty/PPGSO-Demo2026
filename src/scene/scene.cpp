@@ -23,9 +23,19 @@ constexpr float SHADOW_CONSTANT_BIAS = 2.f;
 namespace scn {
 
 Scene::Scene()
-    : depthShader("depth.vs", "depth.fs"),
-      depthShaderInstanced("depth_instanced.vs", "depth.fs", true) {
+    : depthShader(std::make_unique<render::Shader>("depth.vs", "depth.fs")),
+      depthShaderInstanced(std::make_unique<render::Shader>(
+          "depth_instanced.vs", "depth.fs", true)) {
     this->root = Node::create("root");
+}
+
+void Scene::depth_prepass() {
+    if (activeCamera.expired())
+        return;
+    const auto camera = activeCamera.lock();
+    this->root->drawPrepass(
+        camera->projection,
+        glm::inverse(camera->node.lock()->globalTransform()));
 }
 
 void Scene::draw() {
@@ -47,7 +57,11 @@ void Scene::draw() {
     const auto camera_projection = activeCamera.lock()->projection;
     const auto inv_camera_transform =
         glm::inverse(activeCamera.lock()->node.lock()->globalTransform());
+    // The prepass already wrote the opaque depth: what's drawn again there
+    // is equal, and passes
+    glDepthFunc(GL_LEQUAL);
     this->root->draw(camera_projection, inv_camera_transform);
+    glDepthFunc(GL_LESS);
 }
 
 void Scene::update(float dt) {
@@ -245,8 +259,8 @@ void Scene::shadow_pass() {
             if (shadow->enabled &&
                 (light->bakedShadow || !shadow->bakedOnly) &&
                 (!sun || groupOf(shadow) == own))
-                shadow->drawShadow(proj, view, depthShader,
-                                   depthShaderInstanced);
+                shadow->drawShadow(proj, view, *depthShader,
+                                   *depthShaderInstanced);
     }
     glDisable(GL_POLYGON_OFFSET_FILL);
     // After the loop, a point light has 6 faces to render

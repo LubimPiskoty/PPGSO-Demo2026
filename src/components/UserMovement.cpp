@@ -8,20 +8,28 @@
 namespace component {
 
 void UserMovement::subscribeInput() {
-    input::onKey([this](int key, int action) {
+    subscriptions[0] = input::onKey([this](int key, int action) {
         if (enabled && action != GLFW_REPEAT)
             handleInput(key, action == GLFW_PRESS);
     });
-    input::onMouseButton([this](int button, int action) {
+    subscriptions[1] = input::onMouseButton([this](int button, int action) {
         if (!enabled)
             return;
         handleMouseButton(button, action == GLFW_PRESS);
         input::setCursorCaptured(looking);
     });
-    input::onCursorPos([this](double x, double y) {
+    subscriptions[2] = input::onCursorPos([this](double x, double y) {
         if (enabled)
             handleMouseMove(x, y);
     });
+}
+
+UserMovement::~UserMovement() {
+    for (int id : subscriptions)
+        input::unsubscribe(id);
+    // Not left captured by a camera that's gone
+    if (looking)
+        input::setCursorCaptured(false);
 }
 
 void UserMovement::update(float dt) {
@@ -39,7 +47,7 @@ void UserMovement::update(float dt) {
 }
 
 // W = (0, 0, -1), S = (0, 0, +1), A = (-1, 0, 0), D = (+1, 0, 0)
-// Space = (0, +1, 0), C = (0, -1, 0)
+// E = (0, +1, 0), Q = (0, -1, 0)
 void UserMovement::handleInput(int key, bool is_pressed) {
     if (key == forward_key)
         forward_held = is_pressed;
