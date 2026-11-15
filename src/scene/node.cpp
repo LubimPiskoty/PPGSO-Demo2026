@@ -52,19 +52,32 @@ void Node::update(float dt) {
     for (auto const &child : this->children)
         child->update(dt);
 }
-
-void Node::draw(glm::mat4 projection, glm::mat4 invCameraTransform) {
+    void Node::draw(glm::mat4 projection, glm::mat4 invCameraTransform,
+                    std::vector<TransparentDraw>& transparent) {
     if (!enabled)
         return;
 
     // Disabled components don't draw (a disabled Mesh can still cast a
     // shadow through its Shadow component)
-    for (const auto &component : components)
-        if (component->enabled)
-            component->draw(projection, invCameraTransform);
+    for (const auto &c : components) {
+        if (!c->enabled)
+            continue;
+        // Transparent meshes wait: Scene::draw draws them after the opaque
+        // ones, sorted far to near
+        if (c->type_id() == component::component_type_id<component::Mesh>()) {
+            auto *mesh = static_cast<component::Mesh *>(c.get());
+            if (mesh->material->blend != render::BlendMode::Opaque) {
+                glm::vec4 viewPos =
+                    invCameraTransform * glm::vec4(globalPosition(), 1.f);
+                transparent.push_back({mesh, -viewPos.z});
+                continue;
+            }
+        }
+        c->draw(projection, invCameraTransform);
+    }
 
     for (auto const &child : this->children)
-        child->draw(projection, invCameraTransform);
+        child->draw(projection, invCameraTransform, transparent);
 }
 
 void Node::drawPrepass(glm::mat4 projection, glm::mat4 invCameraTransform) {

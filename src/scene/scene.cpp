@@ -60,7 +60,20 @@ void Scene::draw() {
     // The prepass already wrote the opaque depth: what's drawn again there
     // is equal, and passes
     glDepthFunc(GL_LEQUAL);
-    this->root->draw(camera_projection, inv_camera_transform);
+
+    std::vector<TransparentDraw> transparent;
+    this->root->draw(camera_projection, inv_camera_transform, transparent);
+
+    // Transparent last, far to near: each blends over what's behind it
+    std::sort(transparent.begin(), transparent.end(),
+              [](const auto &a, const auto &b) { return a.viewDepth > b.viewDepth; });
+    for (auto &t : transparent)
+        t.mesh->draw(camera_projection, inv_camera_transform);
+
+    // Material::bind leaves these set after a transparent one
+    glDepthMask(GL_TRUE);
+    glDisable(GL_BLEND);
+
     glDepthFunc(GL_LESS);
 }
 

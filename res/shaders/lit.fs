@@ -350,5 +350,5 @@ void main() {
     if (uHasEmissiveMap)
         result += texture(uEmissiveTex, FragTexCoord).rgb * uEmissiveStrength;
 
-    FragColor = vec4(result, 1.0);
+    FragColor = vec4(result, uMaterial.opacity);
 }

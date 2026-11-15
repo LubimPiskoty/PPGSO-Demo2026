@@ -13,6 +13,8 @@
 #include <utility>
 #include <vector>
 
+namespace component { class Mesh; }
+
 namespace scn {
 
 // Decomposed position/rotation/scale, e.g. the result of collapsing a node's
@@ -21,6 +23,11 @@ struct PosRotScale {
     glm::vec3 pos{0.f};
     glm::quat rot{1.f, 0.f, 0.f, 0.f};
     glm::vec3 scale{1.f};
+};
+
+struct TransparentDraw {
+    component::Mesh* mesh;
+    float viewDepth;
 };
 
 class Node : public std::enable_shared_from_this<Node> {
@@ -95,7 +102,8 @@ class Node : public std::enable_shared_from_this<Node> {
 
     // Overridable functions
     void update(float dt);
-    void draw(glm::mat4 projection, glm::mat4 invCameraTransform);
+    void draw(glm::mat4 projection, glm::mat4 invCameraTransform,
+          std::vector<TransparentDraw>& transparent);
     void drawPrepass(glm::mat4 projection, glm::mat4 invCameraTransform);
 
     // General functions
