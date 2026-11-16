@@ -120,6 +120,21 @@ class PostProcessing {
     // After the prepass: the lit pass draws the color, the normals stay
     void shade() { msaa->drawTo(true, false); }
 
+    // Between the opaque and the transparent draws (Scene::drawTransparent):
+    // the opaque depth resolved, and bound on unit 8 as uSceneDepth (the
+    // water reads how deep it is under it), then on drawing the frame again
+    void resolveDepth() {
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, msaa->getFBO());
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, scene->getFBO());
+        glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
+                          GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+        msaa->bind();
+        shade();
+        glActiveTexture(GL_TEXTURE8);
+        glBindTexture(GL_TEXTURE_2D, scene->getDepthTex());
+        glActiveTexture(GL_TEXTURE0);
+    }
+
     // Distance from the camera, m, of what's drawn at uv (0..1, from the
     // bottom left), from the last frame's depth (resolved in end()); the far
     // plane where nothing is. Reads back from the GPU: a few points a frame.
@@ -163,10 +178,17 @@ class PostProcessing {
                 input = pass.fbs[r]->getColorTex();
             }
         }
+        output = input;
         Framebuffer::unbind(width, height);
         draw(screen, input, 0, input, nullptr);
         glEnable(GL_DEPTH_TEST);
     }
+
+    // The finished frame end() last showed (after every pass), width x
+    // height: what the render mode saves (main.cpp)
+    GLuint finalTexture() const { return output; }
+    int getWidth() const { return width; }
+    int getHeight() const { return height; }
 
   private:
     struct Pass {
@@ -180,6 +202,7 @@ class PostProcessing {
     };
 
     int width, height, samples;
+    GLuint output = 0; // finalTexture()
     glm::mat4 projection{1.f}, invProjection{1.f}, invView{1.f};
     GLuint screen, vao;
     std::unique_ptr<Framebuffer> msaa, scene;

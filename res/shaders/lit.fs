@@ -24,6 +24,15 @@ struct Material {
     float opacity;
 };
 uniform Material uMaterial;
+// BlendMode::Transparent (render::Material): blended over what's behind,
+// alpha the albedo's times uMaterial.opacity, not cut out at 0.5
+uniform bool uTransparent;
+// Water: the deeper it is under the surface, the less see-through. Per m of
+// water down to what's opaque behind it (uSceneDepth, the opaque pass's
+// depth, PostProcessing::resolveDepth); 0 off, the rest of the materials.
+uniform float uDepthFade;
+uniform sampler2D uSceneDepth; // unit 8
+uniform mat4 uProjection; // the vertex shader's, for the distances
 
 // Texture units match render::TextureSlot
 uniform sampler2D uAlbedoTex;
@@ -71,6 +80,12 @@ struct GpuLight {
 // surfaces the light grazes
 #define SHADOW_NORMAL_OFFSET 1.0
 #define SHADOW_GRAZING_OFFSET 1.5
+// The water's surface (MC_Water, its node 1 m down, demo_scene.cpp; the same
+// in ssao.fs and tools/drape_ground.py)
+#define WATER_LEVEL -5.29
+// No shadows below this: under the water's lowest troughs (water.vs's waves
+// sum to about 0.36 m), so nothing a trough uncovers loses its shadow
+#define NO_SHADOW_BELOW (WATER_LEVEL - 0.5)
 
 // Must match ShadowMaps::MAX_SUN_LAYERS / MAX_SMALL_LAYERS
 #define MAX_SUN_SHADOWS 4
@@ -136,6 +151,7 @@ struct Surface {
     vec3 specular;
     float shininess;
     float roughness;
+    float alpha; // 1 unless transparent
 };
 
 // Surface normal, perturbed by the normal map when there is one
@@ -165,8 +181,9 @@ Surface getSurface() {
     surf.faceNormal = normalize(gl_FrontFacing ? FragNormal : -FragNormal);
     vec4 albedo = texture(uAlbedoTex, FragTexCoord);
     // Alpha-masked cards (tree leaves, the corn's tassels); prepass.fs cuts
-    // the same
-    if (albedo.a < 0.5)
+    // the same. Transparent ones blend instead, fully clear texels dropped.
+    surf.alpha = uTransparent ? albedo.a * uMaterial.opacity : 1.0;
+    if (uTransparent ? surf.alpha < 0.01 : albedo.a < 0.5)
         discard;
     surf.albedo = albedo.rgb;
     surf.specular = uMaterial.specular;
@@ -216,7 +233,8 @@ float shadowPcf(sampler2DArrayShadow maps, int layer, vec3 c) {
 
 // 1 = lit, 0 = in shadow
 float shadowFactor(Light light, Surface surf, vec3 lightDir) {
-    if (light.shadowIndex < 0)
+    // Under the water no shadows: they showed on the sea floor through it
+    if (light.shadowIndex < 0 || surf.position.y < NO_SHADOW_BELOW)
         return 1.0;
 
     // Normal offset: the depth is looked up a little out from the surface,
@@ -227,7 +245,7 @@ float shadowFactor(Light light, Surface surf, vec3 lightDir) {
         texel *= length(surf.position - light.position);
     float grazing = 1.0 - max(dot(surf.faceNormal, lightDir), 0.0);
     surf.position += surf.faceNormal * texel * (SHADOW_NORMAL_OFFSET +
-            SHADOW_GRAZING_OFFSET * grazing);
+                SHADOW_GRAZING_OFFSET * grazing);
 
     if (light.type == LIGHT_POINT) {
         // One layer per cube face (+X -X +Y -Y +Z -Z), in the small maps
@@ -313,6 +331,11 @@ vec3 spotLight(Light light, Surface surf, vec3 viewDir) {
         attenuation(light, surf.position);
 }
 
+// Distance in front of the camera, m, of a depth buffer value (0..1)
+float eyeDepth(float depth) {
+    return uProjection[3][2] / (depth * 2.0 - 1.0 + uProjection[2][2]);
+}
+
 // ---------------------------------------------------------------------------
 
 void main() {
@@ -333,6 +356,25 @@ void main() {
             result += spotLight(light, surf, viewDir);
     }
 
+    // Water: by the stretch of the view ray between the surface and what's
+    // behind it, from its opacity in the shallows to opaque where it's deep,
+    // and its own colour darker (light gets lost on the way down and back).
+    // Before the sky's reflection, so the waves keep theirs.
+    if (uTransparent && uDepthFade > 0.0) {
+        const float DEEPEST = 0.15; // the water's own colour when deep
+        float behind = texelFetch(uSceneDepth, ivec2(gl_FragCoord.xy), 0).r;
+        // Clamped: with MSAA a pixel the surface only partly covers is
+        // shaded at its middle, off the triangle, and at grazing angles the
+        // depth there can run past the far plane: a negative distance, the
+        // alpha went hugely negative and the blend left black specks
+        float here = max(eyeDepth(clamp(gl_FragCoord.z, 0.0, 1.0)), 0.01);
+        float through = max(eyeDepth(behind) - here, 0.0) *
+                length(uViewPos.xyz - surf.position) / here;
+        float clear = clamp(exp(-through * uDepthFade), 0.0, 1.0);
+        surf.alpha = clamp(mix(1.0, surf.alpha, clear), 0.0, 1.0);
+        result *= mix(DEEPEST, 1.0, clear);
+    }
+
     // Sky reflection with Fresnel
     if (uReflectivity > 0.0) {
         vec3 reflectDir = reflect(-viewDir, surf.normal); // reflection from camera view
@@ -340,7 +382,9 @@ void main() {
         vec3 envColor = textureLod(uSkybox, reflectDir, lod).rgb * uSkyTint; // read from blurred mip level
 
         // Schlick Fresnel
-        float NdotV = max(dot(surf.normal, viewDir), 0.0); // if its 1 then its 90angles direction => fresnel weak
+        // Clamped to 1 too: rounding can give 1.0000001, and pow() of a
+        // negative 1 - NdotV below would be NaN
+        float NdotV = clamp(dot(surf.normal, viewDir), 0.0, 1.0); // if its 1 then its 90angles direction => fresnel weak
         float fresnel = uReflectivity + (1.0 - uReflectivity) * pow(1.0 - NdotV, 5.0);
         float amount = fresnel * (1.0 - surf.roughness); // rough surfaces reflect less
         result = mix(result, envColor, amount);
@@ -350,5 +394,9 @@ void main() {
     if (uHasEmissiveMap)
         result += texture(uEmissiveTex, FragTexCoord).rgb * uEmissiveStrength;
 
-    FragColor = vec4(result, 1.0);
+    // Well under what the half float frame holds (65504): a sun glint past
+    // that turns infinite, and the blurs and the bloom spread it
+    result = min(result, vec3(1000.0));
+
+    FragColor = vec4(result, surf.alpha);
 }

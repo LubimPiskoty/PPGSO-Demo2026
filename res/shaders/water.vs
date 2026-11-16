@@ -57,7 +57,11 @@ void main() {
     FragNormal = normalize(vec3(-slope.x, 1.0 - squeeze, -slope.y));
     // Along +x the surface rises by dh/dx
     FragTangent = normalize(vec3(1.0 - squeeze, slope.x, 0.0));
-    FragTexCoord = TexCoord;
+    // The repeating ripple textures (tools/make_water_textures.py), TILE m
+    // each, drifting slowly, laid by the world position (not the mesh's
+    // atlas UVs: one atlas cell over the whole sea was 2 m a texel)
+    const float TILE = 64.0;
+    FragTexCoord = world.xz / TILE + uTime * vec2(0.0045, 0.0026);
 
     gl_Position = uProjection * uView * vec4(FragPos, 1.0);
 }

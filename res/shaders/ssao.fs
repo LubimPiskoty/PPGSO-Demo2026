@@ -34,9 +34,21 @@ const float RADIUS = 1.50; // m around a point that can occlude it
 // so less than 1 keeps sunny dense grass from going dark.
 const float STRENGTH = 1.6;
 const float BIAS = 0.025; // m, so a surface doesn't occlude itself
+// Occluders facing the same way as the point (cos of the angle between their
+// normals from COPLANAR_FROM up to 1) count only COPLANAR_WEIGHT
+const float COPLANAR_FROM = 0.85; // about 30 degrees apart
+const float COPLANAR_WEIGHT = 0.2;
+// ... when it's at most LAYER_NEAR m over the point's plane, fading back to
+// full by LAYER_FAR
+const float LAYER_NEAR = 0.05, LAYER_FAR = 0.2;
 // Far away the depth is too coarse to tell creases from noise: the
 // occlusion fades out between these distances, m
 const float FADE_START = 60.0;
+// The water's surface (MC_Water, its node 1 m down, demo_scene.cpp): the
+// water isn't in the depth (it's transparent), so under it the seabed and
+// the hulls would darken the water drawn over them. Left open: the water
+// darkens them by its depth instead (lit.fs).
+const float WATER_LEVEL = -5.0;
 const float FADE_END = 120.0;
 
 vec3 viewPos(vec2 uv) {
@@ -52,7 +64,7 @@ float occlusion() {
         return 1.0;
     vec3 fragPos = viewPos(vUV);
     float distance = length(fragPos);
-    if (distance > FADE_END)
+    if (distance > FADE_END || (uInvView * vec4(fragPos, 1.0)).y < WATER_LEVEL)
         return 1.0;
     // The camera's rotation is orthonormal: its transpose turns world into
     // view space
@@ -73,9 +85,20 @@ float occlusion() {
         offset.xy = offset.xy / offset.w * 0.5 + 0.5;
         // What's drawn there: in front of the sample, it occludes; only
         // what's within RADIUS counts (no dark halos round a silhouette)
-        float sampleDepth = viewPos(offset.xy).z;
+        vec3 occluder = viewPos(offset.xy);
+        float sampleDepth = occluder.z;
         float rangeCheck =
             smoothstep(0.0, 1.0, RADIUS / abs(fragPos.z - sampleDepth));
+        // What occludes it facing the same way and lying just over its plane
+        // (the ground's patches over each other, a few cm apart): the same
+        // flat surface, it hardly counts. Walls, hulls, houses at an angle,
+        // and leaves further off, count in full.
+        vec3 occluderNormal = texture(uNormal, offset.xy).xyz;
+        float coplanar = smoothstep(COPLANAR_FROM, 1.0,
+                dot(occluderNormal, normalWorld)) *
+                (1.0 - smoothstep(LAYER_NEAR, LAYER_FAR,
+                        dot(occluder - fragPos, normal)));
+        rangeCheck *= mix(1.0, COPLANAR_WEIGHT, coplanar);
         occluded += (sampleDepth >= samplePos.z + BIAS ? 1.0 : 0.0) * rangeCheck;
     }
     float open = 1.0 - occluded / float(KERNEL_SIZE);

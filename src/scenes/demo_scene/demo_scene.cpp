@@ -3,6 +3,7 @@
 #include "city_layout.hpp"
 #include "lamp_posts.hpp"
 #include "light_props.hpp"
+#include "road_lifts.hpp"
 
 #include "../../components/animator.hpp"
 #include "../../components/camera.hpp"
@@ -181,25 +182,50 @@ std::vector<Patch> patchesOf(const std::vector<V> &corners) {
 
 // Every copy of a model in one instanced draw, casting shadows. Flat tiles
 // are open surfaces: nothing behind their front faces for the shadow pass.
+// lifts: the road tiles' lifts over the terrain and each other
+// (city::roadLift, tools/drape_ground.py), so nothing fights over the depth.
 std::shared_ptr<scn::Node>
 instanced(const city::Group &group,
-          const std::shared_ptr<render::Material> &material,
-          bool open = false) {
-    std::vector<component::Instance> instances;
+          const std::shared_ptr<render::Material> &material, bool open = false,
+          const float *lifts = nullptr) {
+    // Mirrored copies wind the other way round: drawn on their own, with
+    // the front faces flipped (render::Mesh::mirrored), or they'd be culled
+    std::vector<component::Instance> instances, mirrored;
     for (int i = 0; i < group.count; i++) {
         const city::Placement &p = group.copies[i];
         component::Instance instance;
         instance.position = position(p);
+        if (lifts)
+            instance.position.y += lifts[i];
         instance.rotation = {p.rx, p.ry, p.rz};
         instance.scale = V(p.scale);
         if (p.mirrored)
             instance.scale.y = -p.scale; // flat, so only the normal flips
-        instances.push_back(instance);
+        (p.mirrored ? mirrored : instances).push_back(instance);
     }
+    // Flat tiles have nothing under them: both sides drawn, so the docks
+    // over the water aren't see-through from below (lit.fs turns the
+    // normal round for the back)
+    auto tile = [&](bool flip) {
+        auto m = model(group.model);
+        for (render::Mesh &mesh : m->meshes) {
+            mesh.doubleSided = open;
+            mesh.mirrored = flip;
+        }
+        return m;
+    };
     auto node = scn::Node::create(group.model);
-    node->add_component<component::Mesh>(model(group.model), material);
+    node->add_component<component::Mesh>(tile(false), material);
     node->add_component<component::Instances>(std::move(instances));
     node->add_component<component::Shadow>()->open = open;
+    if (!mirrored.empty()) {
+        auto flipped = tile(true);
+        auto child = scn::Node::create(std::string(group.model) + "_Mirrored");
+        child->add_component<component::Mesh>(flipped, material);
+        child->add_component<component::Instances>(std::move(mirrored));
+        child->add_component<component::Shadow>()->open = open;
+        node->add_child(child);
+    }
     return node;
 }
 
@@ -581,19 +607,28 @@ struct Demo {
         // Gerstner waves in water.vs, lit.fs adds the sky reflection
         water = std::make_shared<render::Material>(
             "Water", std::make_shared<render::Shader>("water.vs", "lit.fs"));
-        water->setFloat("uReflectivity", 0.3f);
+        water->setFloat("uReflectivity", 0.03f);
         water->setFloat("uRoughness", 0.1f);
-        water->specular = glm::vec3(0.8f);
-        water->shininess = 96.f;
+        water->specular = glm::vec3(0.3f);
+        water->shininess = 60.f;
+        // See-through in the shallows (opacity there), opaque where it's
+        // deep: uDepthFade per m of water (lit.fs), so the bottom and the
+        // hulls fade out with the depth while the waves stay on top
+        // (the transparent pass, Scene::drawTransparent)
+        water->blend = render::BlendMode::Transparent;
+        water->opacity = 0.6f;
+        water->setFloat("uDepthFade", 0.28f);
         litInstanced = std::make_shared<render::Material>(
             "Lit instanced", std::make_shared<render::Shader>(
                                  "default_instanced.vs", "lit.fs", true));
         // Trees: bend in the wind (foliage_instanced.vs), leaves seen from
         // both sides. Same wind direction as the water's swells.
         foliage = std::make_shared<render::Material>(
-            "Foliage", std::make_shared<render::Shader>(
-                           "foliage_instanced.vs", "lit.fs", true));
-        foliage->doubleSided = true;
+            "Foliage", std::make_shared<render::Shader>("foliage_instanced.vs",
+                                                        "lit.fs", true));
+        // Not double sided: the tree files have every leaf card both ways
+        // round, with canopy normals (tools/tree_normals.py)
+        foliage->doubleSided = false;
         foliage->setVec3("uWindDir", glm::vec3(1.f, 0.f, 0.25f));
         foliage->setFloat("uWindStrength", 1.75f);
         foliage->setFloat("uPlantHeight", 11.f); // the tallest tree models
@@ -643,7 +678,15 @@ void addCityObjects(Demo &d) {
         for (const city::Group &group : groups)
             d.city->add_child(instanced(group, material, open));
     };
-    add(city::ground, d.litInstanced, true);
+    // The road tiles, lifted (road_lifts.hpp, one per copy)
+    static_assert(std::size(city::roadLift) ==
+                      std::size(city::ground_City_Ground),
+                  "road_lifts.hpp is stale: run tools/drape_ground.py");
+    for (const city::Group &group : city::ground)
+        d.city->add_child(instanced(group, d.litInstanced, true,
+                                    group.copies == city::ground_City_Ground
+                                        ? city::roadLift
+                                        : nullptr));
     add(city::houses, d.litInstanced);
     add(city::buildings, d.litInstanced);
     add(city::people, d.litInstanced);
@@ -867,8 +910,8 @@ void addCorn(Demo &d) {
             plants.push_back(plant);
         }
     }
-    d.instancedModel("Corn", "ENV_Corn.glb", corn,
-                     std::move(plants), false); // no Shadow, see above
+    d.instancedModel("Corn", "ENV_Corn.glb", corn, std::move(plants),
+                     false); // no Shadow, see above
 }
 
 // Boats and ships ride the waves, each its own node, what stands on their
@@ -876,6 +919,11 @@ void addCorn(Demo &d) {
 // in the hull's space): standing on the ships' stern post and hung on the
 // front of the mast, on the boats' stern.
 void addBoats(Demo &d) {
+    // Leftover people standing on a deck, cut out of MC_Rest_People.glb by
+    // tools/split_ship_crew.py: the boat's place in city::boats, the file
+    const std::pair<size_t, const char *> REST_CREW[] = {
+        {4, "MC_Rest_Crew_4.glb"},
+    };
     const auto shipLamps =
         std::make_shared<render::Material>("Ship lamp", d.lit->getShader());
     d.glowing.push_back(shipLamps);
@@ -929,6 +977,21 @@ void addBoats(Demo &d) {
             child->add_component<component::Shadow>();
             node->add_child(child);
         }
+        // The leftover people on its deck (tools/split_ship_crew.py), world
+        // space: undone by the boat's rest transform, so they ride along
+        for (const auto &[boatIndex, file] : REST_CREW) {
+            if (boatIndex != i)
+                continue;
+            auto crew =
+                scn::Node::create("Rest_Crew", toBoat * -position(p) / p.scale);
+            crew->setLocalRot(toBoat);
+            crew->setLocalScale(V(1.f / p.scale));
+            crew->add_component<component::Mesh>(
+                std::make_shared<render::Model>(loader::loadModel(file)),
+                d.lit);
+            crew->add_component<component::Shadow>();
+            node->add_child(crew);
+        }
         d.city->add_child(node);
     }
 }
@@ -942,8 +1005,9 @@ void addGroundAndWater(Demo &d) {
             continue;
         if (std::string(model) == "Rest_Environment") {
             // The terrain, split in two (tools/drape_ground.py): the
-            // ground, one open surface that casts, and the round grass and
-            // dirt patches lying on it, which don't (see addPatches)
+            // ground, an open surface that casts, and the round grass and
+            // dirt patches lying on it, which don't (their shadows fell a
+            // little off them, as the draped decals' did, see addPatches)
             auto ground = scn::Node::create("Rest_Ground");
             ground->add_component<component::Mesh>(
                 std::make_shared<render::Model>(
@@ -970,9 +1034,19 @@ void addGroundAndWater(Demo &d) {
     }
     // Split into small triangles for the waves (tools/subdivide_water.py)
     auto node = scn::Node::create("Water", glm::vec3(0, -1, 0));
-    node->add_component<component::Mesh>(
-        std::make_shared<render::Model>(loader::loadModel("MC_Water.glb")),
-        d.water);
+    // The water's own repeating textures (tools/make_water_textures.py,
+    // laid by water.vs), not the atlas cell the file has: its textures
+    // would win over the material's
+    auto sea =
+        std::make_shared<render::Model>(loader::loadModel("MC_Water.glb"));
+    for (render::Mesh &mesh : sea->meshes)
+        for (GLuint &texture : mesh.textures)
+            texture = 0;
+    d.water->setTexture(render::TextureSlot::Albedo,
+                        loader::loadTexture("ENV_Water_Albedo.png", true));
+    d.water->setTexture(render::TextureSlot::Normal,
+                        loader::loadTexture("ENV_Water_Normal.png"));
+    node->add_component<component::Mesh>(sea, d.water);
     d.city->add_child(node);
 }
 
@@ -1168,7 +1242,7 @@ std::shared_ptr<component::Animator> addCamera(Demo &d) {
             at = flown.end;
         }
         // The timelapse: high above the city, looking down on it like on a
-        // model (the tilt-shift blur is a post-processing pass), a slow
+        // model, a slow
         // drift while the day goes by. The sun crosses the sky along its
         // path's z axis, (0.94, 0.34) on the ground: the camera looks along
         // that and drifts across it, (0.34, -0.94), so the shadows don't
@@ -1195,9 +1269,10 @@ std::shared_ptr<component::Animator> addCamera(Demo &d) {
                         then(then(posDay, lapse.pos), night.pos),
                         component::PlayMode::Single);
         // After the position: turned to face what it looks at
-        auto &look = clock->addTrack(component::AnimTarget::Property,
-                                     then(then(lookDay, lapse.look), night.look),
-                                     component::PlayMode::Single);
+        auto &look =
+            clock->addTrack(component::AnimTarget::Property,
+                            then(then(lookDay, lapse.look), night.look),
+                            component::PlayMode::Single);
         look.name = "look at";
         look.setProperty = [node = camNode.get()](const V &target) {
             node->setLocalRot(glm::quatLookAt(
@@ -1205,22 +1280,6 @@ std::shared_ptr<component::Animator> addCamera(Demo &d) {
         };
         camNode->setLocalPos(posDay.keys.front().value);
         look.setProperty(lookDay.keys.front().value);
-    }
-    {
-        // Tilt-shift for the timelapse's miniature look (dof.fs), switched
-        // while the screen is black between the shots
-        auto &track = clock->addTrack(component::AnimTarget::Property,
-                                      Curve::flat({{0.f, V(0.f)},
-                                                   {LAPSE_AT, V(0.f)},
-                                                   {LAPSE_AT, V(1.f)},
-                                                   {NIGHT_AT, V(1.f)},
-                                                   {NIGHT_AT, V(0.f)},
-                                                   {CUT, V(0.f)}}),
-                                      component::PlayMode::Single);
-        track.name = "tilt shift";
-        track.setProperty = [tilt = d.scene.tiltShift](const V &v) {
-            *tilt = v.x;
-        };
     }
     {
         // Narrow view for the timelapse's miniature look, normal for the
@@ -1346,15 +1405,16 @@ void addFadesAndCut(Demo &d, component::Animator &clock) {
 void addSmoke(Demo &d) {
     auto smoke = scn::Node::create("Smoke");
     auto material = std::make_shared<render::Material>(
-        "Smoke", std::make_shared<render::Shader>("particle.vs", "particle.fs"));
+        "Smoke",
+        std::make_shared<render::Shader>("particle.vs", "particle.fs"));
     auto spawn = std::make_shared<render::ComputeShader>("spawnParticle.comp");
     auto update =
         std::make_shared<render::ComputeShader>("updateParticle.comp");
     // About half the houses have a fire going, the smithy always
     std::vector<V> chimneys;
-    std::mt19937 pick(11);
+    std::mt19937 pick(15);
     for (const auto &top : city::chimneys)
-        if (std::bernoulli_distribution(0.3)(pick))
+        if (std::bernoulli_distribution(0.17)(pick))
             chimneys.push_back(vec(top));
     chimneys.push_back(d.inForge(vec(forge::chimneyTop)));
     // Every house's fire its own: how much smoke, how dark, how fast it
@@ -1424,13 +1484,12 @@ void addDusk(Demo &d, component::Animator &clock) {
         fires.push_back({smoke, moment(order)});
     // A lamp fades in over this much of it
     constexpr float FADE = 0.04f;
-    auto &track =
-        clock.addTrack(component::AnimTarget::Property,
-                       Curve::flat({{0.f, V(0.f)},
-                                    {from, V(0.f)},
-                                    {to, V(1.f)},
-                                    {d.time.cut, V(1.f)}}),
-                       component::PlayMode::Single);
+    auto &track = clock.addTrack(component::AnimTarget::Property,
+                                 Curve::flat({{0.f, V(0.f)},
+                                              {from, V(0.f)},
+                                              {to, V(1.f)},
+                                              {d.time.cut, V(1.f)}}),
+                                 component::PlayMode::Single);
     track.name = "dusk";
     track.setProperty = [lamping, fires, glowing = d.glowing](const V &v) {
         const float now = glm::clamp(v.x, 0.f, 1.f) * (1.f + FADE);
@@ -1446,8 +1505,12 @@ void addDusk(Demo &d, component::Animator &clock) {
         for (const Fire &fire : fires)
             if (auto e = fire.smoke.lock())
                 e->spawning = now >= fire.at;
+        // Lit glass far brighter than what its light falls on (HDR), so
+        // the bloom (bloom.fs, from 0.7) has something to spread; AgX rolls
+        // it off to a hot white
+        constexpr float LAMP_GLOW = 8.f;
         for (const auto &m : glowing)
-            m->setFloat("uEmissiveStrength", v.x);
+            m->setFloat("uEmissiveStrength", v.x * LAMP_GLOW);
     };
 }
 

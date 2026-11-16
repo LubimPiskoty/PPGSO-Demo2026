@@ -25,6 +25,7 @@ Mesh &Mesh::operator=(Mesh &&other) noexcept {
         for (int i = 0; i < (int)TextureSlot::Count; i++)
             textures[i] = other.textures[i];
         doubleSided = other.doubleSided;
+        mirrored = other.mirrored;
     }
     return *this;
 }
@@ -96,23 +97,30 @@ void Mesh::restoreTextures(const Overridden &saved) const {
     glActiveTexture(GL_TEXTURE0);
 }
 
-// Turns culling off for a double sided mesh, back on after if it was on
+// Turns culling off for a double sided mesh, back on after if it was on.
+// A mirrored mesh's triangles wind the other way round: clockwise is its
+// front while it draws.
 struct CullOff {
-    bool restore;
-    explicit CullOff(bool doubleSided)
-        : restore(doubleSided && glIsEnabled(GL_CULL_FACE)) {
+    bool restore, mirrored;
+    CullOff(bool doubleSided, bool mirrored)
+        : restore(doubleSided && glIsEnabled(GL_CULL_FACE)),
+          mirrored(mirrored) {
         if (restore)
             glDisable(GL_CULL_FACE);
+        if (mirrored)
+            glFrontFace(GL_CW);
     }
     ~CullOff() {
         if (restore)
             glEnable(GL_CULL_FACE);
+        if (mirrored)
+            glFrontFace(GL_CCW);
     }
 };
 
 void Mesh::draw() const {
     Overridden saved = bindTextures();
-    CullOff cull(doubleSided);
+    CullOff cull(doubleSided, mirrored);
     glBindVertexArray(vao);
     glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, nullptr);
     glBindVertexArray(0);
@@ -121,7 +129,7 @@ void Mesh::draw() const {
 
 void Mesh::draw_instanced(GLsizei instance_count) const {
     Overridden saved = bindTextures();
-    CullOff cull(doubleSided);
+    CullOff cull(doubleSided, mirrored);
     glBindVertexArray(vao);
     glDrawElementsInstanced(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, nullptr,
                             instance_count);

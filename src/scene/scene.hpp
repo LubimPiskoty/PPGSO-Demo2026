@@ -39,10 +39,6 @@ class Scene {
     // the normal image, 0 black. Shared like cutTo, the scene's animations
     // fade it around the cuts.
     std::shared_ptr<float> fade = std::make_shared<float>(1.f);
-    // How much of the depth of field is tilt-shift instead of the lens, 0..1
-    // (dof.fs, render::Dof). Shared like fade: the demo's clock turns it on
-    // for the timelapse.
-    std::shared_ptr<float> tiltShift = std::make_shared<float>(0.f);
 
     Scene();
 
@@ -55,7 +51,11 @@ class Scene {
     // camera, before draw (render::PostProcessing::begin binds the buffers):
     // draw then shades every pixel about once, the post passes read both
     void depth_prepass();
+    // The opaque meshes (and the sky)
     void draw();
+    // Then the transparent ones, farthest first: after
+    // render::PostProcessing::resolveDepth, the water reads the opaque depth
+    void drawTransparent();
     // Renders the scene depth from every shadow casting light into shadowMaps
     void shadow_pass();
     const render::ShadowMaps &getShadowMaps() const { return *shadowMaps; }

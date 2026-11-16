@@ -9,8 +9,8 @@ out vec4 FragColor;
 uniform sampler2D uScreen;
 uniform int uPass; // 0 horizontal, 1 vertical
 
-const float SIGMA = 6.0; // px, how strong the blur is
-const int RADIUS = 18;   // px each side, 3 sigma: the weights beyond are ~0
+const float SIGMA = 0.45; // px, how strong the blur is
+const int RADIUS = 18; // px each side, 3 sigma: the weights beyond are ~0
 
 void main() {
     vec2 texel = 1.0 / vec2(textureSize(uScreen, 0));

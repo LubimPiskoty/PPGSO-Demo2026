@@ -27,8 +27,9 @@ constexpr int textureUnit(int slot) { return slot < 4 ? slot : slot + 2; }
 
 enum class BlendMode {
   Opaque,
-  // Blending on, depth writes off (Material::bind). Not sorted yet, and
-  // lit.fs doesn't output the opacity: see TODO.md, transparent objects
+  // Blending on, depth writes off (Material::bind); lit.fs outputs the
+  // albedo's alpha times opacity. Drawn after everything opaque, farthest
+  // first (Scene::draw), and left out of the depth prepass.
   Transparent,
 };
 

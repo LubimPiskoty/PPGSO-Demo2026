@@ -85,6 +85,9 @@ void Material::bindTo(GLuint program) const {
     glUniform3fv(uniLoc("uMaterial.specular"), 1, glm::value_ptr(specular));
     glUniform1f(uniLoc("uMaterial.shininess"), shininess);
     glUniform1f(uniLoc("uMaterial.opacity"), opacity);
+    glUniform1i(uniLoc("uTransparent"), blend == BlendMode::Transparent);
+    // The opaque depth, for the transparent pass (PostProcessing::resolveDepth)
+    glUniform1i(uniLoc("uSceneDepth"), 8);
     glUniform1f(uniLoc("uTime"), time);
     glUniform3fv(uniLoc("uSkyTint"), 1, glm::value_ptr(skyTint));
 

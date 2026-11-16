@@ -36,6 +36,9 @@ struct Mesh {
     // The file's material is double sided (glTF doubleSided): drawn without
     // back-face culling whatever the Material says
     bool doubleSided = false;
+    // Drawn with a mirroring transform (a negative scale): its triangles
+    // wind clockwise on screen, so that is their front (glFrontFace)
+    bool mirrored = false;
 
     void draw() const;
     void draw_instanced(GLsizei instance_count) const;
