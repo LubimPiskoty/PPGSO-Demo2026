@@ -114,7 +114,7 @@ static void run(GLFWwindow *window, int fbWidth, int fbHeight,
     static constexpr Layer LAYERS[] = {
         // Ambient occlusion (render::Ssao), then darkened by it
         {"ssao.fs", true, 2},
-        {"blur.fs", true, 2}, // Gaussian: horizontal, then vertical
+        // {"blur.fs", true, 2}, // Gaussian: horizontal, then vertical
         // {"inverse.fs", false},
         {"bloom.fs", true},
         // Distance fog, coloured by the sky behind (the skybox, unit 4)

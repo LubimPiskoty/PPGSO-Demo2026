@@ -9,7 +9,7 @@ out vec4 FragColor;
 uniform sampler2D uScreen;
 uniform int uPass; // 0 horizontal, 1 vertical
 
-const float SIGMA = 0.45; // px, how strong the blur is
+const float SIGMA = 5.45; // px, how strong the blur is
 const int RADIUS = 18; // px each side, 3 sigma: the weights beyond are ~0
 
 void main() {
