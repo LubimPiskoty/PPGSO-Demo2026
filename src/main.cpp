@@ -125,6 +125,7 @@ static void run(GLFWwindow *window, int fbWidth, int fbHeight,
         // are sRGB, decoded when sampled), this encodes it for the screen
         {"agx_tonemapper.fs", true},
         // {"gama.fs", true},
+        {"grayscale.fs", false},
     };
     for (const Layer &layer : LAYERS)
         post.add(layer.shader, layer.on, layer.repeats);
