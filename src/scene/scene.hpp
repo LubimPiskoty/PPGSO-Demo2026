@@ -53,9 +53,11 @@ class Scene {
     void depth_prepass();
     // The opaque meshes (and the sky)
     void draw();
-    // Then the transparent ones, farthest first: after
+    // Then the transparent ones draw() set aside, farthest first: after
     // render::PostProcessing::resolveDepth, the water reads the opaque depth
     void drawTransparent();
+    // draw()'s transparent meshes, for drawTransparent
+    std::vector<TransparentDraw> transparent;
     // Renders the scene depth from every shadow casting light into shadowMaps
     void shadow_pass();
     const render::ShadowMaps &getShadowMaps() const { return *shadowMaps; }

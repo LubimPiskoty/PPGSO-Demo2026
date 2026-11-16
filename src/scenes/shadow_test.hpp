@@ -67,6 +67,48 @@ scn::Scene shadowTest() {
     addCaster("Pyramid", pyramid, {-1.f, 0.f, -3.f}, 1.f);
     addCaster("Floating box", box, {0.5f, 2.5f, 0.f}, 0.6f);
 
+    // Transparent objects: drawn after the opaque ones, sorted far to near
+    // (Scene::draw). No Shadow component, glass doesn't cast a full shadow.
+    unsigned char clear[4] = {255, 255, 255, 255};
+    auto glassTexture = std::make_shared<render::Texture>(
+        render::Texture{loader::createTexture(clear, 1, 1), "<glass>"});
+
+    auto makeGlass = [&](const std::string &name, glm::vec3 color,
+                         float opacity) {
+        auto mat = std::make_shared<render::Material>(name, litShader);
+        mat->setTexture(render::TextureSlot::Albedo, glassTexture);
+        mat->diffuse = color;
+        mat->ambient = color * 0.2f;
+        mat->specular = glm::vec3(1.f);
+        mat->shininess = 128.f;
+        mat->opacity = opacity;
+        mat->blend = render::BlendMode::Transparent;
+        return mat;
+    };
+
+    // Three panes in a row in front of the camera: from any side the nearest
+    // one has to dominate the colour
+    auto pane = std::make_shared<render::Model>(
+        loader::createBox(glm::vec3(0.8f, 0.6f, 0.03f)));
+    const glm::vec3 paneColors[3] = {
+        {1.f, 0.2f, 0.2f}, {0.2f, 1.f, 0.3f}, {0.2f, 0.4f, 1.f}};
+    for (int i = 0; i < 3; i++) {
+        auto node = scn::Node::create("Glass pane " + std::to_string(i),
+                                      glm::vec3(0.8f + 0.3f * i, 0.6f, 3.5f + 1.f * i));
+        node->add_component<component::Mesh>(
+            pane, makeGlass("Glass " + std::to_string(i), paneColors[i], 0.45f));
+        scene.root->add_child(node);
+    }
+
+    // Glass sphere: the floor and the box behind it show through
+    {
+        auto node = scn::Node::create("Glass sphere", glm::vec3(-3.5f, 1.f, 1.5f));
+        node->add_component<component::Mesh>(
+            sphere, makeGlass("Glass sphere", glm::vec3(0.9f, 0.9f, 1.f), 0.3f));
+        scene.root->add_child(node);
+    }
+
+
     // Camera
     {
         auto node = scn::Node::create("Camera", glm::vec3{0.f, 5.f, 9.f});

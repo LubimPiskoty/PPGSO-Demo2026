@@ -32,15 +32,8 @@ class Mesh : public component::ComponentBase<Mesh> {
         return s;
     }
 
-    // Normal pass, opaque materials: transparent ones wait for the
-    // transparent pass (Scene::draw), which calls drawLit for them
+    // Normal pass: sets the camera on the material, binds it and draws
     void draw(glm::mat4 projection, glm::mat4 invCameraTransform) override {
-        if (material->blend != render::BlendMode::Transparent)
-            drawLit(projection, invCameraTransform);
-    }
-
-    // Sets the camera on the material, binds it and draws
-    void drawLit(glm::mat4 projection, glm::mat4 invCameraTransform) {
         if (checkInstancedCompatibility())
             return;
 

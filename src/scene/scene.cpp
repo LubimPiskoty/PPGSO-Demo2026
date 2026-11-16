@@ -19,29 +19,6 @@ namespace {
 // glPolygonOffset of the shadow pass (factor, units)
 constexpr float SHADOW_SLOPE_BIAS = 1.5f;
 constexpr float SHADOW_CONSTANT_BIAS = 2.f;
-
-// A transparent mesh to draw, and how far it is from the camera
-struct Transparent {
-    float distance;
-    component::Mesh *mesh;
-};
-
-// Every enabled mesh with a transparent material under node
-void gatherTransparent(const std::shared_ptr<scn::Node> &node,
-                       const glm::vec3 &cameraPos,
-                       std::vector<Transparent> &out) {
-    if (!node->enabled)
-        return;
-    for (const auto &component : node->components)
-        if (auto mesh = std::dynamic_pointer_cast<component::Mesh>(component))
-            if (mesh->enabled &&
-                mesh->material->blend == render::BlendMode::Transparent)
-                out.push_back(
-                    {glm::distance(node->globalPosition(), cameraPos),
-                     mesh.get()});
-    for (const auto &child : node->children)
-        gatherTransparent(child, cameraPos, out);
-}
 } // namespace
 
 namespace scn {
@@ -84,7 +61,12 @@ void Scene::draw() {
     // The prepass already wrote the opaque depth: what's drawn again there
     // is equal, and passes
     glDepthFunc(GL_LEQUAL);
-    this->root->draw(camera_projection, inv_camera_transform);
+
+    // Transparent meshes are set aside (Node::draw), drawn by
+    // drawTransparent once the opaque depth is resolved (main.cpp)
+    transparent.clear();
+    this->root->draw(camera_projection, inv_camera_transform, transparent);
+
     glDepthFunc(GL_LESS);
 }
 
@@ -94,22 +76,19 @@ void Scene::drawTransparent() {
     const auto camera_projection = activeCamera.lock()->projection;
     const auto inv_camera_transform =
         glm::inverse(activeCamera.lock()->node.lock()->globalTransform());
-    // After everything opaque, so it blends over it, and farthest first, so
-    // the nearer blend over the farther (sorted by each mesh's node, not per
-    // triangle). They test the depth but don't write it (Material::bind),
-    // so they don't hide each other.
-    std::vector<Transparent> transparent;
-    const glm::vec3 cameraPos =
-        activeCamera.lock()->node.lock()->globalPosition();
-    gatherTransparent(root, cameraPos, transparent);
+    glDepthFunc(GL_LEQUAL);
+
+    // Transparent last, far to near: each blends over what's behind it
     std::sort(transparent.begin(), transparent.end(),
-              [](const Transparent &a, const Transparent &b) {
-                  return a.distance > b.distance;
-              });
-    for (const Transparent &t : transparent)
-        t.mesh->drawLit(camera_projection, inv_camera_transform);
-    glDisable(GL_BLEND);
+              [](const auto &a, const auto &b) { return a.viewDepth > b.viewDepth; });
+    for (auto &t : transparent)
+        t.mesh->draw(camera_projection, inv_camera_transform);
+
+    // Material::bind leaves these set after a transparent one
     glDepthMask(GL_TRUE);
+    glDisable(GL_BLEND);
+
+    glDepthFunc(GL_LESS);
 }
 
 void Scene::update(float dt) {
