@@ -1,0 +1,158 @@
+#version 430
+// Forward+ light culling (render::LightCulling), one workgroup per screen
+// tile, after the depth prepass. Two lists a tile:
+// - opaque: the lights whose sphere reaches into the tile's frustum, cut
+//   off front and back at the nearest and farthest depth in the tile
+// - transparent: the same from the camera's near plane to the farthest
+//   depth (the transparent surfaces aren't in the depth, but lie in front
+//   of what's opaque)
+// lit.fs shades a pixel with its tile's list only.
+
+#define TILE_SIZE 16
+// Must match LightCulling::LIGHTS_PER_TILE (light_culling.hpp)
+#define LIGHTS_PER_TILE 512
+
+layout(local_size_x = TILE_SIZE, local_size_y = TILE_SIZE, local_size_z = 1) in;
+
+#define LIGHT_DIRECTIONAL 0
+
+// As lit.fs (render::GpuLight); attenuation.w = the light's reach, m
+struct GpuLight {
+    vec4 position; // xyz = position, w = type
+    vec4 direction;
+    vec4 color;
+    vec4 attenuation;
+    vec4 shadow;
+    vec4 cutOff;
+};
+
+layout(std430, binding = 4) readonly buffer Lights {
+    vec4 uViewPos;
+    ivec4 uLightCount; // x = number of lights
+    GpuLight uLights[];
+};
+
+// The lists: tile t's opaque one from (LIGHTS_PER_TILE + 1) * t, its
+// transparent one uTileInfo.w further on: the count, then light indices
+layout(std430, binding = 5) buffer TileLights {
+    ivec4 uTileInfo; // x = tiles across, y = tile size, z = LIGHTS_PER_TILE,
+    // w = where the transparent lists start
+    int uTileLights[];
+};
+
+uniform sampler2D uDepth; // the prepass depth, resolved
+uniform mat4 uView;
+uniform mat4 uInvProjection;
+uniform ivec2 uScreenSize;
+uniform float uNear, uFar;
+
+shared vec3 sPlanes[4]; // the tile's side planes, view space, inward
+// The tile's nearest and farthest depth, m in front of the camera, as
+// float bits: positive floats sort the same as their bits read as uints
+shared uint sMinDepth, sMaxDepth;
+shared uint sOpaque, sTransparent; // the lists' lengths
+
+// View-space point on the far plane, through a point of the screen (px)
+vec3 viewRay(vec2 pixel) {
+    vec2 ndc = pixel / vec2(uScreenSize) * 2.0 - 1.0;
+    vec4 p = uInvProjection * vec4(ndc, 1.0, 1.0);
+    return p.xyz / p.w;
+}
+
+// Is a sphere out of the tile's side planes? Out when it's entirely behind
+// one of them. Near a corner one just outside two planes can pass.
+bool outsideSides(vec3 centre, float radius) {
+    for (int i = 0; i < 4; i++)
+        if (dot(sPlanes[i], centre) < -radius)
+            return true;
+    return false;
+}
+
+// Does a sphere reach the depths near..far (m in front of the camera)?
+bool inDepths(vec3 centre, float radius, float near, float far) {
+    float depth = -centre.z; // the camera looks down -z
+    return depth + radius > near && depth - radius < far;
+}
+
+void main() {
+    uint li = gl_LocalInvocationIndex;
+    const uint THREADS = TILE_SIZE * TILE_SIZE;
+
+    if (li == 0) {
+        sMinDepth = floatBitsToUint(uFar);
+        sMaxDepth = 0u;
+        sOpaque = 0u;
+        sTransparent = 0u;
+    }
+    barrier();
+
+    // 1) The tile's depth range, from every pixel's depth
+    ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+    if (all(lessThan(pixel, uScreenSize))) {
+        float depth = texelFetch(uDepth, pixel, 0).r;
+        if (depth < 1.0) { // 1: nothing there, the sky
+            vec2 uv = (vec2(pixel) + 0.5) / vec2(uScreenSize);
+            vec4 p = uInvProjection * vec4(vec3(uv, depth) * 2.0 - 1.0, 1.0);
+            uint bits = floatBitsToUint(-p.z / p.w);
+            atomicMin(sMinDepth, bits);
+            atomicMax(sMaxDepth, bits);
+        }
+    }
+
+    // 2) The tile's side planes through the camera (d = 0), each spanned by
+    // two neighbouring corner rays, turned to face the tile's middle ray
+    if (li == 0) {
+        vec2 lo = vec2(gl_WorkGroupID.xy * TILE_SIZE);
+        vec2 hi = lo + vec2(TILE_SIZE);
+        vec3 corner[4] = vec3[4](viewRay(lo), viewRay(vec2(hi.x, lo.y)),
+                viewRay(hi), viewRay(vec2(lo.x, hi.y)));
+        vec3 middle = viewRay((lo + hi) * 0.5);
+        for (int i = 0; i < 4; i++) {
+            vec3 n = normalize(cross(corner[i], corner[(i + 1) % 4]));
+            sPlanes[i] = dot(n, middle) < 0.0 ? -n : n;
+        }
+    }
+    barrier();
+
+    // Nothing opaque in the tile (all sky): no opaque list, the transparent
+    // one out to the far plane
+    bool empty = sMaxDepth == 0u;
+    float minDepth = uintBitsToFloat(sMinDepth);
+    float maxDepth = empty ? uFar : uintBitsToFloat(sMaxDepth);
+
+    uint tile = gl_WorkGroupID.y * gl_NumWorkGroups.x + gl_WorkGroupID.x;
+    uint opaque = tile * (LIGHTS_PER_TILE + 1);
+    uint transparent = opaque + uint(uTileInfo.w);
+
+    // 3) Every light against the frustums, the threads taking turns
+    for (uint i = li; i < uint(uLightCount.x); i += THREADS) {
+        GpuLight light = uLights[i];
+        if (light.color.rgb == vec3(0.0))
+            continue; // off
+        bool inOpaque = !empty, inTransparent = true;
+        if (int(light.position.w + 0.5) != LIGHT_DIRECTIONAL) {
+            vec3 centre = (uView * vec4(light.position.xyz, 1.0)).xyz;
+            float radius = light.attenuation.w;
+            if (outsideSides(centre, radius))
+                continue;
+            inOpaque = inOpaque && inDepths(centre, radius, minDepth, maxDepth);
+            inTransparent = inDepths(centre, radius, uNear, maxDepth);
+        }
+        if (inOpaque) {
+            uint slot = atomicAdd(sOpaque, 1u);
+            if (slot < LIGHTS_PER_TILE)
+                uTileLights[opaque + 1u + slot] = int(i);
+        }
+        if (inTransparent) {
+            uint slot = atomicAdd(sTransparent, 1u);
+            if (slot < LIGHTS_PER_TILE)
+                uTileLights[transparent + 1u + slot] = int(i);
+        }
+    }
+    barrier();
+
+    if (li == 0) {
+        uTileLights[opaque] = int(min(sOpaque, uint(LIGHTS_PER_TILE)));
+        uTileLights[transparent] = int(min(sTransparent, uint(LIGHTS_PER_TILE)));
+    }
+}

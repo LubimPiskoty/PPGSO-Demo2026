@@ -6,6 +6,7 @@
 #include "../components/skybox.hpp"
 #include "../physics/common.hpp"
 #include "../render/light_buffer.hpp"
+#include "../render/light_culling.hpp"
 #include "../render/material.hpp"
 #include "../render/shadow_maps.hpp"
 #include "../util/guid.hpp"
@@ -51,6 +52,10 @@ class Scene {
     // camera, before draw (render::PostProcessing::begin binds the buffers):
     // draw then shades every pixel about once, the post passes read both
     void depth_prepass();
+    // Forward+: uploads the lights, then each screen tile's list of those
+    // that reach it (render::LightCulling), for draw and drawTransparent.
+    // After the depth prepass, from its depth resolved (width x height).
+    void cullLights(GLuint depthTexture, int width, int height);
     // The opaque meshes (and the sky)
     void draw();
     // Then the transparent ones draw() set aside, farthest first: after
@@ -60,6 +65,9 @@ class Scene {
     std::vector<TransparentDraw> transparent;
     // Renders the scene depth from every shadow casting light into shadowMaps
     void shadow_pass();
+    // Render mode (--render): baked maps are drawn every frame too, with the
+    // same casters, so the frames don't depend on when a map was baked
+    static inline bool redrawBakedShadows = false;
     const render::ShadowMaps &getShadowMaps() const { return *shadowMaps; }
     // Light that map i belongs to, as of the last shadow_pass
     const std::vector<std::weak_ptr<component::Light>> &
@@ -97,12 +105,15 @@ class Scene {
     std::unique_ptr<render::Shader> depthShader, depthShaderInstanced;
 
     render::LightBuffer lightBuffer;
+    // Behind a pointer like the shaders; made on the first cullLights, so a
+    // scene can be built before there's a GL context
+    std::unique_ptr<render::LightCulling> lightCulling;
     // Matrix each shadow layer was last rendered with, in the suns' array
     // and in the small one
     std::vector<glm::mat4> shadowMatrices, smallShadowMatrices;
     // Recursively get all pbodies in scene (slow now, no caching)
     void gatherPhysicsBodies(const std::shared_ptr<Node> &node);
-    // Collects lights from the scene and uploads them to the UBO
+    // Collects lights from the scene and uploads them (LightBuffer)
     void uploadLights();
 };
 

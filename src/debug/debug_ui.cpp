@@ -194,8 +194,10 @@ static void lightPreviewWindow(scn::Scene &scene) {
     const auto &slot = slots[index];
     depthPreviewTex = maps.getDepthArray(slot.bank);
     depthPreviewLayer = (int)slot.layer;
-    depthPreviewW = maps.resolution(slot.bank);
-    depthPreviewH = maps.resolution(slot.bank);
+    // The preview image at most 1024 px: drawn at the map's full size, a
+    // 16k sun map took a 1 GiB image for a small window
+    const int mapSize = maps.resolution(slot.bank);
+    depthPreviewW = depthPreviewH = std::min(mapSize, 1024);
 
     // Distance (in world units) that shows as white
     static float range = 50.f;
@@ -205,7 +207,7 @@ static void lightPreviewWindow(scn::Scene &scene) {
                            ImGuiSliderFlags_Logarithmic);
         ImGui::Text("near %.3f  far %.1f", nearPlane, farPlane);
     }
-    ImGui::Text("%d x %d", depthPreviewW, depthPreviewH);
+    ImGui::Text("%d x %d", mapSize, mapSize);
 
     renderViz(nearPlane, farPlane, range);
 

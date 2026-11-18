@@ -9,7 +9,7 @@ out vec4 FragColor;
 uniform sampler2D uScreen;
 
 // Exposure in stops: +1 twice as bright, -1 half, 0 unchanged
-const float EXPOSURE = -.33;
+const float EXPOSURE = 0.00;
 
 // Mean error^2: 3.6705141e-06
 vec3 agxDefaultContrastApprox(vec3 x) {

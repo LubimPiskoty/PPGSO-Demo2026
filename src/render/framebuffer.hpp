@@ -77,8 +77,9 @@ class Framebuffer {
     // bound): the color, the normals, or both. Fragment output 0 goes to the
     // color, output 1 to the normals.
     void drawTo(bool toColor, bool toNormals) const {
-        const GLenum buffers[2] = {toColor ? GL_COLOR_ATTACHMENT0 : GL_NONE,
-                                   toNormals ? GL_COLOR_ATTACHMENT1 : GL_NONE};
+        const GLenum buffers[2] = {
+            static_cast<GLenum>(toColor ? GL_COLOR_ATTACHMENT0 : GL_NONE),
+            static_cast<GLenum>(toNormals ? GL_COLOR_ATTACHMENT1 : GL_NONE)};
         glDrawBuffers(2, buffers);
     }
 
@@ -112,80 +113,23 @@ class Framebuffer {
     // Writes the color texture to a PNG (8 bit, values clamped to 0..1).
     // Not for multisampled buffers, blitTo a plain one first.
     bool save(const std::string &path) const {
-        return saveRgb(colorTex, path, false);
-    }
-
-    // Writes the normals to a PNG, each axis -1..1 as 0..255 (facing +x is
-    // red, up +y green, +z blue). Not for multisampled buffers.
-    bool saveNormals(const std::string &path) const {
-        return saveRgb(normalTex, path, true);
-    }
-
-    // Same as save(), for any of the buffer's color textures; normals maps
-    // -1..1 to 0..1 first
-    bool saveRgb(GLuint texture, const std::string &path,
-                 bool normals) const {
-        if (!texture || samples > 0) {
+        if (!colorTex || samples > 0) {
             std::printf("[Error] Can't save %s: no plain color texture\n",
                         path.c_str());
             return false;
         }
         std::vector<float> rgb((size_t)width * height * 3);
         glPixelStorei(GL_PACK_ALIGNMENT, 1);
-        glBindTexture(GL_TEXTURE_2D, texture);
+        glBindTexture(GL_TEXTURE_2D, colorTex);
         glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_FLOAT, rgb.data());
         glBindTexture(GL_TEXTURE_2D, 0);
         std::vector<unsigned char> pixels(rgb.size());
         for (size_t i = 0; i < rgb.size(); i++)
-            pixels[i] = (unsigned char)(255.f *
-                                        glm::clamp(normals ? rgb[i] * 0.5f + 0.5f
-                                                           : rgb[i],
-                                                   0.f, 1.f));
+            pixels[i] = (unsigned char)(255.f * glm::clamp(rgb[i], 0.f, 1.f));
         // OpenGL's rows start at the bottom, PNG's at the top
         stbi_flip_vertically_on_write(1);
         const bool ok = stbi_write_png(path.c_str(), width, height, 3,
                                        pixels.data(), width * 3) != 0;
-        if (!ok)
-            std::printf("[Error] Can't write %s\n", path.c_str());
-        return ok;
-    }
-
-    // Writes the depth texture to a grey PNG: the distance from the camera
-    // (near and far are the camera's planes), black at the camera, white at
-    // the farthest thing drawn, so the picture uses the whole range whatever
-    // the far plane is. Nothing drawn (the sky) is white too.
-    // Not for multisampled buffers, blitTo a plain one first.
-    bool saveDepth(const std::string &path, float near, float far) const {
-        if (!depthTex || samples > 0) {
-            std::printf("[Error] Can't save %s: no plain depth texture\n",
-                        path.c_str());
-            return false;
-        }
-        std::vector<float> depth((size_t)width * height);
-        glPixelStorei(GL_PACK_ALIGNMENT, 1);
-        glBindTexture(GL_TEXTURE_2D, depthTex);
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT,
-                      depth.data());
-        glBindTexture(GL_TEXTURE_2D, 0);
-        // Buffer depth (0..1, most of it used up close) -> metres
-        float farthest = near;
-        for (float &d : depth) {
-            if (d >= 1.f) {
-                d = -1.f; // nothing drawn here
-                continue;
-            }
-            d = 2.f * near * far / (far + near - (2.f * d - 1.f) * (far - near));
-            farthest = glm::max(farthest, d);
-        }
-        std::vector<unsigned char> pixels(depth.size());
-        for (size_t i = 0; i < depth.size(); i++)
-            pixels[i] = depth[i] < 0.f
-                            ? 255
-                            : (unsigned char)(255.f * (depth[i] - near) /
-                                              glm::max(farthest - near, 1e-6f));
-        stbi_flip_vertically_on_write(1);
-        const bool ok = stbi_write_png(path.c_str(), width, height, 1,
-                                       pixels.data(), width) != 0;
         if (!ok)
             std::printf("[Error] Can't write %s\n", path.c_str());
         return ok;
@@ -241,8 +185,7 @@ class Framebuffer {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
         if (is_depth) {
-            // Outside the buffer counts as the far plane, i.e. not in shadow.
-            // Edge clamping would smear the border texels over the scene.
+            // Outside the buffer counts as the far plane (the sky)
             const float border[] = {1.f, 1.f, 1.f, 1.f};
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
                             GL_CLAMP_TO_BORDER);

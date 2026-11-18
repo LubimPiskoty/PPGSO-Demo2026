@@ -1,7 +1,9 @@
 #include "demo_scene.hpp"
 #include "../smithy/forge_layout.hpp"
 #include "city_layout.hpp"
+#include "fir_lights.hpp"
 #include "lamp_posts.hpp"
+#include "night_lights.hpp"
 #include "light_props.hpp"
 #include "road_lifts.hpp"
 
@@ -23,6 +25,7 @@
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <iostream>
+#include <limits>
 #include <map>
 #include <memory>
 #include <optional>
@@ -52,6 +55,9 @@ constexpr const char *INTERIOR = "Smithy interior";
 // south-east side of the market square, its door facing the square
 const V FORGE_AT{city::smithySite.x, city::smithySite.y, city::smithySite.z};
 const V SQUARE{2.f, -2.45f, -71.f};
+// The Christmas tree (addFirTree) stands where the square's Tree_5 was,
+// which addCityObjects leaves out
+const V FIR_AT{4.315f, -2.497f, -69.269f};
 // The middle of the smithy's doorway, x in its house's space
 constexpr float DOOR_MID = (forge::doorX0 + forge::doorX1) / 2;
 
@@ -217,13 +223,13 @@ instanced(const city::Group &group,
     auto node = scn::Node::create(group.model);
     node->add_component<component::Mesh>(tile(false), material);
     node->add_component<component::Instances>(std::move(instances));
-    node->add_component<component::Shadow>()->open = open;
+    node->add_component<component::Shadow>();
     if (!mirrored.empty()) {
         auto flipped = tile(true);
         auto child = scn::Node::create(std::string(group.model) + "_Mirrored");
         child->add_component<component::Mesh>(flipped, material);
         child->add_component<component::Instances>(std::move(mirrored));
-        child->add_component<component::Shadow>()->open = open;
+        child->add_component<component::Shadow>();
         node->add_child(child);
     }
     return node;
@@ -411,6 +417,19 @@ const Take NIGHT_TAKE = {"Night",
                           {{-3.f, 1.6f, -59.f}, 3.f},
                           {{5.f, 1.8f, -55.f}, 3.f}}};
 
+// How near a point comes to a take's path (straight between its ways), m
+float fromPath(V p, const Take &take) {
+    float nearest = std::numeric_limits<float>::max();
+    for (size_t i = 0; i + 1 < take.ways.size(); i++) {
+        const V a = take.ways[i].pos, b = take.ways[i + 1].pos;
+        const float t = glm::clamp(glm::dot(p - a, b - a) /
+                                       glm::max(glm::dot(b - a, b - a), 1e-6f),
+                                   0.f, 1.f);
+        nearest = std::min(nearest, glm::length(p - (a + t * (b - a))));
+    }
+    return nearest;
+}
+
 // A key of a take's path: when, where, and how far between its ways (2.5:
 // half way from the third to the fourth)
 struct Mark {
@@ -570,9 +589,12 @@ Timeline timeline() {
     return t;
 }
 
-// The point light in a street lamp (and on board the ships)
+// The point light in a street lamp (and on board the ships): a pool of
+// light round the post, past that too faint to show
 component::Light streetLight() {
-    return component::Light::point({1.f, 0.7f, 0.4f}, 2.5f, 0.14f, 0.07f);
+    auto light = component::Light::point({1.f, 0.7f, 0.4f}, 2.5f, 0.14f, 0.07f);
+    light.range = 12.f;
+    return light;
 }
 
 // What the parts of the demo scene share while it's built
@@ -691,7 +713,15 @@ void addCityObjects(Demo &d) {
     add(city::buildings, d.litInstanced);
     add(city::people, d.litInstanced);
     add(city::props, d.litInstanced);
-    add(city::trees, d.foliage);
+    // Every tree but the square's, the Christmas tree takes its place
+    for (const city::Group &group : city::trees) {
+        std::vector<city::Placement> kept;
+        for (int i = 0; i < group.count; i++)
+            if (glm::length(position(group.copies[i]) - FIR_AT) > 0.5f)
+                kept.push_back(group.copies[i]);
+        const city::Group trees{group.model, kept.data(), (int)kept.size()};
+        d.city->add_child(instanced(trees, d.foliage));
+    }
 }
 
 // Soldiers carry a railroad lantern, hung on its bail from a hand, its
@@ -723,6 +753,13 @@ void addLanterns(Demo &d) {
     const float down = glm::radians(20.f);
     const V ahead{0.f, -std::sin(down), std::cos(down)};
     std::vector<component::Instance> instances;
+    // Their lights, with how near each is to the night take's path
+    struct Lantern {
+        std::shared_ptr<scn::Node> node;
+        component::Light light;
+        float fromPath;
+    };
+    std::vector<Lantern> lanterns;
     for (const Bearers &group : bearers)
         for (int i = 0; i < group.count; i++) {
             const city::Placement &man = group.copies[i];
@@ -738,18 +775,32 @@ void addLanterns(Demo &d) {
             instance.scale = V(man.scale);
             instances.push_back(instance);
 
-            auto node = scn::Node::create("Lantern light",
-                                          at + turn * (lens * man.scale));
+            const V lightAt = at + turn * (lens * man.scale);
+            auto node = scn::Node::create("Lantern light", lightAt);
             node->setLocalRot(glm::quatLookAt(turn * ahead, V(0.f, 1.f, 0.f)));
             auto light = component::Light::spot({1.f, 0.72f, 0.4f}, 3.f, 22.f,
                                                 34.f, 0.09f, 0.032f);
+            light.range = 14.f; // down onto the road ahead
+            lanterns.push_back({node, light,
+                                fromPath(lightAt, NIGHT_TAKE)});
+        }
+    // Only the ones the night's camera passes nearest cast shadows
+    constexpr size_t SHADOWED = 4;
+    std::sort(lanterns.begin(), lanterns.end(),
+              [](const Lantern &a, const Lantern &b) {
+                  return a.fromPath < b.fromPath;
+              });
+    for (size_t i = 0; i < lanterns.size(); i++) {
+        component::Light &light = lanterns[i].light;
+        if (i < SHADOWED) {
             // Everyone stands still: drawn once
             light.castsShadow = true;
             light.bakedShadow = true;
             light.shadowNear = 0.05f;
             light.shadowFar = 30.f;
-            d.lamp(node, light, d.city);
         }
+        d.lamp(lanterns[i].node, light, d.city);
+    }
     d.instancedModel("Lanterns", "LGT_Lantern.glb", d.glow("Lantern"),
                      std::move(instances));
 }
@@ -780,10 +831,11 @@ void addStreetLamps(Demo &d) {
         disc.scale = {1.f, THIN, 1.f};
         discs.push_back(disc);
         // Those around the market square cast shadows (6 maps each, baked:
-        // nothing there moves)
+        // nothing there moves) and reach further, it's where the night is
         auto lit = streetLight();
         if (glm::length(glm::vec2(post.x - SQUARE.x, post.z - SQUARE.z)) <
             30.f) {
+            lit.range = 16.f;
             lit.castsShadow = true;
             lit.bakedShadow = true;
             lit.shadowNear = 0.1f;
@@ -807,6 +859,141 @@ void addStreetLamps(Demo &d) {
     node->add_component<component::Instances>(std::move(discs));
     node->add_component<component::Shadow>();
     d.city->add_child(node);
+}
+
+// The Christmas tree in the market square: a fir (res/models/fir_tree.glb,
+// readied by tools/prepare_glb.py) with coloured bulbs and a star
+// on the tip, each a small point light, on from dusk like the lamps. The
+// bulbs from tools/fir_lights.py, in the fir's own space.
+void addFirTree(Demo &d) {
+    // Up from the model's 12 m, to stand over the square
+    constexpr float SCALE = 1.35f;
+    component::Instance tree;
+    tree.position = FIR_AT;
+    tree.scale = V(SCALE);
+    // Doesn't sway (litInstanced, not foliage): the bulbs stay on it
+    d.instancedModel("Christmas tree", "fir_tree.glb", d.litInstanced, {tree});
+
+    // A glowing material of one colour (1x1 textures), its glow on from
+    // dusk (Demo::glow)
+    auto bulbMaterial = [&](const char *name, V colour) {
+        const glm::u8vec4 pixel(glm::clamp(colour, 0.f, 1.f) * 255.f, 255);
+        auto texture = std::make_shared<render::Texture>();
+        texture->id = loader::createTexture(&pixel.x, 1, 1, true);
+        auto material = d.glow(name);
+        material->setTexture(render::TextureSlot::Albedo, texture);
+        material->setTexture(render::TextureSlot::Emissive, texture);
+        return material;
+    };
+    // A bulb's light reaches the branches round it: there are many, close
+    // together, so each is faint and short
+    auto bulbLight = [](V colour, float intensity, float range) {
+        auto light = component::Light::point(colour, intensity, 0.5f, 1.f);
+        light.range = range;
+        return light;
+    };
+    auto bulbs = [&](const char *name, float radius,
+                     const std::shared_ptr<render::Material> &material,
+                     std::vector<component::Instance> instances) {
+        auto node = scn::Node::create(name);
+        node->add_component<component::Mesh>(
+            std::make_shared<render::Model>(
+                loader::createSphere(radius, 1.f, 12, 8)),
+            material);
+        node->add_component<component::Instances>(std::move(instances));
+        d.city->add_child(node); // no Shadow: they'd shut their own light in
+    };
+
+    // Warm white, red, gold, blue (fir::Bulb::colour)
+    const V firLightColours[] = {{1.f, 0.75f, 0.45f},
+                                 {1.f, 0.12f, 0.08f},
+                                 {1.f, 0.55f, 0.1f},
+                                 {0.2f, 0.35f, 1.f}};
+    std::vector<component::Instance> byColour[std::size(firLightColours)];
+    for (const fir::Bulb &bulb : fir::bulbs) {
+        const V colour = firLightColours[bulb.colour];
+        component::Instance instance;
+        instance.position = FIR_AT + V(bulb.x, bulb.y, bulb.z) * SCALE;
+        byColour[bulb.colour].push_back(instance);
+        d.lamp(scn::Node::create("Christmas bulb light", instance.position),
+               bulbLight(colour, 0.56f, 2.f), d.city);
+    }
+    for (size_t c = 0; c < std::size(firLightColours); c++)
+        bulbs("Christmas bulbs", 0.06f,
+              bulbMaterial("Christmas bulb", firLightColours[c]),
+              std::move(byColour[c]));
+
+    const V gold{1.f, 0.7f, 0.25f};
+    component::Instance star;
+    star.position = FIR_AT + vec(fir::star) * SCALE;
+    bulbs("Christmas star", 0.14f, bulbMaterial("Christmas star", gold),
+          {star});
+    d.lamp(scn::Node::create("Christmas star light", star.position),
+           bulbLight(gold, 1.6f, 5.5f), d.city);
+}
+
+// A lamp hung under the roof ridge of every market stall round the square
+// (LGT_Lamp.glb, as on the street lamps), so the square isn't dark at
+// night: a point light in each, no shadow, on from dusk
+void addStallLamps(Demo &d) {
+    constexpr float AROUND = 28.f; // m from the square's middle
+    const V light = vec(lights::lampLight);
+    std::vector<component::Instance> hung;
+    for (const city::Group &group : city::buildings) {
+        const std::string model = group.model;
+        if (model.rfind("Market_", 0) != 0)
+            continue;
+        // Under the ridge: the two stall sizes (MC_Market_1_*, _2_*)
+        const float ridge = model.rfind("Market_1", 0) == 0 ? 2.39f : 2.81f;
+        for (int i = 0; i < group.count; i++) {
+            const city::Placement &stall = group.copies[i];
+            if (glm::length(glm::vec2(stall.x - SQUARE.x, stall.z - SQUARE.z)) >
+                AROUND)
+                continue;
+            component::Instance instance;
+            instance.position = position(stall) + V(0.f, ridge - 0.3f, 0.f);
+            hung.push_back(instance);
+            auto lit = streetLight();
+            lit.intensity = 1.8f;
+            lit.range = 10.f;
+            d.lamp(scn::Node::create("Stall lamp light",
+                                     instance.position + light),
+                   lit, d.city);
+        }
+    }
+    d.instancedModel("Stall lamps", "LGT_Lamp.glb", d.glow("Stall lamp"),
+                     std::move(hung), false);
+}
+
+// The city's night lights (night_lights.hpp, tools/night_lights.py): about
+// 2000 small ones without shadows, by every house's walls (its windows'
+// light), in the people's hands, over the boats' decks. On from dusk, each
+// at its own moment: over the timelapse the city lights up, Forward+ shades
+// each pixel with the few that reach it.
+void addNightLights(Demo &d) {
+    auto lights = scn::Node::create("Night lights");
+    for (const night::Glow &glow : night::glows) {
+        component::Light light = component::Light::point(V(1.f), 1.f);
+        switch (glow.kind) {
+        case night::Window: // warm, a soft pool by the wall
+            light = component::Light::point({1.f, 0.6f, 0.3f}, 1.f, 0.22f,
+                                            0.2f);
+            light.range = 7.f;
+            break;
+        case night::Torch: // small, orange
+            light = component::Light::point({1.f, 0.5f, 0.2f}, 0.8f, 0.35f,
+                                            0.5f);
+            light.range = 5.f;
+            break;
+        case night::Deck:
+            light = streetLight();
+            light.range = 8.f;
+            break;
+        }
+        d.lamp(scn::Node::create("Night light", {glow.x, glow.y, glow.z}),
+               light, lights);
+    }
+    d.city->add_child(lights);
 }
 
 // Grass and dirt patches: every copy laid onto the ground in one mesh
@@ -1013,7 +1200,7 @@ void addGroundAndWater(Demo &d) {
                 std::make_shared<render::Model>(
                     loader::loadModel("MC_Rest_Ground.glb")),
                 d.lit);
-            ground->add_component<component::Shadow>()->open = true;
+            ground->add_component<component::Shadow>();
             d.city->add_child(ground);
             auto patches = scn::Node::create("Rest_Patches");
             patches->add_component<component::Mesh>(
@@ -1125,7 +1312,7 @@ void addShadowFloor(Demo &d) {
             std::make_shared<render::Model>(loader::createRect({600.f, 600.f})),
             black)
         ->enabled = false;
-    node->add_component<component::Shadow>()->open = true;
+    node->add_component<component::Shadow>();
     d.city->add_child(node);
 }
 
@@ -1206,8 +1393,8 @@ void addSkyAndSun(Demo &d) {
     moonNode->setLocalRotEuler({glm::pi<float>(), 0.f, 0.f});
     node->add_child(moonNode);
     moonNode->add_component<component::Light>(
-        component::Light::directional(V(0.f), 1.f, 0.15f));
-    const V moon{0.16f, 0.19f, 0.3f};
+        component::Light::directional(V(0.f), 0.6f, 0.5f));
+    const V moon{0.21f, 0.25f, 0.39f};
     auto moonAnimator = moonNode->add_component<component::Animator>();
     moonAnimator->addTrack(AnimTarget::Color,
                            component::Curve<V>::flat(day({{0.f, none},
@@ -1529,6 +1716,9 @@ scn::Scene demoScene() {
     addCityObjects(d);
     addLanterns(d);
     addStreetLamps(d);
+    addStallLamps(d);
+    addNightLights(d);
+    addFirTree(d);
     addPatches(d);
     addCorn(d);
     addBoats(d);

@@ -40,7 +40,10 @@ template <typename F> static void remove(Callbacks<F> &callbacks, int id) {
 static void keyCallback(GLFWwindow *window, int key, int scancode, int action,
                         int mods) {
 #ifdef WITH_IMGUI
-    if (ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureKeyboard)
+    // Typing into an ImGui window isn't forwarded, but a release always is:
+    // a key held down before ImGui took the keyboard would stay held
+    if (action != GLFW_RELEASE && ImGui::GetCurrentContext() &&
+        ImGui::GetIO().WantCaptureKeyboard)
         return;
 #endif
     dispatch(key_callbacks, key, action);

@@ -12,7 +12,7 @@ struct Particle {
     vec3 accel;
     float _pad0;
     vec2 scale;
-    vec2 _pad1;
+    vec2 startScale;
 };
 
 layout(std430, binding = 0) readonly buffer ParticleBuffer {

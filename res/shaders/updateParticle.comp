@@ -14,7 +14,7 @@ struct Particle {
     vec3 accel;
     float _pad0;
     vec2 scale;
-    vec2 _pad1;
+    vec2 startScale; // its size when spawned
 };
 
 layout(std430, binding = 0) buffer ParticleBuffer {
@@ -40,9 +40,6 @@ layout(std430, binding = 3) buffer DrawlistBuffer {
 };
 
 uniform float u_dt;
-uniform vec3 u_viewPos;
-uniform vec3 u_forwardDir;
-uniform float u_cullingMinAngle; // cos of the max angle from forward; -1 disables culling
 
 void SimulateParticle(uint index) {
     Particle particle = particles[index];
@@ -59,16 +56,13 @@ void SimulateParticle(uint index) {
     } else {
         float lifeRatio = particle.life / particle.initialLife;
         particle.color = mix(particle.endColor, particle.startColor, lifeRatio);
-        // Shrink during the last 10% of life
-        if (particle.life <= particle.initialLife * 0.1) {
-            particle.scale = mix(vec2(0), vec2(0.1),
-                                 particle.life / (particle.initialLife * 0.1));
-        }
+        // Shrink to nothing during the last 10% of life, from its own size
+        if (particle.life <= particle.initialLife * 0.1)
+            particle.scale = particle.startScale *
+                    (particle.life / (particle.initialLife * 0.1));
 
-        if (dot(u_forwardDir, normalize(particle.pos - u_viewPos)) > u_cullingMinAngle) {
-            uint drawIndex = atomicAdd(indirectCommand.instanceCount, 1u);
-            drawIndices[drawIndex] = index;
-        }
+        uint drawIndex = atomicAdd(indirectCommand.instanceCount, 1u);
+        drawIndices[drawIndex] = index;
     }
 
     particles[index] = particle;

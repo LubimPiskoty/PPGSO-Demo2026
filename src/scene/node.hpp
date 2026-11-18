@@ -17,14 +17,6 @@ namespace component { class Mesh; }
 
 namespace scn {
 
-// Decomposed position/rotation/scale, e.g. the result of collapsing a node's
-// global transform on demand.
-struct PosRotScale {
-    glm::vec3 pos{0.f};
-    glm::quat rot{1.f, 0.f, 0.f, 0.f};
-    glm::vec3 scale{1.f};
-};
-
 struct TransparentDraw {
     component::Mesh* mesh;
     float viewDepth;
@@ -39,8 +31,7 @@ class Node : public std::enable_shared_from_this<Node> {
     std::weak_ptr<Node> parent; // weak: parent owns children, not the reverse
     std::vector<std::shared_ptr<Node>> children;
 
-    // Randomly assigned on creation, or read from the scene file. Used to
-    // reference nodes (e.g. activeCamera) in scene files.
+    // Randomly assigned on creation, names the node in warnings
     util::Guid guid;
 
     // Attributes
@@ -67,7 +58,6 @@ class Node : public std::enable_shared_from_this<Node> {
     glm::mat4 localTransform() const;
     glm::mat4 globalTransform() const;
     glm::vec3 globalPosition() const;
-    PosRotScale globalPosRotScale() const;
     glm::quat globalRotation() const;
     // Identity for root nodes
     glm::mat4 parentGlobalTransform() const;
@@ -109,8 +99,6 @@ class Node : public std::enable_shared_from_this<Node> {
     // General functions
     static std::shared_ptr<Node> create(std::string name);
     static std::shared_ptr<Node> create(std::string name, glm::vec3 localPos);
-    static std::shared_ptr<Node> create(std::string name,
-                                        glm::mat4 localTransform);
     void add_child(const std::shared_ptr<Node> &child);
 
     // Pretty-print this node and its subtree as a tree

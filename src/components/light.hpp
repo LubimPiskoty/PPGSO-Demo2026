@@ -22,6 +22,10 @@ class Light : public ComponentBase<Light> {
     float constant = 1.f;
     float linear = 0.09f;
     float quadratic = 0.032f;
+    // point + spot: metres it reaches. lit.fs fades it out to nothing
+    // there, Forward+ counts it only within it: as short as the light still
+    // shows, the longer, the more tiles shade it
+    float range = 10.f;
 
     // spot: half-angle of the cone in degrees (also the shadow map's FOV / 2)
     float cutOff = 12.5f;
@@ -35,11 +39,6 @@ class Light : public ComponentBase<Light> {
     bool bakedShadow = false;
     // Set it after changing a baked light, its map is rendered once more
     bool shadowDirty = true;
-    // Renders a shadow map but adds no light. A directional one is a second
-    // sun map of only the casters under its parent node (the other suns
-    // leave those out): same rotation, a small box over those casters,
-    // multiplied onto the sun's shadow.
-    bool shadowOnly = false;
     // directional: half-size of the orthographic box, centered on the node
     float shadowExtent = 20.f;
     float shadowNear = 0.1f;

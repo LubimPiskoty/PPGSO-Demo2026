@@ -15,10 +15,8 @@
 #include "render/framebuffer.hpp"
 #include "render/postprocessing.hpp"
 #include "render/ssao.hpp"
-#include "scenes/ball_jar.hpp"
 #include "scenes/demo_scene/demo_scene.hpp"
 #include "scenes/particle_test.hpp"
-#include "scenes/physics_test.hpp"
 #include "scenes/scene_manager.hpp"
 #include "scenes/shadow_test.hpp"
 #include "scenes/smithy/smithy_scene.hpp"
@@ -28,6 +26,8 @@
 //   semestralka --render frames [--size 1920x1080] [--fps 30] [--seconds 120]
 //               [--start 40]   (skips ahead first, like Space)
 //               [--msaa 8]     (samples, 0 none; else the build's: 4, Debug 0)
+//               [--jpg 95]     (JPEG of that quality instead, %05d.jpg: about
+//                               a fifth of the PNG, a 4K frame some 1.5 MB)
 // Drawn at that size whatever the window's (the window shows a corner of
 // it), as fast as it goes, without the debug UI. Without --seconds it runs
 // until the window is closed.
@@ -38,6 +38,7 @@ struct RenderMode {
     float seconds = 0.f; // 0: until the window closes
     float start = 0.f;   // s into the demo the first frame is
     int msaa = -1;       // MSAA samples, 0 none; below 0 the build's (4 / 0)
+    int jpg = 0;         // JPEG quality 1..100, 0: PNG
     bool on() const { return !dir.empty(); }
 };
 
@@ -57,6 +58,8 @@ static RenderMode parseArgs(int argc, char **argv) {
             mode.start = (float)std::atof(value.c_str());
         else if (arg == "--msaa")
             mode.msaa = std::max(std::atoi(value.c_str()), 0);
+        else if (arg == "--jpg")
+            mode.jpg = std::clamp(std::atoi(value.c_str()), 1, 100);
         else
             continue;
         i++;
@@ -64,9 +67,10 @@ static RenderMode parseArgs(int argc, char **argv) {
     return mode;
 }
 
-// The finished frame (the post-processing's last pass) into a PNG
+// The finished frame (the post-processing's last pass) into a PNG, or a
+// JPEG of quality jpg
 static void saveFrame(const render::PostProcessing &post,
-                      const std::string &path) {
+                      const std::string &path, int jpg) {
     const int w = post.getWidth(), h = post.getHeight();
     std::vector<unsigned char> rgb((size_t)w * h * 3);
     glBindTexture(GL_TEXTURE_2D, post.finalTexture());
@@ -75,7 +79,10 @@ static void saveFrame(const render::PostProcessing &post,
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, rgb.data());
     glBindTexture(GL_TEXTURE_2D, 0);
     stbi_flip_vertically_on_write(1); // GL's rows go bottom up
-    if (!stbi_write_png(path.c_str(), w, h, 3, rgb.data(), w * 3))
+    const bool ok =
+        jpg > 0 ? stbi_write_jpg(path.c_str(), w, h, 3, rgb.data(), jpg)
+                : stbi_write_png(path.c_str(), w, h, 3, rgb.data(), w * 3);
+    if (!ok)
         std::cerr << "Couldn't write " << path << std::endl;
 }
 
@@ -87,6 +94,7 @@ static void run(GLFWwindow *window, int fbWidth, int fbHeight,
         fbWidth = rendering.width;
         fbHeight = rendering.height;
         std::filesystem::create_directories(rendering.dir);
+        scn::Scene::redrawBakedShadows = true;
     }
 #ifdef NDEBUG
     int samples = 4;
@@ -114,17 +122,15 @@ static void run(GLFWwindow *window, int fbWidth, int fbHeight,
     static constexpr Layer LAYERS[] = {
         // Ambient occlusion (render::Ssao), then darkened by it
         {"ssao.fs", true, 2},
-        // {"blur.fs", true, 2}, // Gaussian: horizontal, then vertical
-        // {"inverse.fs", false},
         {"bloom.fs", true},
         // Distance fog, coloured by the sky behind (the skybox, unit 4)
         {"fog.fs", true},
-        // The thin G-buffer in quarters: scene, normals, positions, distance
+        // The thin G-buffer in quarters: scene, normals, Forward+ lights per
+        // tile, distance
         {"gbuffer_debug.fs", false},
         // Last: everything before works on linear light (colour textures
         // are sRGB, decoded when sampled), this encodes it for the screen
         {"agx_tonemapper.fs", true},
-        // {"gama.fs", true},
         {"grayscale.fs", false},
     };
     for (const Layer &layer : LAYERS)
@@ -152,8 +158,8 @@ static void run(GLFWwindow *window, int fbWidth, int fbHeight,
     scenes.setViewport((float)fbWidth, (float)fbHeight);
     scenes.load(0);
 
-    // F12 saves every buffer of the next frame (the scene, its depth map
-    // and each post-processing pass) into capture/
+    // F12 saves the next frame's buffers (the scene and each
+    // post-processing pass) into capture/
     bool captureRequested = false;
     // Space skips 5 s ahead
     constexpr float SKIP = 5.f;
@@ -242,7 +248,11 @@ static void run(GLFWwindow *window, int fbWidth, int fbHeight,
             scene.shadow_pass();
             post.begin();
             scene.depth_prepass();
-            post.shade();
+            // The prepass depth resolved for Forward+ (then on drawing the
+            // colour), each tile's lights from it
+            post.resolveDepth();
+            scene.cullLights(post.depthTexture(), post.getWidth(),
+                             post.getHeight());
             scene.draw();
             post.resolveDepth();
             scene.drawTransparent();
@@ -269,8 +279,9 @@ static void run(GLFWwindow *window, int fbWidth, int fbHeight,
 
         if (rendering.on()) {
             char name[16];
-            std::snprintf(name, sizeof name, "%05d.png", frame++);
-            saveFrame(post, rendering.dir + "/" + name);
+            std::snprintf(name, sizeof name, rendering.jpg ? "%05d.jpg" : "%05d.png",
+                          frame++);
+            saveFrame(post, rendering.dir + "/" + name, rendering.jpg);
             if (frame % rendering.fps == 0)
                 std::cout << "Rendered " << frame / rendering.fps << " s ("
                           << frame << " frames)" << std::endl;
@@ -290,13 +301,7 @@ static void run(GLFWwindow *window, int fbWidth, int fbHeight,
                           std::localtime(&now));
             const std::string prefix = "capture/" + std::string(stamp) + "_" +
                                        std::to_string(captured++) + "_";
-            // The depth map needs the camera's planes
-            float near = 0.1f, far = 100.f;
-            if (auto camera = scene.activeCamera.lock()) {
-                near = camera->getNear();
-                far = camera->getFar();
-            }
-            post.save(prefix, near, far);
+            post.save(prefix);
             std::cout << "Saved the frame's buffers to " << prefix << "*.png"
                       << std::endl;
         }

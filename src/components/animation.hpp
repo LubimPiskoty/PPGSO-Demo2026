@@ -1,6 +1,5 @@
 #pragma once
 
-#include "ecs.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -164,37 +163,4 @@ struct Playback {
     }
 };
 
-template <typename T>
-class Animation : public component::ComponentBase<Animation<T>> {
-    const Curve<T> curve;
-    T &property;
-    Playback playback;
-
-  public:
-    Animation(const Curve<T> &curve, T &property)
-        : curve(curve), property(property) {
-        playback.duration = curve.getDuration();
-    }
-
-    void update(float dt) override {
-        if (!this->enabled || !playback.playing)
-            return;
-
-        playback.advance(dt);
-        if (!curve.empty())
-            property = curve.sample(playback.time);
-    }
-
-    void play() { playback.playing = true; }
-
-    void stop() { playback.playing = false; }
-
-    bool isPlaying() const { return playback.playing; }
-
-    void setPlayMode(PlayMode mode) { playback.mode = mode; }
-
-    void setPlaySpeed(float s) { playback.speed = s; }
-
-    const char *type_name() const override { return "Animation"; }
-};
 } // namespace component

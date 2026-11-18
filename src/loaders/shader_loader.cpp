@@ -64,12 +64,8 @@ GLuint createShaderProgram(const std::string &vertexPath,
                   << infoLog << std::endl;
     }
 
-    GLuint blockIndex;
-    blockIndex = glGetUniformBlockIndex(program, "Lights");
-    if (blockIndex != GL_INVALID_INDEX)
-        glUniformBlockBinding(program, blockIndex, 1);
-
-    blockIndex = glGetUniformBlockIndex(program, "ShadowBlock");
+    // The Lights storage buffer sets its binding (4) in the shader itself
+    GLuint blockIndex = glGetUniformBlockIndex(program, "ShadowBlock");
     if (blockIndex != GL_INVALID_INDEX)
         glUniformBlockBinding(program, blockIndex, 2);
 

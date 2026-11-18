@@ -9,16 +9,12 @@
 #include <memory>
 
 namespace component {
-// TODO: Draw call types
-// https://evanvoodoo.github.io/2025-01-24-gpu-particles/
+// GPU particles, after https://evanvoodoo.github.io/2025-01-24-gpu-particles/
 
 const uint32_t DEFAULT_MAX_PARTICLES = 1 << 12;
 
 class ParticleSystem : public ComponentBase<ParticleSystem> {
   public:
-    enum EmitterType { POINT, SPRITE };
-
-    EmitterType emitterType = EmitterType::SPRITE;
     glm::vec4 minColor = glm::vec4(0, 0, 0, 1), maxColor = glm::vec4(1);
     glm::vec3 minPosition = glm::vec3(0), maxPosition = glm::vec3(0);
     glm::vec3 minVelocity = glm::vec3(-1), maxVelocity = glm::vec3(1);
@@ -38,12 +34,10 @@ class ParticleSystem : public ComponentBase<ParticleSystem> {
     // Motion smear: seconds of movement stretched behind each particle, 0 = off
     float stretch = 0.05f;
     uint32_t maxParticles = DEFAULT_MAX_PARTICLES;
-    uint32_t drawnParticleCount = 0;
 
     ParticleSystem(std::shared_ptr<render::Material> instanced_material,
                    std::shared_ptr<render::ComputeShader> spawnCompute,
-                   std::shared_ptr<render::ComputeShader> updateCompute,
-                   EmitterType type = EmitterType::SPRITE);
+                   std::shared_ptr<render::ComputeShader> updateCompute);
     // Frees the quad's buffers (the particle buffers free themselves)
     ~ParticleSystem() override;
     ParticleSystem(const ParticleSystem &) = delete;

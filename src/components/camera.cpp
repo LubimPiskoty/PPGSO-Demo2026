@@ -34,31 +34,17 @@ void Camera::lookAt(glm::vec3 target, glm::vec3 up) {
     owner->setGlobalTransform(transform);
 }
 
-float Camera::getFov() {
-    return fov;
-}
 float Camera::getNear() {
     return near;
 }
 float Camera::getFar() {
     return far;
 }
-float Camera::getWidth() {
-    return width;
-}
-float Camera::getHeight() {
-    return height;
-}
 void Camera::setFov(float fovDegrees) {
     fov = glm::radians(fovDegrees);
     calculateProjection();
 }
 
-void Camera::setNearFar(float near, float far) {
-    this->near = near;
-    this->far = far;
-    calculateProjection();
-}
 void Camera::setSize(float width, float height) {
     this->width = width;
     this->height = height;

@@ -194,13 +194,13 @@ struct Builder {
     // A node drawing one model of the ironheart pack (textures embedded)
     std::shared_ptr<scn::Node> prop(const std::string &name,
                                     const std::string &model, V pos,
-                                    V rot = V(0.f), bool open = false) {
+                                    V rot = V(0.f)) {
         auto node = scn::Node::create(name, pos);
         node->setLocalRotEuler(rot);
         node->add_component<component::Mesh>(
             std::make_shared<render::Model>(loader::loadModel(model + ".glb")),
             lit);
-        node->add_component<component::Shadow>()->open = open;
+        node->add_component<component::Shadow>();
         return node;
     }
 
@@ -422,6 +422,7 @@ void addLights(Builder &b) {
         auto light =
             component::Light::point({1.f, 0.42f, 0.12f}, 3.f, 0.22f, 0.2f);
         light.ambient = 0.10f;
+        light.range = 20.f; // past the walls: the whole room
         light.castsShadow = true;
         light.shadowFar = 15.f;
         b.fire = node->add_component<component::Light>(light);
@@ -432,6 +433,7 @@ void addLights(Builder &b) {
         auto node = scn::Node::create("Hot metal", b.hit + V(0.f, 0.12f, 0.f));
         auto light =
             component::Light::point({1.f, 0.5f, 0.18f}, 0.6f, 0.35f, 0.6f);
+        light.range = 6.f;
         node->add_component<component::Light>(light);
         lights->add_child(node);
     }
@@ -449,6 +451,7 @@ void addLights(Builder &b) {
         // anvil, so the shadow shows against the fire's light there
         auto light = component::Light::spot({1.f, 0.62f, 0.32f}, 0.75f, 16.f,
                                             24.f, 0.02f, 0.006f);
+        light.range = 20.f;
         light.castsShadow = true;
         light.shadowNear = 0.2f;
         light.shadowFar = 8.f;
@@ -465,6 +468,7 @@ void addLights(Builder &b) {
         auto light = component::Light::spot({0.75f, 0.82f, 1.f}, 4.f, 30.f,
                                             35.f, 0.09f, 0.032f);
         light.ambient = 0.015f;
+        light.range = 20.f;
         light.castsShadow = true;
         light.shadowFar = 20.f;
         node->add_component<component::Light>(light);
@@ -498,6 +502,7 @@ void addLights(Builder &b) {
         auto light =
             component::Light::point(color, intensity * 0.25f, 0.35f, 0.4f);
         light.ambient = 0.01f;
+        light.range = 8.f;
         node->add_component<component::Light>(light);
         lights->add_child(node);
     }

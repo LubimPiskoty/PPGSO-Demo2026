@@ -16,10 +16,6 @@ class Shadow : public component::ComponentBase<Shadow> {
     // every frame don't need
     bool bakedOnly = false;
 
-    // Open surface (ground, terrain), one sided. Drawn like any other caster
-    // now (front faces, see Scene::shadow_pass); kept to mark them.
-    bool open = false;
-
     // Called by Scene::shadow_pass with the light's matrices and depth shaders
     void drawShadow(glm::mat4 projection, glm::mat4 lightView,
                     const render::Shader &depthShader,
@@ -40,8 +36,6 @@ class Shadow : public component::ComponentBase<Shadow> {
     }
 
     const char *type_name() const override { return "Shadow"; }
-
-  private:
 };
 
 } // namespace component

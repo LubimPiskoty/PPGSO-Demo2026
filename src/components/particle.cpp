@@ -52,9 +52,9 @@ GLuint workGroupsFor(uint32_t items, int workGroupSize) {
 ParticleSystem::ParticleSystem(
     std::shared_ptr<render::Material> instanced_material,
     std::shared_ptr<render::ComputeShader> spawnCompute,
-    std::shared_ptr<render::ComputeShader> updateCompute, EmitterType type)
-    : material(instanced_material), spawnCompute(spawnCompute),
-      updateCompute(updateCompute), emitterType(type) {
+    std::shared_ptr<render::ComputeShader> updateCompute)
+    : spawnCompute(spawnCompute), updateCompute(updateCompute),
+      material(instanced_material) {
 
     constexpr float quadVertices[] = {-0.5f, -0.5f, 0.5f, -0.5f,
                                       -0.5f, 0.5f,  0.5f, 0.5f};
@@ -182,10 +182,6 @@ void ParticleSystem::update(float dt) {
     updateCompute->bind();
     const GLuint prog = updateCompute->program;
     glUniform1f(glGetUniformLocation(prog, "u_dt"), dt);
-    // No view culling yet: the update pass doesn't know the camera
-    glUniform3f(glGetUniformLocation(prog, "u_viewPos"), 0, 0, 0);
-    glUniform3f(glGetUniformLocation(prog, "u_forwardDir"), 0, 0, -1);
-    glUniform1f(glGetUniformLocation(prog, "u_cullingMinAngle"), -2.f);
     updateCompute->run(
         workGroupsFor(maxParticles, updateCompute->QueryLinearWorkGroupSize()));
 }

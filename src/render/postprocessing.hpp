@@ -84,16 +84,11 @@ class PostProcessing {
     bool isEnabled(size_t i) const { return passes[i].enabled; }
     void setEnabled(size_t i, bool enabled) { passes[i].enabled = enabled; }
 
-    // Saves every buffer of the last frame as PNGs: <prefix>0_scene.png (the
-    // scene, MSAA resolved), <prefix>0_depth.png (its depth map, see
-    // Framebuffer::saveDepth; near and far are the camera's planes), then
-    // <prefix>1_<pass>.png... one per pass in order, the last one is what
-    // the window shows. Call after end().
-    void save(const std::string &prefix, float near, float far) const {
-        if (passes.size() == 0)
-            scene->save(prefix + "0_scene.png");
-        // scene->saveDepth(prefix + "0_depth.png", near, far);
-        // scene->saveNormals(prefix + "0_normals.png");
+    // Saves the last frame's buffers as PNGs: <prefix>0_scene.png (the
+    // scene, MSAA resolved), then <prefix>1_<pass>.png... one per pass that
+    // ran, in order, the last one is what the window shows. Call after end().
+    void save(const std::string &prefix) const {
+        scene->save(prefix + "0_scene.png");
         for (size_t i = 0; i < passes.size(); i++) {
             if (!passes[i].enabled)
                 continue; // nothing drawn into it this frame
@@ -120,9 +115,11 @@ class PostProcessing {
     // After the prepass: the lit pass draws the color, the normals stay
     void shade() { msaa->drawTo(true, false); }
 
-    // Between the opaque and the transparent draws (Scene::drawTransparent):
-    // the opaque depth resolved, and bound on unit 8 as uSceneDepth (the
-    // water reads how deep it is under it), then on drawing the frame again
+    // After the depth prepass (Forward+ culls the lights from it,
+    // depthTexture) and between the opaque and the transparent draws
+    // (Scene::drawTransparent): the depth resolved, and bound on unit 8 as
+    // uSceneDepth (the water reads how deep it is under it), then on drawing
+    // the frame again
     void resolveDepth() {
         glBindFramebuffer(GL_READ_FRAMEBUFFER, msaa->getFBO());
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, scene->getFBO());
@@ -135,22 +132,9 @@ class PostProcessing {
         glActiveTexture(GL_TEXTURE0);
     }
 
-    // Distance from the camera, m, of what's drawn at uv (0..1, from the
-    // bottom left), from the last frame's depth (resolved in end()); the far
-    // plane where nothing is. Reads back from the GPU: a few points a frame.
-    float distanceAt(glm::vec2 uv) const {
-        GLint previous = 0;
-        glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &previous);
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, scene->getFBO());
-        float depth = 1.f;
-        glReadPixels(glm::clamp((int)(uv.x * width), 0, width - 1),
-                     glm::clamp((int)(uv.y * height), 0, height - 1), 1, 1,
-                     GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, previous);
-        const glm::vec4 p =
-            invProjection * glm::vec4(glm::vec3(uv, depth) * 2.f - 1.f, 1.f);
-        return glm::length(glm::vec3(p) / p.w);
-    }
+    // The scene's depth, as of the last resolveDepth (Forward+ culls the
+    // lights from the prepass's)
+    GLuint depthTexture() const { return scene->getDepthTex(); }
 
     // The camera the frame was drawn from, for the passes to rebuild
     // positions: its projection and its world transform (the inverse view)

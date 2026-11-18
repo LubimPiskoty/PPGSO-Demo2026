@@ -222,8 +222,7 @@ std::string extensionOf(const std::string &filename) {
 
 Model loadModel(const std::string &filename) {
     Model model;
-    // Set even when loading fails, so a missing model keeps its name when the
-    // scene is saved again
+    // Set even when loading fails, the inspector shows which one it was
     model.filename = filename;
 
     auto fs = cmrc::models::get_filesystem();

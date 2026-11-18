@@ -88,8 +88,8 @@ render::GpuLight Light::toGpu() const {
     g.direction = glm::vec4(direction(), 0.f);       // xyz dir
     g.cutOff = glm::vec4(glm::cos(glm::radians(cutOff)), glm::cos(glm::radians(outerCutOff)), 0.f, 0.f);
     g.color = glm::vec4(color * intensity, ambient); // rgb col, w ambient
-    g.attenuation = glm::vec4(constant, linear, quadratic, 0.f); // point light
-    g.shadow = glm::vec4(-1.f, -1.f, 0.f, 0.f); // Scene::uploadLights sets xy
+    g.attenuation = glm::vec4(constant, linear, quadratic, range);
+    g.shadow = glm::vec4(-1.f, 0.f, 0.f, 0.f); // Scene::uploadLights sets xz
     return g;
 }
 

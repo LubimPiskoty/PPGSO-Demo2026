@@ -15,7 +15,7 @@ struct Particle {
     vec3 accel;
     float _pad0;
     vec2 scale;
-    vec2 _pad1;
+    vec2 startScale; // what scale shrinks from at the end of its life
 };
 
 layout(std430, binding = 0) buffer ParticleBuffer {
@@ -66,7 +66,7 @@ void MakeParticle(uint i) {
 
     vec3 offset = randomVec3(u_emitter.minOffset, u_emitter.maxOffset);
     p.pos = u_emitter.modelMatrix[3].xyz + mat3(u_emitter.rotationMatrix) * offset;
-    p.scale = vec2(u_emitter.size);
+    p.scale = p.startScale = vec2(u_emitter.size);
 
     // w = 0: directions must not pick up translation
     p.velocity = mat3(u_emitter.rotationMatrix) *
@@ -77,7 +77,6 @@ void MakeParticle(uint i) {
     p.startColor = p.color = u_emitter.minColor;
     p.endColor = u_emitter.maxColor;
     p._pad0 = 0.0;
-    p._pad1 = vec2(0.0);
 
     particles[i] = p;
 }

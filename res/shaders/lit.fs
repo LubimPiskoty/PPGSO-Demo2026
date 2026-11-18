@@ -1,4 +1,4 @@
-#version 330 core
+#version 430 core
 
 // ---------------------------------------------------------------------------
 // Inputs
@@ -17,7 +17,6 @@ layout(location = 0) out vec4 FragColor;
 // ---------------------------------------------------------------------------
 
 struct Material {
-    vec3 ambient;
     vec3 diffuse;
     vec3 specular;
     float shininess;
@@ -54,11 +53,8 @@ uniform vec3 uSkyTint; // the skybox's tint: dark at night, so is its reflection
 uniform float uRoughness; // when mat doesnt have roughmap
 
 // ---------------------------------------------------------------------------
-// Lights (layout matches render::LightBlock)
+// Lights (layout matches render::LightHeader + the GpuLight array)
 // ---------------------------------------------------------------------------
-
-// Must match MAX_LIGHTS in light_buffer.hpp, or the block layouts disagree
-#define MAX_LIGHTS 160
 
 #define LIGHT_DIRECTIONAL 0
 #define LIGHT_POINT       1
@@ -71,7 +67,7 @@ struct GpuLight {
     vec4 color; // rgb = color, w = ambient strength
     vec4 attenuation; // x = constant, y = linear, z = quadratic
     vec4 shadow; // x = shadow map layer in its array, -1 = none
-    // y = directional: close-up map layer, -1 = none
+    // z = 0: in uShadowMaps, 1: in uSmallShadowMaps
     vec4 cutOff; // x = inner cutoff, y = outer cutoff, z = shadow texel
     // size, w = 1: z is per metre away from the light
 };
@@ -97,10 +93,20 @@ layout(std140) uniform ShadowBlock {
     mat4 uSmallLightSpace[MAX_SMALL_SHADOWS];
 };
 
-layout(std140) uniform Lights {
-    GpuLight uLights[MAX_LIGHTS];
+// Storage buffer, so any number of lights (render::LightBuffer, binding 4;
+// the particles use 0-3)
+layout(std430, binding = 4) readonly buffer Lights {
     vec4 uViewPos;
     ivec4 uLightCount; // x = number of lights in use
+    GpuLight uLights[]; // unsized, must stay last
+};
+
+// Forward+ (render::LightCulling, forward_plus.comp): per screen tile the
+// lights that reach it, the opaque pass's list and the transparent one's
+layout(std430, binding = 5) readonly buffer TileLights {
+    ivec4 uTileInfo; // x = tiles across, y = tile size, z = lights per tile,
+                     // w = where the transparent lists start
+    int uTileLights[];
 };
 
 // Unpacked light, with the vec4 channels given proper names
@@ -111,9 +117,9 @@ struct Light {
     vec3 color;
     float ambient;
     vec3 attenuation;
+    float reach; // m, Forward+ culls the light past it
     int shadowIndex; // first layer of its map(s), -1 = casts no shadow
     bool smallMap; // in uSmallShadowMaps, else uShadowMaps
-    int closeUpIndex; // directional: layer of the close-up (houses) map, -1 = none
     float cutOff;
     float outerCutOff;
     float shadowTexel; // metres (per metre away if texelPerMetre)
@@ -129,8 +135,8 @@ Light getLight(int i) {
     light.color = gpu.color.rgb;
     light.ambient = gpu.color.w;
     light.attenuation = gpu.attenuation.xyz;
+    light.reach = gpu.attenuation.w;
     light.shadowIndex = int(floor(gpu.shadow.x + 0.5)); // rounds -1 to -1
-    light.closeUpIndex = int(floor(gpu.shadow.y + 0.5));
     light.smallMap = gpu.shadow.z > 0.5;
     light.cutOff = gpu.cutOff.x; // inner cutoff cos
     light.outerCutOff = gpu.cutOff.y; // outer cutoff cos
@@ -197,6 +203,7 @@ Surface getSurface() {
         // G channel: glTF packs roughness there, and a grayscale roughness
         // map has it in every channel anyway
         float roughness = texture(uRoughnessTex, FragTexCoord).g;
+        surf.roughness = roughness; // the sky's reflection blurs by it too
 
         // Rough -> wide highlight (exponent 2), smooth -> tight (2048)
         surf.shininess = exp2(1.0 + 10.0 * (1.0 - roughness));
@@ -267,15 +274,8 @@ float shadowFactor(Light light, Surface surf, vec3 lightDir) {
         return shadowPcf(uSmallShadowMaps, light.shadowIndex,
             shadowCoords(uSmallLightSpace[light.shadowIndex], surf.position));
 
-    float lit = shadowPcf(uShadowMaps, light.shadowIndex,
+    return shadowPcf(uShadowMaps, light.shadowIndex,
             shadowCoords(uLightSpace[light.shadowIndex], surf.position));
-
-    // Sun: the houses are only in the close-up map, so both shadows apply.
-    // Outside its box the close-up map reads as lit.
-    if (light.closeUpIndex >= 0)
-        lit *= shadowPcf(uShadowMaps, light.closeUpIndex,
-                shadowCoords(uLightSpace[light.closeUpIndex], surf.position));
-    return lit;
 }
 
 // Phong ambient + diffuse + specular for light arriving from lightDir
@@ -303,10 +303,13 @@ vec3 directionalLight(Light light, Surface surf, vec3 viewDir) {
     return phong(light, surf, lightDir, viewDir, shadow);
 }
 
-// The further away, the weaker the light
+// The further away, the weaker the light; faded out to 0 at its reach, so
+// where Forward+ stops counting it there's no edge
 float attenuation(Light light, vec3 position) {
     float d = length(light.position - position);
-    return 1.0 / (light.attenuation.x + light.attenuation.y * d +
+    float x = d / max(light.reach, 1e-4);
+    float fade = clamp(1.0 - x * x * x * x, 0.0, 1.0);
+    return fade * fade / (light.attenuation.x + light.attenuation.y * d +
             light.attenuation.z * d * d);
 }
 
@@ -342,9 +345,16 @@ void main() {
     Surface surf = getSurface();
     vec3 viewDir = normalize(uViewPos.xyz - surf.position);
 
+    // This pixel's tile's lights (Forward+), the transparent pass's list
+    // when it's drawn there
+    ivec2 tile = ivec2(gl_FragCoord.xy) / uTileInfo.y;
+    int list = (tile.y * uTileInfo.x + tile.x) * (uTileInfo.z + 1) +
+            (uTransparent ? uTileInfo.w : 0);
+    int count = uTileLights[list];
+
     vec3 result = vec3(0.0);
-    for (int i = 0; i < uLightCount.x; i++) {
-        Light light = getLight(i);
+    for (int k = 0; k < count; k++) {
+        Light light = getLight(uTileLights[list + 1 + k]);
         // Off (a lamp by day): nothing to add, skip its shadow lookups
         if (light.color == vec3(0.0))
             continue;

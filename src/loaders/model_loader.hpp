@@ -8,7 +8,9 @@
 #include <vector>
 
 namespace loader {
-// filename is the embedded resource path, e.g. "SM_PROP_crate_02.glb"
+// filename is the embedded resource path, e.g. "SM_PROP_crate_02.glb".
+// Every mesh's vertices as stored, the file's node transforms are NOT
+// applied: a downloaded file goes through tools/prepare_glb.py first.
 render::Model loadModel(const std::string &filename);
 
 // The model's triangles on the CPU, three corners each, every mesh's in its

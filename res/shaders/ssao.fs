@@ -47,8 +47,8 @@ const float FADE_START = 60.0;
 // The water's surface (MC_Water, its node 1 m down, demo_scene.cpp): the
 // water isn't in the depth (it's transparent), so under it the seabed and
 // the hulls would darken the water drawn over them. Left open: the water
-// darkens them by its depth instead (lit.fs).
-const float WATER_LEVEL = -5.0;
+// darkens them by its depth instead (lit.fs). Same as lit.fs's.
+const float WATER_LEVEL = -5.29;
 const float FADE_END = 120.0;
 
 vec3 viewPos(vec2 uv) {

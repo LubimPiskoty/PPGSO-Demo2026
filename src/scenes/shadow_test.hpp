@@ -68,17 +68,16 @@ scn::Scene shadowTest() {
     addCaster("Floating box", box, {0.5f, 2.5f, 0.f}, 0.6f);
 
     // Transparent objects: drawn after the opaque ones, sorted far to near
-    // (Scene::draw). No Shadow component, glass doesn't cast a full shadow.
-    unsigned char clear[4] = {255, 255, 255, 255};
-    auto glassTexture = std::make_shared<render::Texture>(
-        render::Texture{loader::createTexture(clear, 1, 1), "<glass>"});
-
+    // (Scene::drawTransparent). No Shadow component, glass doesn't cast a
+    // full shadow.
     auto makeGlass = [&](const std::string &name, glm::vec3 color,
                          float opacity) {
+        // lit.fs takes the colour from the albedo texture: one of its colour
+        const glm::u8vec4 pixel(glm::clamp(color, 0.f, 1.f) * 255.f, 255);
+        auto tint = std::make_shared<render::Texture>(render::Texture{
+            loader::createTexture(&pixel.x, 1, 1, true), "<glass>"});
         auto mat = std::make_shared<render::Material>(name, litShader);
-        mat->setTexture(render::TextureSlot::Albedo, glassTexture);
-        mat->diffuse = color;
-        mat->ambient = color * 0.2f;
+        mat->setTexture(render::TextureSlot::Albedo, tint);
         mat->specular = glm::vec3(1.f);
         mat->shininess = 128.f;
         mat->opacity = opacity;

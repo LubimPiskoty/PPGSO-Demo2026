@@ -14,11 +14,6 @@ glm::mat4 Instance::matrix() const {
            glm::scale(glm::mat4(1.f), scale);
 }
 
-void Instances::setInstances(std::vector<Instance> instances) {
-    this->instances = std::move(instances);
-    dirty = true;
-}
-
 void Instances::update(float dt) {
     if (!dirty && !followChildren)
         return;

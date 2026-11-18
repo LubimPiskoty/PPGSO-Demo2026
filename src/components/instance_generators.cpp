@@ -39,20 +39,6 @@ static Instance onCircle(glm::vec3 center, float radius, float angle,
     return makeInstance(center + offset, basis, -angle);
 }
 
-std::vector<Instance> generateCircle(glm::vec3 center, float radius,
-                                     glm::vec3 up, int count) {
-    std::vector<Instance> instances;
-    if (count <= 0)
-        return instances;
-    instances.reserve(count);
-    Basis basis = makeBasis(up);
-
-    float step = glm::two_pi<float>() / count;
-    for (int i = 0; i < count; i++)
-        instances.push_back(onCircle(center, radius, i * step, basis));
-    return instances;
-}
-
 std::vector<Instance> generateDisc(glm::vec3 center, float innerRadius,
                                    float outerRadius, glm::vec3 up, int count) {
     std::vector<Instance> instances;
@@ -74,52 +60,6 @@ std::vector<Instance> generateDisc(glm::vec3 center, float innerRadius,
     return instances;
 }
 
-std::vector<Instance> generateGrid(glm::vec3 center, float cellSize,
-                                   glm::ivec2 cellCount, glm::vec3 up,
-                                   int count) {
-    std::vector<Instance> instances;
-    if (count <= 0 || cellCount.x <= 0 || cellCount.y <= 0)
-        return instances;
-    instances.reserve(count);
-    Basis basis = makeBasis(up);
-
-    // Instances are spread evenly over the cells: with fewer instances than
-    // cells some cells stay empty, with more some cells get several (at the
-    // same spot, so follow up with randomizePosition)
-    long long cells = (long long)cellCount.x * cellCount.y;
-    glm::vec2 corner = -0.5f * cellSize * glm::vec2(cellCount - 1);
-    for (int i = 0; i < count; i++) {
-        long long cell = i * cells / count;
-        glm::vec2 p = corner + cellSize * glm::vec2(cell % cellCount.x,
-                                                    cell / cellCount.x);
-        instances.push_back(
-            makeInstance(center + p.x * basis.u + p.y * basis.v, basis));
-    }
-    return instances;
-}
-
-std::vector<Instance> generatePlane(glm::vec3 center, glm::vec2 size,
-                                    glm::vec3 up, int count) {
-    std::vector<Instance> instances;
-    if (count <= 0)
-        return instances;
-    instances.reserve(count);
-    Basis basis = makeBasis(up);
-
-    // R2 low-discrepancy sequence: even coverage for any count, without the
-    // rows a regular grid would show
-    const float g = 1.32471795724474602596f; // plastic number
-    const glm::vec2 alpha(1.f / g, 1.f / (g * g));
-    for (int i = 0; i < count; i++) {
-        glm::vec2 t = glm::fract(glm::vec2(0.5f) + alpha * (float)(i + 1));
-        glm::vec2 p = (t - 0.5f) * size;
-        instances.push_back(
-            makeInstance(center + p.x * basis.u + p.y * basis.v, basis));
-    }
-    return instances;
-}
-
-// min + (max - min) * [0, 1), also fine when min > max
 static float randomRange(float min, float max, std::mt19937 &rng) {
     std::uniform_real_distribution<float> dist(0.f, 1.f);
     return min + (max - min) * dist(rng);
@@ -149,37 +89,6 @@ void randomizeRotation(std::vector<Instance> &instances, glm::vec3 min,
                        glm::vec3 max, std::mt19937 &rng) {
     for (auto &instance : instances)
         instance.rotation += randomRange(min, max, rng);
-}
-
-static void append(std::vector<Instance> &instances,
-                   std::vector<Instance> generated) {
-    instances.insert(instances.end(), generated.begin(), generated.end());
-}
-
-std::vector<Instance> runRecipe(const InstanceRecipe &recipe) {
-    std::vector<Instance> instances;
-    std::mt19937 rng(recipe.seed);
-    for (const auto &step : recipe.steps) {
-        if (auto s = std::get_if<GenerateCircle>(&step))
-            append(instances,
-                   generateCircle(s->center, s->radius, s->up, s->count));
-        else if (auto s = std::get_if<GenerateDisc>(&step))
-            append(instances, generateDisc(s->center, s->innerRadius,
-                                           s->outerRadius, s->up, s->count));
-        else if (auto s = std::get_if<GenerateGrid>(&step))
-            append(instances, generateGrid(s->center, s->cellSize,
-                                           s->cellCount, s->up, s->count));
-        else if (auto s = std::get_if<GeneratePlane>(&step))
-            append(instances,
-                   generatePlane(s->center, s->size, s->up, s->count));
-        else if (auto s = std::get_if<RandomizeScale>(&step))
-            randomizeScale(instances, s->min, s->max, rng);
-        else if (auto s = std::get_if<RandomizePosition>(&step))
-            randomizePosition(instances, s->min, s->max, rng);
-        else if (auto s = std::get_if<RandomizeRotation>(&step))
-            randomizeRotation(instances, s->min, s->max, rng);
-    }
-    return instances;
 }
 
 } // namespace component::instgen

@@ -6,6 +6,7 @@
 #include "../components/shadow.hpp"
 #include "../components/skybox.hpp"
 #include "../debug/profiler.hpp"
+#include "../loaders/texture_loader.hpp"
 #include "../render/framebuffer.hpp"
 #include "../render/material.hpp"
 #include <algorithm>
@@ -16,6 +17,17 @@
 #include <vector>
 
 namespace {
+// 1x1 opaque white: what depth.fs alpha-tests a caster without an albedo
+// of its own against (a model's own albedo replaces it while it draws)
+GLuint opaqueTexture() {
+    static GLuint texture = 0;
+    if (texture == 0) {
+        const unsigned char white[4] = {255, 255, 255, 255};
+        texture = loader::createTexture(white, 1, 1);
+    }
+    return texture;
+}
+
 // glPolygonOffset of the shadow pass (factor, units)
 constexpr float SHADOW_SLOPE_BIAS = 1.5f;
 constexpr float SHADOW_CONSTANT_BIAS = 2.f;
@@ -39,15 +51,27 @@ void Scene::depth_prepass() {
         glm::inverse(camera->node.lock()->globalTransform()));
 }
 
+void Scene::cullLights(GLuint depthTexture, int width, int height) {
+    if (activeCamera.expired())
+        return;
+    uploadLights();
+    if (!lightCulling)
+        lightCulling = std::make_unique<render::LightCulling>();
+    const auto camera = activeCamera.lock();
+    lightCulling->run(depthTexture, width, height,
+                      glm::inverse(camera->node.lock()->globalTransform()),
+                      camera->projection);
+}
+
 void Scene::draw() {
     if (activeCamera.expired()) {
         std::puts("No camera is active!! Output will be blank");
         return;
     }
 
-    uploadLights(); // upload all lights before draw
     if (auto sky = skybox.lock()) {
-        sky->draw(activeCamera.lock()); // skybox last
+        // Where the prepass left the depth at 1 (nothing drawn)
+        sky->draw(activeCamera.lock());
         sky->bindForReflections();      // cubemapa on 4th slot for reflectz
         render::Material::skyTint = sky->tint;
     } else {
@@ -160,16 +184,9 @@ void Scene::uploadLights() {
         return glm::vec2(-1.f, 0.f);
     };
 
-    // A shadow-only directional light is the sun's close-up map
-    float closeUp = -1.f;
-    for (const auto &light : getAllComponents<component::Light>())
-        if (light->enabled && light->shadowOnly &&
-            light->type == component::LightType::Directional)
-            closeUp = layerOf(light).x;
-
     for (const auto &light : getAllComponents<component::Light>()) {
-        if (!light->enabled || light->shadowOnly)
-            continue; // shadow-only lights add no light
+        if (!light->enabled)
+            continue;
         auto gpu = light->toGpu();
         const glm::vec2 map = layerOf(light);
         gpu.shadow.x = map.x;
@@ -195,12 +212,10 @@ void Scene::uploadLights() {
                 break;
             }
         }
-        if (light->type == component::LightType::Directional)
-            gpu.shadow.y = closeUp;
         lights.push_back(gpu);
     }
 
-    lightBuffer.upload(lights, viewPos); // upload to UBO
+    lightBuffer.upload(lights, viewPos); // to the lights SSBO
 }
 
 void Scene::shadow_pass() {
@@ -247,15 +262,6 @@ void Scene::shadow_pass() {
 
     // Only nodes with a Shadow component are rendered into the maps
     const auto shadowCasters = getAllComponents<component::Shadow>();
-    // The parent node of the shadow-only light above a caster, if any
-    auto groupOf = [&](const std::shared_ptr<component::Shadow> &shadow) {
-        for (auto n = shadow->node.lock(); n; n = n->parent.lock())
-            for (auto &c : n->children)
-                if (auto l = c->get_component<component::Light>())
-                    if (l->shadowOnly)
-                        return n.get();
-        return (scn::Node *)nullptr;
-    };
     // Front faces into the map (back faces culled), so a shadow starts right
     // where a model stands on the ground. Pushed a little deeper, more on
     // slopes, where a texel covers more depth; lit.fs also looks the depth up
@@ -264,9 +270,14 @@ void Scene::shadow_pass() {
     glCullFace(GL_BACK);
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(SHADOW_SLOPE_BIAS, SHADOW_CONSTANT_BIAS);
+    // Procedural casters (the lamps' shadow discs, spheres, boxes) bring no
+    // albedo: without this depth.fs cut them by whatever texture was bound
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, opaqueTexture());
     for (const Caster &caster : casters) {
         const auto &light = caster.light;
-        if (light->bakedShadow && !light->shadowDirty && !wiped[caster.bank])
+        if (light->bakedShadow && !light->shadowDirty && !wiped[caster.bank] &&
+            !redrawBakedShadows)
             continue;
         const auto proj = light->shadowProjection();
         const auto view = light->shadowView(caster.face);
@@ -276,16 +287,9 @@ void Scene::shadow_pass() {
 
         shadowMaps->bindLayer(caster.bank, caster.layer);
         glClear(GL_DEPTH_BUFFER_BIT);
-        // A shadow-only sun draws only the casters under its parent node, the
-        // other suns draw the rest. Point and spot lights draw everything.
-        const bool sun = light->type == component::LightType::Directional;
-        scn::Node *own = nullptr;
-        if (light->shadowOnly)
-            own = light->node.lock()->parent.lock().get();
         for (auto &shadow : shadowCasters)
             if (shadow->enabled &&
-                (light->bakedShadow || !shadow->bakedOnly) &&
-                (!sun || groupOf(shadow) == own))
+                (light->bakedShadow || !shadow->bakedOnly))
                 shadow->drawShadow(proj, view, *depthShader,
                                    *depthShaderInstanced);
     }

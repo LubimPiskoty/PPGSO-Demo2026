@@ -9,7 +9,7 @@ void main() {
     vec2 texel = 1.0 / vec2(textureSize(uScreen, 0));
 
     float threshold = 0.7; // od akeho jasu ma pixel ziarit
-    float intensity = 2.5; // sila ziaru
+    float intensity = 1.5; // sila ziaru
     int radius = 12; // velkost ziary px *2
 
     vec3 glow = vec3(0.0);
@@ -18,6 +18,16 @@ void main() {
     // prejdeme okolie pixelu
     for (int x = -radius; x <= radius; x++) {
         for (int y = -radius; y <= radius; y++) {
+            // Round, the weight down to 0 at the rim: cut off by a square
+            // window, round a very bright point (a bulb) the square showed.
+            // A tight core and a faint wide tail, so the glow falls off
+            // the way light scattered in a lens does, not as an even disc
+            float d2 = float(x * x + y * y) / float(radius * radius);
+            if (d2 >= 1.0)
+                continue;
+            float rim = (1.0 - d2) * (1.0 - d2);
+            float w = (exp(-16.0 * d2) + 0.15 * exp(-3.0 * d2)) * rim;
+
             // Every 2 px, half a texel off: each sample sits between 4
             // texels and the filtering averages them, so the samples cover
             // every pixel (3 px apart, a small bright lamp fell between
@@ -30,7 +40,6 @@ void main() {
             c *= max(brightness - threshold, 0.0) / max(brightness, 1e-4);
 
             // 2) BLUR
-            float w = exp(-float(x * x + y * y) / float(radius * radius));
             glow += c * w;
             weightSum += w;
         }

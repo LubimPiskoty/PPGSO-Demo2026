@@ -29,7 +29,7 @@ enum class BlendMode {
   Opaque,
   // Blending on, depth writes off (Material::bind); lit.fs outputs the
   // albedo's alpha times opacity. Drawn after everything opaque, farthest
-  // first (Scene::draw), and left out of the depth prepass.
+  // first (Scene::drawTransparent), and left out of the depth prepass.
   Transparent,
 };
 
@@ -98,11 +98,10 @@ public:
 
   // Textures
   void setTexture(TextureSlot slot, std::shared_ptr<Texture> texture);
-  std::shared_ptr<Texture> getTexture(TextureSlot slot) const;
   bool hasTexture(TextureSlot slot) const;
 
-  // Phong / Blinn-Phong parameters
-  glm::vec3 ambient{0.1f};
+  // Phong parameters (diffuse: grid_lit.fs's colour, lit.fs takes the
+  // albedo texture's)
   glm::vec3 diffuse{1.f};
   glm::vec3 specular{0.5f};
   float shininess = 32.f;
@@ -124,11 +123,9 @@ public:
   // uploaded in bind()
   void setFloat(const std::string &name, float v);
   void setVec3(const std::string &name, const glm::vec3 &v);
-  void setVec4(const std::string &name, const glm::vec4 &v);
   void setMat4(const std::string &name, const glm::mat4 &v);
 
   std::shared_ptr<Shader> getShader() const;
-  void setShader(std::shared_ptr<Shader> shader);
 
   std::string name;
 
@@ -138,7 +135,6 @@ private:
 
   std::unordered_map<std::string, float> uFloats;
   std::unordered_map<std::string, glm::vec3> uVec3s;
-  std::unordered_map<std::string, glm::vec4> uVec4s;
   std::unordered_map<std::string, glm::mat4> uMat4s;
 
   void bindTo(GLuint program) const;

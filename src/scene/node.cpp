@@ -27,20 +27,6 @@ std::shared_ptr<Node> Node::create(std::string name, glm::vec3 localPos) {
     return node;
 }
 
-std::shared_ptr<Node> Node::create(std::string name, glm::mat4 localTransform) {
-    auto node = Node::create(name);
-
-    glm::vec3 skew, pos, scale;
-    glm::vec4 perspective;
-    glm::quat rot;
-    glm::decompose(localTransform, scale, rot, pos, skew, perspective);
-    node->setLocalPos(pos);
-    node->setLocalRot(rot);
-    node->setLocalScale(scale);
-
-    return node;
-}
-
 void Node::update(float dt) {
     if (!enabled)
         return;
@@ -52,7 +38,7 @@ void Node::update(float dt) {
     for (auto const &child : this->children)
         child->update(dt);
 }
-    void Node::draw(glm::mat4 projection, glm::mat4 invCameraTransform,
+void Node::draw(glm::mat4 projection, glm::mat4 invCameraTransform,
                     std::vector<TransparentDraw>& transparent) {
     if (!enabled)
         return;
@@ -169,15 +155,6 @@ glm::quat Node::globalRotation() const {
     // non-uniformly scaled parent would add). Cached with the transform.
     globalTransform();
     return globalRotCache;
-}
-
-PosRotScale Node::globalPosRotScale() const {
-    PosRotScale result;
-    glm::vec3 skew;
-    glm::vec4 perspective;
-    glm::decompose(globalTransform(), result.scale, result.rot, result.pos,
-                   skew, perspective);
-    return result;
 }
 
 void Node::print_subtree(std::ostream &os, int depth) const {
